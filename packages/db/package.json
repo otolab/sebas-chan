@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@sebas-chan/shared-types": "*",
-    "nanoid": "^5.0.4"
+    "axios": "^1.11.0",
+    "nanoid": "^5.0.4",
+    "winston": "^3.17.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
