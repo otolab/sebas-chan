@@ -1,4 +1,4 @@
-import { Issue, Flow, Knowledge, Input } from '@sebas-chang/shared-types';
+// import { Issue, Flow, Knowledge, Input } from '@sebas-chang/shared-types';
 
 export class CoreAgent {
   private eventQueue: AgentEvent[] = [];
@@ -22,10 +22,10 @@ export class CoreAgent {
   private async processEventLoop() {
     while (this.isProcessing) {
       const event = this.eventQueue.shift();
-      
+
       if (!event) {
         // キューが空の場合は少し待機
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
         continue;
       }
 

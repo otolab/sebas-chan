@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { Issue, Flow, Knowledge } from '@sebas-chang/shared-types';
+import { Issue } from '@sebas-chang/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 
@@ -21,13 +21,16 @@ export class DBClient extends EventEmitter {
     }
 
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
-    
+
     this.worker = spawn('python3', [pythonScript], {
-      stdio: ['pipe', 'pipe', 'pipe']
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
 
     this.worker.stdout?.on('data', (data) => {
-      const lines = data.toString().split('\n').filter(line => line.trim());
+      const lines = data
+        .toString()
+        .split('\n')
+        .filter((line: string) => line.trim());
       for (const line of lines) {
         try {
           const response = JSON.parse(line);
@@ -62,7 +65,7 @@ export class DBClient extends EventEmitter {
     });
 
     // ワーカーの起動を待つ
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     this.isReady = true;
   }
 
@@ -84,19 +87,19 @@ export class DBClient extends EventEmitter {
       jsonrpc: '2.0',
       method,
       params,
-      id
+      id,
     };
 
     return new Promise((resolve, reject) => {
       this.pendingRequests.set(id, { resolve, reject });
-      
+
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(id);
         reject(new Error('Request timeout'));
       }, 10000); // 10秒のタイムアウト
 
       this.worker!.stdin?.write(JSON.stringify(request) + '\n');
-      
+
       // タイムアウトをクリア
       const originalResolve = this.pendingRequests.get(id)!.resolve;
       this.pendingRequests.get(id)!.resolve = (value) => {
@@ -110,14 +113,14 @@ export class DBClient extends EventEmitter {
   async addIssue(issue: Omit<Issue, 'id'>): Promise<string> {
     const id = nanoid();
     const issueWithId = { ...issue, id };
-    
+
     // 複雑なオブジェクトはJSON文字列として保存
     const issueData = {
       ...issueWithId,
       updates: JSON.stringify(issueWithId.updates),
-      relations: JSON.stringify(issueWithId.relations)
+      relations: JSON.stringify(issueWithId.relations),
     };
-    
+
     await this.sendRequest('addIssue', issueData);
     return id;
   }
@@ -125,12 +128,12 @@ export class DBClient extends EventEmitter {
   async getIssue(id: string): Promise<Issue | null> {
     const result = await this.sendRequest('getIssue', { id });
     if (!result) return null;
-    
+
     // JSON文字列をパース
     return {
       ...result,
       updates: JSON.parse(result.updates || '[]'),
-      relations: JSON.parse(result.relations || '[]')
+      relations: JSON.parse(result.relations || '[]'),
     };
   }
 
@@ -139,7 +142,7 @@ export class DBClient extends EventEmitter {
     return results.map((r: any) => ({
       ...r,
       updates: JSON.parse(r.updates || '[]'),
-      relations: JSON.parse(r.relations || '[]')
+      relations: JSON.parse(r.relations || '[]'),
     }));
   }
 

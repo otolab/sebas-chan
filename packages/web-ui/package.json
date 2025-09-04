@@ -4,8 +4,8 @@
   "description": "Web UI for sebas-chang",
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "dev": "echo 'Web UI not configured yet'",
+    "build": "echo 'Web UI build skipped'",
     "preview": "vite preview",
     "clean": "rm -rf .svelte-kit dist"
   },
