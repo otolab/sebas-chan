@@ -1,0 +1,29 @@
+{
+  "name": "sebas-chang",
+  "version": "0.0.1",
+  "description": "AIエージェントシステム - 安全なフォーゲッタ",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "core:dev": "npm run dev -w @sebas-chang/core",
+    "api:dev": "npm run dev -w @sebas-chang/api-rest",
+    "mcp:dev": "npm run dev -w @sebas-chang/mcp-server",
+    "ui:dev": "npm run dev -w @sebas-chang/web-ui"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0",
+    "vitest": "^1.2.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}

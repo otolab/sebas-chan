@@ -1,0 +1,22 @@
+{
+  "name": "@sebas-chang/db",
+  "version": "0.0.1",
+  "description": "LanceDB データベース層",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "clean": "rm -rf dist",
+    "python:install": "pip install -r src/python/requirements.txt"
+  },
+  "dependencies": {
+    "@sebas-chang/shared-types": "*",
+    "nanoid": "^5.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

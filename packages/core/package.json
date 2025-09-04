@@ -1,0 +1,20 @@
+{
+  "name": "@sebas-chang/core",
+  "version": "0.0.1",
+  "description": "思考エンジンコア",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@sebas-chang/shared-types": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

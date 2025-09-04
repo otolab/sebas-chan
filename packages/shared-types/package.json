@@ -1,0 +1,15 @@
+{
+  "name": "@sebas-chang/shared-types",
+  "version": "0.0.1",
+  "description": "共有型定義",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
