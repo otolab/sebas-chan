@@ -13,8 +13,8 @@
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "server:dev": "npm run dev -w @sebas-chan/server",
     "core:dev": "npm run dev -w @sebas-chan/core",
-    "api:dev": "npm run dev -w @sebas-chan/api-rest",
     "mcp:dev": "npm run dev -w @sebas-chan/mcp-server",
     "ui:dev": "npm run dev -w @sebas-chan/web-ui"
   },

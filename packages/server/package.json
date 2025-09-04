@@ -1,12 +1,16 @@
 {
-  "name": "@sebas-chan/api-rest",
+  "name": "@sebas-chan/server",
   "version": "0.0.1",
-  "description": "REST API サーバー",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "description": "メインサーバープロセス",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
+  "bin": {
+    "sebas-chan": "./dist/main.js"
+  },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/main.ts",
+    "start": "node dist/main.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/**/*.ts",
@@ -15,16 +19,18 @@
   },
   "dependencies": {
     "@sebas-chan/shared-types": "*",
-    "@sebas-chan/core": "*",
-    "@sebas-chan/db": "*",
     "express": "^4.18.2",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "body-parser": "^1.20.2"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
     "@types/node": "^20.11.0",
+    "@types/supertest": "^6.0.2",
+    "supertest": "^6.3.4",
     "tsx": "^4.7.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^1.2.0"
   }
 }
