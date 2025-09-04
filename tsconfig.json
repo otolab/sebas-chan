@@ -4,8 +4,9 @@
     { "path": "./packages/shared-types" },
     { "path": "./packages/core" },
     { "path": "./packages/db" },
-    { "path": "./packages/api-rest" },
+    { "path": "./packages/server" },
     { "path": "./packages/mcp-server" },
-    { "path": "./packages/reporters" }
+    { "path": "./packages/reporters" },
+    { "path": "./packages/web-ui" }
   ]
 }
