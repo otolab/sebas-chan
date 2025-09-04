@@ -41,7 +41,11 @@ interface Issue {
 
 ### 3. Knowledge（知識）
 
-ClosedになったIssueから抽出・蒸留された永続的な知識。
+多様な情報源から抽出・蒸留された永続的な知識。生成元は以下のような多様なソースとタイミング：
+- ClosedになったIssueからの抽出
+- Pondからの発見・サルベージ
+- State Documentからの一般化・構造化
+- ユーザーからの直接入力
 
 ```typescript
 interface Knowledge {

@@ -9,7 +9,7 @@
 ### A: 個別要素の処理 (Individual Scope)
 
 #### A-0: PROCESS_USER_REQUEST
-ユーザーからの自然言語リクエストを解釈し、適切な後続ワークフローを起動する最上位ワークフロー。
+ユーザーからの自然言語リクエストを解釈し、適切な後続ワークフローを起動する高優先度ワークフロー。
 
 #### A-1: INGEST_INPUT
 Reporterから投入されたInputをIssueに変換し、関連するFlowを探索して紐付ける。
@@ -17,7 +17,7 @@ Reporterから投入されたInputをIssueに変換し、関連するFlowを探�
 #### A-2: ANALYZE_ISSUE_IMPACT
 Issueが更新された際に、関連するFlowや他のIssueへの影響を分析。
 
-#### A-3: EXTRACT_KNOWLEDGE
+#### A-3: EXTRACT_KNOWLEDGE_FROM_ISSUE
 完了したIssueから再利用可能なKnowledgeを抽出・生成。
 
 #### A-4: DEFINE_SYSTEM_RULE
@@ -35,7 +35,7 @@ Flowのdescriptionを解釈し、Issue間の依存関係を更新。
 全Flowの状態とシステムルールを考慮し、優先度スコアを再計算。
 
 #### B-4: SALVAGE_FROM_POND
-Pond内の情報をクラスタリングし、価値のある情報を発見。
+Pond内の情報をクラスタリングし、価値のある情報を発見。発見された情報はKnowledgeとして保存、またはIssueとして報告される。
 
 #### B-5: REFLECT_AND_ORGANIZE_STATE
 状態文書全体を整理・要約し、重要な情報の構造化を提案する自己言及的ワークフロー。
