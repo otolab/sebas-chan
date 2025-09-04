@@ -30,7 +30,13 @@ export class CoreAgent {
       }
 
       console.log(`Processing event: ${event.type}`);
-      await this.processEvent(event);
+      
+      try {
+        await this.processEvent(event);
+      } catch (error) {
+        console.error(`Error processing event ${event.type}:`, error);
+        // エラーが発生しても処理を継続
+      }
     }
   }
 
