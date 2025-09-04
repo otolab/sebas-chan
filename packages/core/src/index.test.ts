@@ -3,8 +3,8 @@ import { CoreAgent, AgentEvent } from './index';
 
 describe('CoreAgent', () => {
   let agent: CoreAgent;
-  let consoleLogSpy: any;
-  let consoleWarnSpy: any;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -37,10 +37,10 @@ describe('CoreAgent', () => {
   it('should start and stop', async () => {
     const startPromise = agent.start();
     expect(consoleLogSpy).toHaveBeenCalledWith('Starting Core Agent...');
-    
+
     await agent.stop();
     expect(consoleLogSpy).toHaveBeenCalledWith('Stopping Core Agent...');
-    
+
     await expect(startPromise).resolves.toBeUndefined();
   });
 
@@ -54,12 +54,12 @@ describe('CoreAgent', () => {
 
     agent.queueEvent(event);
     const startPromise = agent.start();
-    
+
     // Give it time to process
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     expect(consoleLogSpy).toHaveBeenCalledWith('Processing event: PROCESS_USER_REQUEST');
-    
+
     await agent.stop();
     await startPromise;
   });
@@ -74,11 +74,11 @@ describe('CoreAgent', () => {
 
     agent.queueEvent(event);
     const startPromise = agent.start();
-    
-    await new Promise(resolve => setTimeout(resolve, 100));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
     expect(consoleWarnSpy).toHaveBeenCalledWith('Unknown event type: UNKNOWN_EVENT');
-    
+
     await agent.stop();
     await startPromise;
   });

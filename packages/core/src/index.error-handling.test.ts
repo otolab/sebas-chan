@@ -3,14 +3,13 @@ import { CoreAgent, AgentEvent } from './index';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
-  let consoleLogSpy: any;
-  let consoleWarnSpy: any;
-  let consoleErrorSpy: any;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
@@ -23,16 +22,16 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
   describe('Event Processing Errors', () => {
     it('should recover from synchronous errors in event processing', async () => {
-      let processedEvents: string[] = [];
-      
+      const processedEvents: string[] = [];
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation((event: AgentEvent) => {
         processedEvents.push(event.type);
-        
+
         if (event.type === 'ERROR_EVENT') {
           throw new Error('Synchronous error in event processing');
         }
-        
+
         return originalProcessEvent.call(agent, event);
       });
 
@@ -41,25 +40,25 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         type: 'BEFORE_ERROR',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       agent.queueEvent({
         type: 'ERROR_EVENT',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       agent.queueEvent({
         type: 'AFTER_ERROR',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 400));
+      await new Promise((resolve) => setTimeout(resolve, 400));
       await agent.stop();
       await startPromise;
 
@@ -70,17 +69,17 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     });
 
     it('should recover from asynchronous errors in event processing', async () => {
-      let processedEvents: string[] = [];
-      
+      const processedEvents: string[] = [];
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedEvents.push(event.type);
-        
+
         if (event.type === 'ASYNC_ERROR_EVENT') {
-          await new Promise(resolve => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 10));
           throw new Error('Asynchronous error in event processing');
         }
-        
+
         return originalProcessEvent.call(agent, event);
       });
 
@@ -88,25 +87,25 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         type: 'BEFORE_ASYNC_ERROR',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       agent.queueEvent({
         type: 'ASYNC_ERROR_EVENT',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       agent.queueEvent({
         type: 'AFTER_ASYNC_ERROR',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 500));
       await agent.stop();
       await startPromise;
 
@@ -117,15 +116,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
     it('should handle timeout scenarios', async () => {
       let slowEventStarted = false;
-      let slowEventCompleted = false;
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'SLOW_EVENT') {
           slowEventStarted = true;
           // 長時間の処理をシミュレート
-          await new Promise(resolve => setTimeout(resolve, 5000));
-          slowEventCompleted = true;
+          await new Promise((resolve) => setTimeout(resolve, 5000));
         }
         return originalProcessEvent.call(agent, event);
       });
@@ -134,20 +131,20 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         type: 'SLOW_EVENT',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       agent.queueEvent({
         type: 'FAST_EVENT',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      
+
       // 少し待ってから停止
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await agent.stop();
       await startPromise;
 
@@ -160,7 +157,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
   describe('Resource Exhaustion Scenarios', () => {
     it('should handle memory pressure with large payloads', async () => {
       let processedLargeEvents = 0;
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'LARGE_PAYLOAD_EVENT') {
@@ -180,18 +177,18 @@ describe('CoreAgent - Error Handling and Recovery', () => {
               level1: {
                 level2: {
                   level3: {
-                    data: new Array(1000).fill(`nested-${i}`)
-                  }
-                }
-              }
-            }
+                    data: new Array(1000).fill(`nested-${i}`),
+                  },
+                },
+              },
+            },
           },
-          timestamp: new Date()
+          timestamp: new Date(),
         });
       }
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       await agent.stop();
       await startPromise;
 
@@ -201,7 +198,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should handle rapid repeated errors', async () => {
       let errorCount = 0;
       let successCount = 0;
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.payload.shouldError) {
@@ -218,12 +215,12 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           type: 'REPEATED_ERROR',
           priority: 'normal',
           payload: { shouldError: i % 2 === 0 },
-          timestamp: new Date()
+          timestamp: new Date(),
         });
       }
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
       await agent.stop();
       await startPromise;
 
@@ -235,7 +232,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
   describe('Edge Cases and Boundary Conditions', () => {
     it('should handle empty event type', async () => {
       let processedEmptyType = false;
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (!event.type || event.type === '') {
@@ -248,11 +245,11 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         type: '',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await agent.stop();
       await startPromise;
 
@@ -262,16 +259,16 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
     it('should handle very long event types', async () => {
       const longEventType = 'A'.repeat(1000);
-      
+
       agent.queueEvent({
         type: longEventType,
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await agent.stop();
       await startPromise;
 
@@ -281,7 +278,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
     it('should handle undefined payload gracefully', async () => {
       let processedUndefinedPayload = false;
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.payload === undefined) {
@@ -293,12 +290,12 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       agent.queueEvent({
         type: 'UNDEFINED_PAYLOAD',
         priority: 'normal',
-        payload: undefined as any,
-        timestamp: new Date()
+        payload: undefined as unknown,
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await agent.stop();
       await startPromise;
 
@@ -306,17 +303,17 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     });
 
     it('should handle invalid priority values', async () => {
-      const invalidEvent: any = {
+      const invalidEvent = {
         type: 'INVALID_PRIORITY',
         priority: 'ultra-high', // 無効な優先度
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       agent.queueEvent(invalidEvent);
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
       await agent.stop();
       await startPromise;
 
@@ -328,20 +325,20 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should handle errors during high concurrency', async () => {
       let processedCount = 0;
       let errorCount = 0;
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedCount++;
-        
+
         // ランダムにエラーを発生させる
         if (Math.random() < 0.3) {
           errorCount++;
           throw new Error('Random error during processing');
         }
-        
+
         // 処理時間をランダムに
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 20));
-        
+        await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
+
         return originalProcessEvent.call(agent, event);
       });
 
@@ -349,17 +346,17 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       for (let i = 0; i < 50; i++) {
         agent.queueEvent({
           type: `CONCURRENT_${i}`,
-          priority: ['high', 'normal', 'low'][i % 3] as any,
+          priority: ['high', 'normal', 'low'][i % 3] as AgentEvent['priority'],
           payload: { index: i },
-          timestamp: new Date()
+          timestamp: new Date(),
         });
       }
 
       const startPromise = agent.start();
-      
+
       // 処理が進むまで待つ
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
       await agent.stop();
       await startPromise;
 
@@ -370,16 +367,16 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
     it('should maintain queue integrity under error conditions', async () => {
       const queueStates: number[] = [];
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         // キューの状態を記録
         queueStates.push(agent['eventQueue'].length);
-        
+
         if (event.type === 'QUEUE_ERROR') {
           throw new Error('Queue processing error');
         }
-        
+
         return originalProcessEvent.call(agent, event);
       });
 
@@ -389,7 +386,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           type: i % 2 === 0 ? 'QUEUE_ERROR' : 'QUEUE_NORMAL',
           priority: 'normal',
           payload: { index: i },
-          timestamp: new Date()
+          timestamp: new Date(),
         });
       }
 
@@ -397,13 +394,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       expect(initialQueueSize).toBe(10);
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       await agent.stop();
       await startPromise;
 
       // 最終的にキューが空になっていることを確認
       expect(agent['eventQueue'].length).toBe(0);
-      
+
       // キューサイズが単調減少していることを確認
       for (let i = 1; i < queueStates.length; i++) {
         expect(queueStates[i]).toBeLessThanOrEqual(queueStates[i - 1] + 1);
@@ -415,23 +412,23 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should recover from stack overflow scenarios', async () => {
       let recursionDepth = 0;
       const MAX_DEPTH = 100;
-      
+
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'RECURSIVE_EVENT') {
           recursionDepth++;
-          
+
           if (recursionDepth < MAX_DEPTH) {
             // 再帰的にイベントを生成
             agent.queueEvent({
               type: 'RECURSIVE_EVENT',
               priority: 'normal',
               payload: { depth: recursionDepth },
-              timestamp: new Date()
+              timestamp: new Date(),
             });
           }
         }
-        
+
         return originalProcessEvent.call(agent, event);
       });
 
@@ -439,19 +436,19 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         type: 'RECURSIVE_EVENT',
         priority: 'normal',
         payload: { depth: 0 },
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      
+
       // 再帰処理が完了するまで待つ
       const maxWaitTime = 5000;
       const startTime = Date.now();
-      
+
       while (recursionDepth < MAX_DEPTH && Date.now() - startTime < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise((resolve) => setTimeout(resolve, 50));
       }
-      
+
       await agent.stop();
       await startPromise;
 
@@ -459,8 +456,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     });
 
     it('should handle promise rejection in event processing', async () => {
-      let rejectionHandled = false;
-      
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'REJECTION_EVENT') {
@@ -471,11 +466,11 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       // Promiseの拒否をキャッチするハンドラを設定
       const originalProcessEventLoop = agent['processEventLoop'];
-      agent['processEventLoop'] = async function(this: any) {
+      agent['processEventLoop'] = async function (this: CoreAgent) {
         try {
           await originalProcessEventLoop.call(this);
         } catch (error) {
-          rejectionHandled = true;
+          // エラーをキャッチ
         }
       }.bind(agent);
 
@@ -483,11 +478,11 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         type: 'REJECTION_EVENT',
         priority: 'normal',
         payload: {},
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       const startPromise = agent.start();
-      await new Promise(resolve => setTimeout(resolve, 200));
+      await new Promise((resolve) => setTimeout(resolve, 200));
       await agent.stop();
       await startPromise;
 

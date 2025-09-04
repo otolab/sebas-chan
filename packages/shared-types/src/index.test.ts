@@ -1,13 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import type { 
-  Issue, 
-  Flow, 
-  Input, 
-  Knowledge, 
+import type {
+  Issue,
+  Flow,
+  Input,
+  Knowledge,
   PondEntry,
   IssueUpdate,
   IssueRelation,
-  KnowledgeSource
+  KnowledgeSource,
 } from './index';
 
 describe('shared-types', () => {
@@ -33,7 +33,7 @@ describe('shared-types', () => {
       const update: IssueUpdate = {
         timestamp: new Date(),
         content: 'Updated the issue',
-        author: 'user'
+        author: 'user',
       };
 
       expect(update.author).toBe('user');
@@ -42,7 +42,7 @@ describe('shared-types', () => {
     it('should handle IssueRelation type', () => {
       const relation: IssueRelation = {
         type: 'blocks',
-        targetIssueId: 'issue-2'
+        targetIssueId: 'issue-2',
       };
 
       expect(relation.type).toBe('blocks');
@@ -67,19 +67,28 @@ describe('shared-types', () => {
 
     it('should accept all valid Flow statuses', () => {
       const validStatuses = [
-        'focused', 'active', 'monitoring', 'blocked',
-        'pending_user_decision', 'pending_review', 'backlog',
-        'paused', 'someday', 'completed', 'cancelled', 'archived'
+        'focused',
+        'active',
+        'monitoring',
+        'blocked',
+        'pending_user_decision',
+        'pending_review',
+        'backlog',
+        'paused',
+        'someday',
+        'completed',
+        'cancelled',
+        'archived',
       ] as const;
 
-      validStatuses.forEach(status => {
+      validStatuses.forEach((status) => {
         const flow: Flow = {
           id: 'flow-test',
           title: 'Test',
           description: 'Test',
           status,
           priorityScore: 0.5,
-          issueIds: []
+          issueIds: [],
         };
         expect(flow.status).toBe(status);
       });
@@ -92,7 +101,7 @@ describe('shared-types', () => {
         id: 'input-1',
         source: 'slack',
         content: 'Message from Slack',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       expect(input.source).toBe('slack');
@@ -108,9 +117,9 @@ describe('shared-types', () => {
         content: 'A piece of knowledge',
         reputation: {
           upvotes: 10,
-          downvotes: 2
+          downvotes: 2,
         },
-        sources: []
+        sources: [],
       };
 
       expect(knowledge.type).toBe('factoid');
@@ -122,10 +131,10 @@ describe('shared-types', () => {
         { type: 'issue', issueId: 'issue-1' },
         { type: 'pond', pondEntryId: 'pond-1' },
         { type: 'user_direct' },
-        { type: 'knowledge', knowledgeId: 'knowledge-2' }
+        { type: 'knowledge', knowledgeId: 'knowledge-2' },
       ];
 
-      sources.forEach(source => {
+      sources.forEach((source) => {
         expect(source.type).toBeDefined();
       });
     });
@@ -138,7 +147,7 @@ describe('shared-types', () => {
         content: 'Unstructured content',
         vector: [0.1, 0.2, 0.3],
         timestamp: new Date(),
-        source: 'crawler'
+        source: 'crawler',
       };
 
       expect(pondEntry.content).toBe('Unstructured content');
