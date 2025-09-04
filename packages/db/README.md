@@ -1,66 +1,66 @@
 # @sebas-chan/db
 
-LanceDB integration package for sebas-chan system.
+sebas-chanシステムのLanceDB統合パッケージ
 
-## Overview
+## 概要
 
-This package provides database functionality using LanceDB for vector storage and search capabilities. It uses a Python worker process for LanceDB operations with TypeScript client interface.
+このパッケージは、LanceDBを使用したベクトルストレージと検索機能を提供します。TypeScriptクライアントインターフェースを通じて、Pythonワーカープロセスがで、LanceDB操作を実行します。
 
-## Setup
+## セットアップ
 
-### Dependencies
+### 依存関係
 
-This package uses `uv` for Python dependency management.
+このパッケージは`uv`を使用してPython依存関係を管理しています。
 
 ```bash
-# Install Python dependencies
+# Python依存関係のインストール
 cd packages/db
 uv sync
 ```
 
-This will:
-1. Create a virtual environment in `.venv`
-2. Install all Python dependencies from `pyproject.toml`
-3. Make the Python worker ready for use
+これにより以下が実行されます：
+1. `.venv`に仮想環境を作成
+2. `pyproject.toml`からすべてのPython依存関係をインストール
+3. Pythonワーカーを使用可能な状態に設定
 
-### Required Python packages
+### 必要なPythonパッケージ
 
-- lancedb: Vector database
-- pyarrow: Data serialization
-- pandas: Data manipulation
-- numpy: Numerical operations
-- pydantic: Data validation
+- lancedb: ベクトルデータベース
+- pyarrow: データシリアライゼーション
+- pandas: データ操作
+- numpy: 数値演算
+- pydantic: データバリデーション
 
-## Architecture
+## アーキテクチャ
 
 ```
-TypeScript Client (index.ts)
-    ↓ JSON-RPC over stdio
-Python Worker (lancedb_worker.py)
+TypeScriptクライアント (index.ts)
+    ↓ JSON-RPC (stdio経由)
+Pythonワーカー (lancedb_worker.py)
     ↓ LanceDB API
-LanceDB Database
+LanceDBデータベース
 ```
 
-## Testing
+## テスト
 
 ```bash
-# Run all tests
+# 全テストの実行
 npm test
 
-# Run specific test suites
-npm test -- src/db-client.test.ts    # CRUD operations
-npm test -- test/python-integration.test.ts  # Python integration
+# 特定のテストスイートの実行
+npm test -- src/db-client.test.ts    # CRUD操作
+npm test -- test/python-integration.test.ts  # Python統合
 ```
 
-### Test Coverage
+### テストカバレッジ
 
-1. **CRUD Operations**: Basic Create, Read, Update, Delete operations for Issues
-2. **Schema Validation**: Ensures data integrity and schema compliance
-3. **Vector Search**: Tests similarity search capabilities (when embeddings are implemented)
-4. **Python Integration**: Validates TypeScript-Python communication via JSON-RPC
-5. **Error Handling**: Tests graceful error recovery
+1. **CRUD操作**: Issueの基本的な作成・読み取り・更新・削除操作
+2. **スキーマ検証**: データ整合性とスキーマ準拠の確認
+3. **ベクトル検索**: 類似度検索機能のテスト（embedding実装後に有効化）
+4. **Python統合**: JSON-RPCによるTypeScript-Python通信の検証
+5. **エラーハンドリング**: 適切なエラー回復のテスト
 
-## Usage
+## 使用方法
 
 ```typescript
 import { DBClient } from '@sebas-chan/db';
@@ -68,10 +68,10 @@ import { DBClient } from '@sebas-chan/db';
 const client = new DBClient();
 await client.connect();
 
-// Create an issue
+// Issueの作成
 const issueId = await client.addIssue({
-  title: 'Test Issue',
-  description: 'Description',
+  title: 'テストIssue',
+  description: '説明',
   status: 'open',
   labels: ['bug'],
   updates: [],
@@ -79,64 +79,64 @@ const issueId = await client.addIssue({
   sourceInputIds: []
 });
 
-// Retrieve an issue
+// Issueの取得
 const issue = await client.getIssue(issueId);
 
-// Search issues
+// Issueの検索
 const results = await client.searchIssues('bug');
 
-// Disconnect when done
+// 終了時の切断
 await client.disconnect();
 ```
 
-## Development
+## 開発
 
-### Python Worker
+### Pythonワーカー
 
-The Python worker (`src/python/lancedb_worker.py`) handles:
-- LanceDB connections
-- Table management
-- Vector operations
-- JSON-RPC communication
+Pythonワーカー (`src/python/lancedb_worker.py`) の機能：
+- LanceDB接続管理
+- テーブル管理
+- ベクトル操作
+- JSON-RPC通信
 
-### TypeScript Client
+### TypeScriptクライアント
 
-The TypeScript client (`src/index.ts`) provides:
-- Process management for Python worker
-- Type-safe API
-- Error handling
-- Automatic reconnection
+TypeScriptクライアント (`src/index.ts`) の機能：
+- Pythonワーカーのプロセス管理
+- 型安全なAPI
+- エラーハンドリング
+- 自動再接続
 
-## Troubleshooting
+## トラブルシューティング
 
-### Python dependencies not found
+### Python依存関係が見つからない場合
 
-If you see `ModuleNotFoundError: No module named 'lancedb'`:
+`ModuleNotFoundError: No module named 'lancedb'` が表示される場合：
 
 ```bash
 cd packages/db
 uv sync
 ```
 
-### Python version issues
+### Pythonバージョンの問題
 
-The package requires Python 3.11+. Check your Python version:
+このパッケージはPython 3.11以上が必要です。Pythonバージョンを確認：
 
 ```bash
 python3 --version
 ```
 
-If using pyenv, ensure Python is available:
+pyenvを使用している場合、Pythonが利用可能か確認：
 
 ```bash
 pyenv versions
-pyenv global 3.11.13  # or your preferred version
+pyenv global 3.11.13  # または好みのバージョン
 ```
 
-## Future Improvements
+## 今後の改善予定
 
-- [ ] Real embedding model integration (currently using dummy vectors)
-- [ ] Vector similarity search implementation
-- [ ] Data persistence optimization
-- [ ] Connection pooling for Python worker
-- [ ] Better error recovery mechanisms
+- [ ] 実際のembeddingモデルの統合（現在はダミーベクトル使用）
+- [ ] ベクトル類似度検索の実装
+- [ ] データ永続化の最適化
+- [ ] Pythonワーカーのコネクションプーリング
+- [ ] より良いエラー回復メカニズム

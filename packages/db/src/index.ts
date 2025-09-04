@@ -3,10 +3,11 @@ import { EventEmitter } from 'events';
 import { Issue } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
+import * as fs from 'fs';
 
 interface PendingRequest {
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
 }
 
 export class DBClient extends EventEmitter {
@@ -21,10 +22,10 @@ export class DBClient extends EventEmitter {
     }
 
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
-    
+
     // uvの仮想環境を使用
     const venvPython = path.join(__dirname, '../../.venv/bin/python');
-    const pythonCmd = require('fs').existsSync(venvPython) ? venvPython : 'python3';
+    const pythonCmd = fs.existsSync(venvPython) ? venvPython : 'python3';
 
     this.worker = spawn(pythonCmd, [pythonScript], {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -81,7 +82,7 @@ export class DBClient extends EventEmitter {
     }
   }
 
-  private async sendRequest(method: string, params?: any): Promise<any> {
+  private async sendRequest(method: string, params?: unknown): Promise<unknown> {
     if (!this.worker || !this.isReady) {
       throw new Error('Not connected to database');
     }
@@ -143,7 +144,7 @@ export class DBClient extends EventEmitter {
 
   async searchIssues(query: string): Promise<Issue[]> {
     const results = await this.sendRequest('searchIssues', { query });
-    return results.map((r: any) => ({
+    return results.map((r: Record<string, unknown>) => ({
       ...r,
       updates: JSON.parse(r.updates || '[]'),
       relations: JSON.parse(r.relations || '[]'),
