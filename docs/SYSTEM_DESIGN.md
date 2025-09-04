@@ -5,10 +5,13 @@
 ### コアプロセス構成
 
 ```
-sebas-chan Core Process (Node.js)
+sebas-chan Server Process (Node.js)
+├── Main Server（エントリーポイント）
+│   ├── REST API（外部インターフェース）
+│   ├── Config（設定管理）
+│   └── CLI（コマンドライン）
 ├── Core Agent（思考ループ）
 ├── Core API（内部API層）
-├── REST API Server（外部インターフェース）
 └── DB Bridge（Python子プロセス）→ LanceDB
 ```
 
@@ -179,8 +182,8 @@ sebas-chan Core Process (Node.js)
 
 ```
 packages/
+├── server/         # メインサーバープロセス
 ├── core/           # Core Agent + Core API
-├── api-rest/       # REST API Server
 ├── db/             # DB Bridge（TypeScript + Python）
 ├── mcp-server/     # MCP Server（独立コマンド）
 ├── reporter-sdk/   # Reporter用クライアントSDK

@@ -59,14 +59,15 @@ npm run dev:web     # Web UI
 ```
 sebas-chan/
 ├── packages/               # モノレポ配下のパッケージ群
+│   ├── server/            # メインサーバープロセス
 │   ├── core/              # Core Agentと基本ロジック
 │   ├── db/                # データベースブリッジ層（LanceDB）
 │   ├── mcp-server/        # MCPサーバー実装
-│   └── web/               # SvelteKit Web UI
+│   └── web-ui/            # SvelteKit Web UI
 ├── docs/                  # ドキュメント
 │   ├── ideas/            # 設計思想と仕様
 │   ├── ARCHITECTURE.md   # システムアーキテクチャ
-│   └── IMPLEMENTATION_STATUS.md  # 実装状況
+│   └── ROADMAP.md        # 実装ロードマップ
 ├── prompts/              # AI作業指針
 └── AGENTS.md            # エージェント向けインデックス
 ```

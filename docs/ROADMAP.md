@@ -13,7 +13,7 @@
 - [ ] shared-types パッケージ作成
 - [ ] DB Bridge実装（TypeScript + Python）
 - [ ] Core API基本実装
-- [ ] REST API基本エンドポイント
+- [ ] Server パッケージ作成（REST API、設定管理）
 - [ ] インメモリイベントキュー
 
 ## 実装フェーズ概要
@@ -22,8 +22,8 @@
 **目標**: コアシステムの基本動作確認
 
 **実装内容**:
-- Core API + Core Agent（単一プロセス）
-- REST API Server（Express）
+- Server パッケージ（メインプロセス、REST API、設定管理）
+- Core API + Core Agent
 - DB Bridge（Python子プロセス）
 - インメモリイベントキュー
 - 基本的なワークフロー（A-0: PROCESS_USER_REQUEST）
@@ -130,8 +130,12 @@
 ### パッケージ構成
 ```
 packages/
+├── server/         # メインサーバープロセス
+│   ├── api/       # REST APIエンドポイント
+│   ├── config/    # 設定管理
+│   ├── cli/       # CLIコマンド
+│   └── main.ts    # エントリーポイント
 ├── core/           # Core Agent + Core API
-├── api-rest/       # REST API Server
 ├── db/             # DB Bridge (TypeScript + Python)
 ├── mcp-server/     # MCP Server (独立コマンド)
 ├── reporter-sdk/   # Reporter用クライアントSDK

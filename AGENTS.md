@@ -19,10 +19,11 @@ npm run dev
 ## プロジェクト構成
 
 - **packages/** - モノレポ配下のパッケージ群
+  - **server/** - メインサーバープロセス（REST API、設定管理）
   - **core/** - Core Agentと基本ロジック
   - **db/** - データベースブリッジ層
   - **mcp-server/** - MCPサーバー実装
-  - **web/** - SvelteKit Web UI
+  - **web-ui/** - SvelteKit Web UI
 
 ## ドキュメント
 
