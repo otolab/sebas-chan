@@ -67,6 +67,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       
       if (event.retryCount !== undefined && event.maxRetries !== undefined) {
         if (event.retryCount < event.maxRetries) {
+          // 直接キューに追加（enqueueEventだと新しいIDとタイムスタンプが付与される）
           this.eventQueue.enqueue({
             ...event,
             retryCount: event.retryCount + 1
@@ -209,6 +210,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     const fullEvent: Event = {
       id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date(),
+      retryCount: event.retryCount !== undefined ? event.retryCount : undefined,
+      maxRetries: event.maxRetries !== undefined ? event.maxRetries : undefined,
       ...event
     };
     this.eventQueue.enqueue(fullEvent);
