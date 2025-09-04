@@ -94,19 +94,21 @@ Knowledge（永続的知識）
 
 ## 📊 開発状況
 
-### 現在: Phase 1 - 基盤構築 🏗️
+### 現在: Phase 1 - 最小構成（準備中）
 
 - ✅ プロジェクト構成（npm workspaces モノレポ）
-- 🔄 データモデル定義（TypeScript）
-- 🔄 DBブリッジ層（LanceDB + Python JSON-RPC）
+- ✅ システム設計確定
+- 🔄 shared-types作成中
+- 🔄 DB Bridge実装準備
 
-### 今後の予定
+### ロードマップ
 
-- **Phase 2**: Core Agent実装、思考ワークフロー
-- **Phase 3**: MCPサーバー、Reporters、Web UI
-- **Phase 4**: 自己調整メカニズム、高度な機能
+- **Phase 1**: 最小構成 - Core API、REST API、DB Bridge
+- **Phase 2**: 基本機能 - Reporter SDK、Web UI、主要ワークフロー
+- **Phase 3**: MCP統合 - MCPサーバー、拡張ワークフロー
+- **Phase 4**: 実用化 - 複数Reporter、自己調整機能
 
-詳細は[実装状況](docs/IMPLEMENTATION_STATUS.md)を参照してください。
+詳細は[ロードマップ](docs/ROADMAP.md)を参照してください。
 
 ## 📚 ドキュメント
 

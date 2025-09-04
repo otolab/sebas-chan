@@ -30,6 +30,7 @@ npm run dev
 - [設計仕様書](docs/ideas/1.設計仕様書.md) - システム全体の設計思想
 - [実装に向けた設計方針](docs/ideas/3.実装に向けた設計方針.md) - 実装方針と詳細設計
 - [アーキテクチャ詳細](docs/ARCHITECTURE.md) - エージェント構成と通信仕様
+- [インターフェース仕様](docs/INTERFACES.md) - モジュール間の詳細な接続仕様
 
 ### 開発ガイド
 - [README](README.md) - プロジェクト概要と開発環境
@@ -47,6 +48,8 @@ npm run dev
 
 ## 現在の状態
 
-Phase 1: 基盤構築（進行中）
+Phase 1: 最小構成（準備中）
 
-詳細は[実装状況](docs/IMPLEMENTATION_STATUS.md)を参照してください。
+## 実装計画
+
+詳細は[ロードマップ](docs/ROADMAP.md)を参照してください。
