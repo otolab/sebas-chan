@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { Issue } from '@sebas-chang/shared-types';
+import { Issue } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 

@@ -1,5 +1,5 @@
 {
-  "name": "sebas-chang",
+  "name": "sebas-chan",
   "version": "0.0.1",
   "description": "AIエージェントシステム - 安全なフォーゲッタ",
   "private": true,
@@ -13,10 +13,10 @@
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
-    "core:dev": "npm run dev -w @sebas-chang/core",
-    "api:dev": "npm run dev -w @sebas-chang/api-rest",
-    "mcp:dev": "npm run dev -w @sebas-chang/mcp-server",
-    "ui:dev": "npm run dev -w @sebas-chang/web-ui"
+    "core:dev": "npm run dev -w @sebas-chan/core",
+    "api:dev": "npm run dev -w @sebas-chan/api-rest",
+    "mcp:dev": "npm run dev -w @sebas-chan/mcp-server",
+    "ui:dev": "npm run dev -w @sebas-chan/web-ui"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

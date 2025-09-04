@@ -1,4 +1,4 @@
-// import { Issue, Flow, Knowledge, Input } from '@sebas-chang/shared-types';
+// import { Issue, Flow, Knowledge, Input } from '@sebas-chan/shared-types';
 
 export class CoreAgent {
   private eventQueue: AgentEvent[] = [];

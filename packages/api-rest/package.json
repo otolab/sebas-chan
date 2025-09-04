@@ -1,5 +1,5 @@
 {
-  "name": "@sebas-chang/api-rest",
+  "name": "@sebas-chan/api-rest",
   "version": "0.0.1",
   "description": "REST API サーバー",
   "main": "dist/index.js",
@@ -14,9 +14,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@sebas-chang/shared-types": "*",
-    "@sebas-chang/core": "*",
-    "@sebas-chang/db": "*",
+    "@sebas-chan/shared-types": "*",
+    "@sebas-chan/core": "*",
+    "@sebas-chan/db": "*",
     "express": "^4.18.2",
     "cors": "^2.8.5"
   },

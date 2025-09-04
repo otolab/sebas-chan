@@ -33,7 +33,7 @@ import { z } from 'zod';
 ```typescript
 const server = new McpServer(
   {
-    name: 'sebas-chang',
+    name: 'sebas-chan',
     version: '1.0.0',
   },
   {
@@ -159,11 +159,11 @@ z.number().min(1).max(100).describe('1-100の数値')
 
 ```json
 {
-  "name": "@sebas-chang/mcp-server",
+  "name": "@sebas-chan/mcp-server",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "sebas-chang-mcp": "./dist/index.js"
+    "sebas-chan-mcp": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",

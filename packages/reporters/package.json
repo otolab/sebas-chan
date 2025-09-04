@@ -1,5 +1,5 @@
 {
-  "name": "@sebas-chang/reporters",
+  "name": "@sebas-chan/reporters",
   "version": "0.0.1",
   "description": "情報収集モジュール群",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@sebas-chang/shared-types": "*"
+    "@sebas-chan/shared-types": "*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

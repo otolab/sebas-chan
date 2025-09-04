@@ -22,9 +22,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@sebas-chang/shared-types': path.resolve(__dirname, 'packages/shared-types/src'),
-      '@sebas-chang/core': path.resolve(__dirname, 'packages/core/src'),
-      '@sebas-chang/db': path.resolve(__dirname, 'packages/db/src'),
+      '@sebas-chan/shared-types': path.resolve(__dirname, 'packages/shared-types/src'),
+      '@sebas-chan/core': path.resolve(__dirname, 'packages/core/src'),
+      '@sebas-chan/db': path.resolve(__dirname, 'packages/db/src'),
     },
   },
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@sebas-chang/mcp-server",
+  "name": "@sebas-chan/mcp-server",
   "version": "0.0.1",
   "description": "MCP Server for external AI agents",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@sebas-chang/shared-types": "*",
+    "@sebas-chan/shared-types": "*",
     "@modelcontextprotocol/sdk": "^0.5.0"
   },
   "devDependencies": {

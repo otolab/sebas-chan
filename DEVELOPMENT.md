@@ -1,4 +1,4 @@
-# sebas-chang 開発ドキュメント
+# sebas-chan 開発ドキュメント
 
 ## コンセプト
 

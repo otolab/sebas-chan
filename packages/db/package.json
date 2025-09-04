@@ -1,5 +1,5 @@
 {
-  "name": "@sebas-chang/db",
+  "name": "@sebas-chan/db",
   "version": "0.0.1",
   "description": "LanceDB データベース層",
   "main": "dist/index.js",
@@ -15,7 +15,7 @@
     "python:install": "pip install -r src/python/requirements.txt"
   },
   "dependencies": {
-    "@sebas-chang/shared-types": "*",
+    "@sebas-chan/shared-types": "*",
     "nanoid": "^5.0.4"
   },
   "devDependencies": {

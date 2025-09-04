@@ -1,7 +1,7 @@
 {
-  "name": "@sebas-chang/web-ui",
+  "name": "@sebas-chan/web-ui",
   "version": "0.0.1",
-  "description": "Web UI for sebas-chang",
+  "description": "Web UI for sebas-chan",
   "type": "module",
   "scripts": {
     "dev": "echo 'Web UI not configured yet'",
@@ -17,6 +17,6 @@
     "vite": "^5.0.3"
   },
   "dependencies": {
-    "@sebas-chang/shared-types": "*"
+    "@sebas-chan/shared-types": "*"
   }
 }

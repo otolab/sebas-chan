@@ -1,5 +1,5 @@
 {
-  "name": "@sebas-chang/core",
+  "name": "@sebas-chan/core",
   "version": "0.0.1",
   "description": "思考エンジンコア",
   "main": "dist/index.js",
@@ -16,7 +16,7 @@
   "dependencies": {
     "@plaidev/code-bugs-core": "^1.1.1",
     "@plaidev/code-bugs-driver": "^1.1.4",
-    "@sebas-chang/shared-types": "*"
+    "@sebas-chan/shared-types": "*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

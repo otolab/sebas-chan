@@ -1,5 +1,5 @@
 {
-  "name": "@sebas-chang/shared-types",
+  "name": "@sebas-chan/shared-types",
   "version": "0.0.1",
   "description": "共有型定義",
   "main": "dist/index.js",
