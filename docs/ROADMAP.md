@@ -2,19 +2,23 @@
 
 ## 現在のステータス
 
-**フェーズ**: Phase 1（最小構成）準備中
+**フェーズ**: Phase 1（最小構成）実装完了
 
 ### 完了項目
 - [x] プロジェクト構成（npm workspaces モノレポ）
 - [x] 設計ドキュメント作成
 - [x] システムアーキテクチャ確定
+- [x] shared-types パッケージ作成
+- [x] Core Agent基本実装（エラーハンドリング含む）
+- [x] Server パッケージ作成（REST API、CLI、設定管理）
+- [x] インメモリイベントキュー（優先度付き）
+- [x] 包括的なユニットテスト（118テスト全て成功）
 
-### 進行中のタスク（Phase 1）
-- [ ] shared-types パッケージ作成
+### 次のタスク（Phase 2準備）
 - [ ] DB Bridge実装（TypeScript + Python）
-- [ ] Core API基本実装
-- [ ] Server パッケージ作成（REST API、設定管理）
-- [ ] インメモリイベントキュー
+- [ ] Reporter SDK（TypeScript）の作成
+- [ ] Manual Input Reporter（最初のReporter）
+- [ ] 簡易Web UI（SvelteKit、読み取り専用）
 
 ## 実装フェーズ概要
 
@@ -197,9 +201,11 @@ packages/
 ## 成功指標
 
 ### Phase 1完了条件
-- [ ] REST APIが起動し、`/request`エンドポイントが動作
-- [ ] DB BridgeがLanceDBと通信可能
-- [ ] State文書の読み書きが可能
+- [x] REST APIが起動し、`/request`エンドポイントが動作
+- [x] Core Agentがイベント駆動で動作
+- [x] エラーハンドリングとリトライ機構が実装
+- [ ] DB BridgeがLanceDBと通信可能（Phase 2へ延期）
+- [ ] State文書の永続化（Phase 2へ延期、現在はインメモリ実装済み）
 
 ### Phase 2完了条件
 - [ ] Web UIでシステム状態を確認可能
@@ -216,20 +222,22 @@ packages/
 - [ ] システムが自己調整パラメータを更新
 - [ ] 1週間以上の連続稼働テストをクリア
 
-## 次のアクション
+## 次のアクション（Phase 2）
 
-1. **プロジェクト初期設定**
-   - npm workspacesの設定
-   - 基本的なpackage.json作成
-   - TypeScript設定
-
-2. **shared-types作成**
-   - データモデルの型定義
-   - 共通インターフェース定義
-
-3. **DB Bridge実装開始**
+1. **DB Bridge実装開始**
    - Python環境セットアップ
-   - JSON-RPC基本実装
+   - LanceDB統合
+   - JSON-RPC通信レイヤー
    - TypeScriptラッパー作成
+
+2. **Reporter SDK作成**
+   - REST APIクライアント
+   - 認証機構
+   - エラーハンドリング
+
+3. **Manual Input Reporter**
+   - 最初のReporter実装
+   - CLI/Web両対応
+   - Reporter SDKを利用
 
 この計画に従って、段階的かつ着実にsebas-chanシステムを構築していきます。
