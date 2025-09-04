@@ -21,8 +21,12 @@ export class DBClient extends EventEmitter {
     }
 
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
+    
+    // uvの仮想環境を使用
+    const venvPython = path.join(__dirname, '../../.venv/bin/python');
+    const pythonCmd = require('fs').existsSync(venvPython) ? venvPython : 'python3';
 
-    this.worker = spawn('python3', [pythonScript], {
+    this.worker = spawn(pythonCmd, [pythonScript], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
 
