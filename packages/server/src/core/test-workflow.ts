@@ -17,7 +17,7 @@ export class TestWorkflow {
    * 確定的なレスポンスを返す
    */
   async processUserRequest(event: Event): Promise<void> {
-    const { request } = event.payload;
+    const { request } = event.payload as { request: string };
 
     // テスト用の確定的な処理
     if (request.includes('test')) {
@@ -33,7 +33,7 @@ export class TestWorkflow {
         sourceInputIds: [],
       };
 
-      await this.stateManager.update('issues', (issues = []) => {
+      await this.stateManager.update<Issue[]>('issues', (issues = []) => {
         return [...issues, issue];
       });
 
@@ -47,7 +47,7 @@ export class TestWorkflow {
    * 確定的にIssueを生成
    */
   async ingestInput(event: Event): Promise<void> {
-    const { input } = event.payload;
+    const { input } = event.payload as { input: any };
 
     // キーワードベースの確定的な分類
     const labels: string[] = [];
@@ -66,7 +66,7 @@ export class TestWorkflow {
       sourceInputIds: [input.id],
     };
 
-    await this.stateManager.update('issues', (issues = []) => {
+    await this.stateManager.update<Issue[]>('issues', (issues = []) => {
       return [...issues, issue];
     });
 
@@ -78,9 +78,9 @@ export class TestWorkflow {
    * 確定的なFlow更新
    */
   async analyzeIssueImpact(event: Event): Promise<void> {
-    const { issueId } = event.payload;
+    const { issueId } = event.payload as { issueId: string };
 
-    const issues = (await this.stateManager.get('issues')) || [];
+    const issues = (await this.stateManager.get<Issue[]>('issues')) || [];
     const issue = issues.find((i: Issue) => i.id === issueId);
 
     if (!issue) {
@@ -129,9 +129,9 @@ export class TestWorkflow {
    * 確定的なKnowledge生成
    */
   async extractKnowledge(event: Event): Promise<void> {
-    const { issueId } = event.payload;
+    const { issueId } = event.payload as { issueId: string };
 
-    const issues = (await this.stateManager.get('issues')) || [];
+    const issues = (await this.stateManager.get<Issue[]>('issues')) || [];
     const issue = issues.find((i: Issue) => i.id === issueId);
 
     if (!issue) {
@@ -154,7 +154,7 @@ export class TestWorkflow {
     }
 
     // 解決済みからは「解決策」タイプのKnowledge
-    if (issue.status === 'resolved') {
+    if (issue.status === 'closed') {
       knowledgeItems.push({
         id: `knowledge-solution-${issueId}`,
         type: 'factoid' as const,
@@ -175,7 +175,7 @@ export class TestWorkflow {
       });
     }
 
-    await this.stateManager.update('knowledge', (knowledge = []) => {
+    await this.stateManager.update<Knowledge[]>('knowledge', (knowledge = []) => {
       return [...knowledge, ...knowledgeItems];
     });
 
@@ -187,7 +187,7 @@ export class TestWorkflow {
    * 確定的な関連性判定
    */
   async clusterIssues(_event: Event): Promise<void> {
-    const issues = (await this.stateManager.get('issues')) || [];
+    const issues = (await this.stateManager.get<Issue[]>('issues')) || [];
 
     // 同じラベルを持つIssueをクラスタリング
     const clusters = new Map<string, Issue[]>();
@@ -239,7 +239,7 @@ export class TestWorkflow {
     console.log('[TestWorkflow] Processing event:', event.type);
 
     switch (event.type) {
-      case 'USER_REQUEST':
+      case 'PROCESS_USER_REQUEST':
         await this.processUserRequest(event);
         break;
 
