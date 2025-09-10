@@ -6,7 +6,7 @@
  */
 
 import { Event } from './engine';
-import { StateManager } from './state';
+import { StateManager } from './state-manager';
 import { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
 
 export class TestWorkflow {
@@ -112,7 +112,7 @@ export class TestWorkflow {
       issueIds: [issueId],
     };
 
-    await this.stateManager.update('flows', (flows = []) => {
+    await this.stateManager.update('flows', (flows: Flow[] = []) => {
       const existing = flows.findIndex((f: Flow) => f.id === flow.id);
       if (existing >= 0) {
         flows[existing] = flow;
@@ -146,7 +146,7 @@ export class TestWorkflow {
     if (issue.labels.includes('bug')) {
       knowledgeItems.push({
         id: `knowledge-problem-${issueId}`,
-        type: 'problem',
+        type: 'factoid' as const,
         content: `Problem identified: ${issue.description}`,
         reputation: { upvotes: 0, downvotes: 0 },
         sources: [{ type: 'issue', issueId }],
@@ -157,7 +157,7 @@ export class TestWorkflow {
     if (issue.status === 'resolved') {
       knowledgeItems.push({
         id: `knowledge-solution-${issueId}`,
-        type: 'solution',
+        type: 'factoid' as const,
         content: `Solution for: ${issue.title}`,
         reputation: { upvotes: 1, downvotes: 0 },
         sources: [{ type: 'issue', issueId }],
@@ -212,14 +212,14 @@ export class TestWorkflow {
             // 相互に関連付け
             if (!issue1.relations.some((r) => r.targetIssueId === issue2.id)) {
               issue1.relations.push({
-                type: 'related',
+                type: 'relates_to' as const,
                 targetIssueId: issue2.id,
               });
             }
 
             if (!issue2.relations.some((r) => r.targetIssueId === issue1.id)) {
               issue2.relations.push({
-                type: 'related',
+                type: 'relates_to' as const,
                 targetIssueId: issue1.id,
               });
             }

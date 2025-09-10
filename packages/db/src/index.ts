@@ -137,23 +137,23 @@ export class DBClient extends EventEmitter {
     // JSON文字列をパース
     return {
       ...result,
-      updates: JSON.parse(result.updates || '[]'),
-      relations: JSON.parse(result.relations || '[]'),
-    };
+      updates: JSON.parse((result as any).updates || '[]'),
+      relations: JSON.parse((result as any).relations || '[]'),
+    } as Issue;
   }
 
   async searchIssues(query: string): Promise<Issue[]> {
-    const results = await this.sendRequest('searchIssues', { query });
-    return results.map((r: Record<string, unknown>) => ({
+    const results = await this.sendRequest('searchIssues', { query }) as any[];
+    return results.map((r: any) => ({
       ...r,
       updates: JSON.parse(r.updates || '[]'),
       relations: JSON.parse(r.relations || '[]'),
-    }));
+    })) as Issue[];
   }
 
   // State文書関連のメソッド
   async getStateDocument(): Promise<string> {
-    return await this.sendRequest('getState');
+    return await this.sendRequest('getState') as string;
   }
 
   async updateStateDocument(content: string): Promise<void> {

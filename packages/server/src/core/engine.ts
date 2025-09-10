@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import { Event, CoreAPI, Issue, Flow, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+export { Event };
 import { EventQueue } from './event-queue';
 import { StateManager } from './state-manager';
 import { logger } from '../utils/logger';

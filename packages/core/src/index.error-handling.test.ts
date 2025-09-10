@@ -3,8 +3,8 @@ import { CoreAgent, AgentEvent } from './index';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
-  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
-  let consoleWarnSpy: ReturnType<typeof vi.spyOn>;
+  let consoleLogSpy: any;
+  let consoleWarnSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -201,7 +201,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if (event.payload.shouldError) {
+        if ((event.payload as any).shouldError) {
           errorCount++;
           throw new Error(`Error ${errorCount}`);
         }
@@ -310,7 +310,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         timestamp: new Date(),
       };
 
-      agent.queueEvent(invalidEvent);
+      agent.queueEvent(invalidEvent as AgentEvent);
 
       const startPromise = agent.start();
       await new Promise((resolve) => setTimeout(resolve, 100));
