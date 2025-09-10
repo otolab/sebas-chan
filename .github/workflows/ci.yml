@@ -28,13 +28,21 @@ jobs:
 
       - name: Install uv
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+          sudo apt-get update
+          sudo apt-get install -y pipx
+          pipx install uv
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Clean install dependencies
         run: |
           rm -rf node_modules package-lock.json
           npm install
+      
+      - name: Setup Python dependencies for DB package
+        run: |
+          cd packages/db
+          uv venv
+          uv sync
 
       - name: Build packages
         run: npm run build
