@@ -14,8 +14,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@plaidev/code-bugs-core": "^1.1.1",
-    "@plaidev/code-bugs-driver": "^1.1.4",
+    "@moduler-prompt/core": "^0.1.0",
+    "@moduler-prompt/driver": "^0.1.0",
     "@sebas-chan/shared-types": "*"
   },
   "devDependencies": {
