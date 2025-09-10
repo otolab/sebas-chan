@@ -38,8 +38,8 @@ jobs:
         run: |
           cd packages/db
           rm -rf .venv
-          uv venv
-          uv sync
+          uv --project . venv
+          uv --project . sync
 
       - name: Build packages
         run: npm run build
@@ -49,6 +49,8 @@ jobs:
 
       - name: Run tests
         run: npm run test
+        env:
+          PYTHON_BIN: ${{ github.workspace }}/packages/db/.venv/bin/python
 
       - name: Check TypeScript
         run: npx tsc --noEmit --project tsconfig.json

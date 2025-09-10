@@ -23,9 +23,27 @@ export class DBClient extends EventEmitter {
 
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
 
-    // uvの仮想環境を使用
-    const venvPython = path.join(__dirname, '../../.venv/bin/python');
-    const pythonCmd = fs.existsSync(venvPython) ? venvPython : 'python3';
+    // プロジェクトルートからの仮想環境パスを試す
+    const projectRoot = path.join(__dirname, '../..');
+    const venvPaths = [
+      path.join(projectRoot, '.venv/bin/python'),  // パッケージルートの.venv
+      path.join(projectRoot, '../../../.venv/bin/python'),  // モノレポルートの.venv（もしあれば）
+      path.join(__dirname, '../../.venv/bin/python'),  // 従来のパス（互換性のため）
+    ];
+    
+    // 最初に見つかった仮想環境のPythonを使用
+    let pythonCmd = 'python3';
+    for (const venvPath of venvPaths) {
+      if (fs.existsSync(venvPath)) {
+        pythonCmd = venvPath;
+        console.log(`Using Python from venv: ${venvPath}`);
+        break;
+      }
+    }
+    
+    if (pythonCmd === 'python3') {
+      console.log('No venv found, using system Python');
+    }
 
     this.worker = spawn(pythonCmd, [pythonScript], {
       stdio: ['pipe', 'pipe', 'pipe'],
