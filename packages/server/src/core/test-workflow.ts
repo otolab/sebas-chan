@@ -11,7 +11,7 @@ import { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
 
 /**
  * TestWorkflow - テスト用の確定的なワークフロー
- * 
+ *
  * このクラスはテスト目的のためにデータをローカルに保持します。
  * 本番環境ではDBパッケージを使用してデータを永続化します。
  * StateManagerは本来の仕様通り、State文書（自然言語テキスト）のみを管理します。
@@ -54,7 +54,7 @@ export class TestWorkflow {
 
       // テストデータに保存
       this.testData.issues.push(issue);
-      
+
       // State文書にも記録
       const currentState = this.stateManager.getState();
       const updatedState = `${currentState}\n- Created test issue: ${issue.id}`;
@@ -70,7 +70,7 @@ export class TestWorkflow {
    * 確定的にIssueを生成
    */
   async ingestInput(event: Event): Promise<void> {
-    const { input } = event.payload as { input: any };
+    const { input } = event.payload as { input: { id: string; content: string; source?: string } };
 
     // キーワードベースの確定的な分類
     const labels: string[] = [];
@@ -80,7 +80,7 @@ export class TestWorkflow {
 
     const issue: Issue = {
       id: `issue-${input.id}`,
-      title: `Issue from ${input.source}`,
+      title: `Issue from ${input.source || 'unknown'}`,
       description: input.content,
       status: 'open',
       labels,
@@ -91,7 +91,7 @@ export class TestWorkflow {
 
     // テストデータに保存
     this.testData.issues.push(issue);
-    
+
     // State文書にも記録
     const currentState = this.stateManager.getState();
     const updatedState = `${currentState}\n- Ingested input as issue: ${issue.id}`;
@@ -146,7 +146,7 @@ export class TestWorkflow {
     } else {
       this.testData.flows.push(flow);
     }
-    
+
     // State文書にも記録
     const currentState = this.stateManager.getState();
     const updatedState = `${currentState}\n- Created flow: ${flow.id} with priority ${flow.priorityScore}`;
@@ -208,7 +208,7 @@ export class TestWorkflow {
 
     // テストデータに保存
     this.testData.knowledge.push(...knowledgeItems);
-    
+
     // State文書にも記録
     const currentState = this.stateManager.getState();
     const updatedState = `${currentState}\n- Extracted ${knowledgeItems.length} knowledge items from issue ${issueId}`;

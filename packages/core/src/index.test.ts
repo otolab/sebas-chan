@@ -3,7 +3,9 @@ import { CoreAgent, AgentEvent } from './index';
 
 describe('CoreAgent', () => {
   let agent: CoreAgent;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleLogSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleWarnSpy: any;
 
   beforeEach(() => {

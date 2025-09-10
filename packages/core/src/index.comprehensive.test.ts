@@ -3,7 +3,9 @@ import { CoreAgent, AgentEvent } from './index';
 
 describe('CoreAgent - Comprehensive Tests', () => {
   let agent: CoreAgent;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleLogSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleWarnSpy: any;
 
   beforeEach(() => {
@@ -71,7 +73,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        processedOrder.push((event.payload as any).id);
+        processedOrder.push((event.payload as { id: string }).id);
         return originalProcessEvent.call(agent, event);
       });
 
@@ -103,7 +105,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedCount++;
-        if ((event.payload as any).shouldFail) {
+        if ((event.payload as { shouldFail?: boolean }).shouldFail) {
           errorCount++;
           throw new Error('Intentional test error');
         }
@@ -444,7 +446,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
             type: 'CIRCULAR_EVENT',
             priority: 'normal',
             payload: {
-              iteration: ((event.payload as any).iteration || 0) + 1,
+              iteration: ((event.payload as { iteration?: number }).iteration || 0) + 1,
             },
             timestamp: new Date(),
           });

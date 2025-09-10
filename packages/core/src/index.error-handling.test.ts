@@ -3,7 +3,9 @@ import { CoreAgent, AgentEvent } from './index';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleLogSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleWarnSpy: any;
 
   beforeEach(() => {
@@ -201,7 +203,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if ((event.payload as any).shouldError) {
+        if ((event.payload as { shouldError?: boolean }).shouldError) {
           errorCount++;
           throw new Error(`Error ${errorCount}`);
         }

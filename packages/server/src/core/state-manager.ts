@@ -3,12 +3,12 @@ import { logger } from '../utils/logger';
 
 /**
  * StateManager - State文書の管理
- * 
+ *
  * State文書はシステム全体で共有される単一の自然言語ワーキングメモリです。
  * - 共有された意識
  * - 思考の出発点
  * - 流動的な情報の置き場
- * 
+ *
  * 注意: このクラスはState文書（自然言語テキスト）のみを管理します。
  * Issue、Flow、Knowledgeなどの構造化データはDBパッケージで管理されます。
  */
