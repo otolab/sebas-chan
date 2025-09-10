@@ -21,6 +21,16 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
       - name: Clean install dependencies
         run: |
           rm -rf node_modules package-lock.json
