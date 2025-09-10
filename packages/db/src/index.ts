@@ -24,11 +24,11 @@ export class DBClient extends EventEmitter {
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
 
     // プロジェクトルートからの仮想環境パスを試す
-    const projectRoot = path.join(__dirname, '../..');
+    // __dirname はビルド後は dist/ になる
+    const packageRoot = path.join(__dirname, '..');  // packages/db
     const venvPaths = [
-      path.join(projectRoot, '.venv/bin/python'), // パッケージルートの.venv
-      path.join(projectRoot, '../../../.venv/bin/python'), // モノレポルートの.venv（もしあれば）
-      path.join(__dirname, '../../.venv/bin/python'), // 従来のパス（互換性のため）
+      path.join(packageRoot, '.venv/bin/python'), // パッケージルートの.venv
+      path.join(__dirname, '../.venv/bin/python'), // 短縮版（同じ）
     ];
 
     // 最初に見つかった仮想環境のPythonを使用
