@@ -9,7 +9,26 @@ import { Event } from './engine';
 import { StateManager } from './state-manager';
 import { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
 
+/**
+ * TestWorkflow - テスト用の確定的なワークフロー
+ * 
+ * このクラスはテスト目的のためにデータをローカルに保持します。
+ * 本番環境ではDBパッケージを使用してデータを永続化します。
+ * StateManagerは本来の仕様通り、State文書（自然言語テキスト）のみを管理します。
+ */
 export class TestWorkflow {
+  // テスト用のローカルデータストレージ
+  // 本番ではDBパッケージがこの役割を担う
+  private testData: {
+    issues: Issue[];
+    flows: Flow[];
+    knowledge: Knowledge[];
+  } = {
+    issues: [],
+    flows: [],
+    knowledge: [],
+  };
+
   constructor(private stateManager: StateManager) {}
 
   /**
@@ -33,9 +52,13 @@ export class TestWorkflow {
         sourceInputIds: [],
       };
 
-      await this.stateManager.update<Issue[]>('issues', (issues = []) => {
-        return [...issues, issue];
-      });
+      // テストデータに保存
+      this.testData.issues.push(issue);
+      
+      // State文書にも記録
+      const currentState = this.stateManager.getState();
+      const updatedState = `${currentState}\n- Created test issue: ${issue.id}`;
+      this.stateManager.updateState(updatedState);
 
       // テスト用のログ
       console.log('[TestWorkflow] Created test issue:', issue.id);
@@ -66,9 +89,13 @@ export class TestWorkflow {
       sourceInputIds: [input.id],
     };
 
-    await this.stateManager.update<Issue[]>('issues', (issues = []) => {
-      return [...issues, issue];
-    });
+    // テストデータに保存
+    this.testData.issues.push(issue);
+    
+    // State文書にも記録
+    const currentState = this.stateManager.getState();
+    const updatedState = `${currentState}\n- Ingested input as issue: ${issue.id}`;
+    this.stateManager.updateState(updatedState);
 
     console.log('[TestWorkflow] Ingested input as issue:', issue.id);
   }
@@ -80,7 +107,7 @@ export class TestWorkflow {
   async analyzeIssueImpact(event: Event): Promise<void> {
     const { issueId } = event.payload as { issueId: string };
 
-    const issues = (await this.stateManager.get<Issue[]>('issues')) || [];
+    const issues = this.testData.issues;
     const issue = issues.find((i: Issue) => i.id === issueId);
 
     if (!issue) {
@@ -112,14 +139,18 @@ export class TestWorkflow {
       issueIds: [issueId],
     };
 
-    await this.stateManager.update('flows', (flows: Flow[] = []) => {
-      const existing = flows.findIndex((f: Flow) => f.id === flow.id);
-      if (existing >= 0) {
-        flows[existing] = flow;
-        return flows;
-      }
-      return [...flows, flow];
-    });
+    // テストデータに保存
+    const existing = this.testData.flows.findIndex((f: Flow) => f.id === flow.id);
+    if (existing >= 0) {
+      this.testData.flows[existing] = flow;
+    } else {
+      this.testData.flows.push(flow);
+    }
+    
+    // State文書にも記録
+    const currentState = this.stateManager.getState();
+    const updatedState = `${currentState}\n- Created flow: ${flow.id} with priority ${flow.priorityScore}`;
+    this.stateManager.updateState(updatedState);
 
     console.log('[TestWorkflow] Analyzed issue impact, created flow:', flow.id);
   }
@@ -131,7 +162,7 @@ export class TestWorkflow {
   async extractKnowledge(event: Event): Promise<void> {
     const { issueId } = event.payload as { issueId: string };
 
-    const issues = (await this.stateManager.get<Issue[]>('issues')) || [];
+    const issues = this.testData.issues;
     const issue = issues.find((i: Issue) => i.id === issueId);
 
     if (!issue) {
@@ -175,9 +206,13 @@ export class TestWorkflow {
       });
     }
 
-    await this.stateManager.update<Knowledge[]>('knowledge', (knowledge = []) => {
-      return [...knowledge, ...knowledgeItems];
-    });
+    // テストデータに保存
+    this.testData.knowledge.push(...knowledgeItems);
+    
+    // State文書にも記録
+    const currentState = this.stateManager.getState();
+    const updatedState = `${currentState}\n- Extracted ${knowledgeItems.length} knowledge items from issue ${issueId}`;
+    this.stateManager.updateState(updatedState);
 
     console.log('[TestWorkflow] Extracted knowledge items:', knowledgeItems.length);
   }
@@ -187,7 +222,7 @@ export class TestWorkflow {
    * 確定的な関連性判定
    */
   async clusterIssues(_event: Event): Promise<void> {
-    const issues = (await this.stateManager.get<Issue[]>('issues')) || [];
+    const issues = this.testData.issues;
 
     // 同じラベルを持つIssueをクラスタリング
     const clusters = new Map<string, Issue[]>();
@@ -228,7 +263,11 @@ export class TestWorkflow {
       }
     }
 
-    await this.stateManager.set('issues', issues);
+    // テストデータは既に更新済み
+    // State文書にクラスタリング結果を記録
+    const currentState = this.stateManager.getState();
+    const updatedState = `${currentState}\n- Clustered ${issues.length} issues into ${clusters.size} groups`;
+    this.stateManager.updateState(updatedState);
     console.log('[TestWorkflow] Clustered issues by labels');
   }
 

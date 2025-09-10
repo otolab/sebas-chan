@@ -1,9 +1,19 @@
 import { EventEmitter } from 'events';
 import { logger } from '../utils/logger';
 
+/**
+ * StateManager - State文書の管理
+ * 
+ * State文書はシステム全体で共有される単一の自然言語ワーキングメモリです。
+ * - 共有された意識
+ * - 思考の出発点
+ * - 流動的な情報の置き場
+ * 
+ * 注意: このクラスはState文書（自然言語テキスト）のみを管理します。
+ * Issue、Flow、Knowledgeなどの構造化データはDBパッケージで管理されます。
+ */
 export class StateManager extends EventEmitter {
   private state: string = '';
-  private data: Record<string, any> = {};
   private lastUpdate: Date = new Date();
 
   async initialize(): Promise<void> {
@@ -75,34 +85,5 @@ export class StateManager extends EventEmitter {
 
   getLastUpdate(): Date {
     return this.lastUpdate;
-  }
-
-  /**
-   * データストアから値を取得
-   */
-  async get<T>(key: string): Promise<T | undefined> {
-    return this.data[key] as T;
-  }
-
-  /**
-   * データストアに値を設定
-   */
-  async set<T>(key: string, value: T): Promise<void> {
-    this.data[key] = value;
-    this.lastUpdate = new Date();
-    this.emit('data:set', { key, value });
-    logger.debug(`Data set: ${key}`);
-  }
-
-  /**
-   * データストアの値を更新
-   */
-  async update<T>(key: string, updater: (current: T | undefined) => T): Promise<void> {
-    const current = this.data[key] as T | undefined;
-    const updated = updater(current);
-    this.data[key] = updated;
-    this.lastUpdate = new Date();
-    this.emit('data:updated', { key, previous: current, current: updated });
-    logger.debug(`Data updated: ${key}`);
   }
 }
