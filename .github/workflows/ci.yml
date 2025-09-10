@@ -28,10 +28,9 @@ jobs:
 
       - name: Install uv
         run: |
-          sudo apt-get update
-          sudo apt-get install -y pipx
+          python -m pip install --user pipx
+          python -m pipx ensurepath
           pipx install uv
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Clean install dependencies
         run: |
