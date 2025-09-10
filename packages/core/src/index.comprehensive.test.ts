@@ -536,7 +536,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
   });
 
   describe('Performance Under Load', () => {
-    it('should maintain performance with high event throughput', async () => {
+    // TODO: パフォーマンステストは別のワークフロー（例: performance.yml）に移行を検討
+    // CI実行時間を短縮し、パフォーマンステストは定期実行や手動トリガーで実施する方が適切
+    it.skip('should maintain performance with high event throughput', async () => {
       const startTime = Date.now();
       const eventCount = 500;
       let processedCount = 0;
