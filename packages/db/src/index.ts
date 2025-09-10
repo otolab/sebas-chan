@@ -22,31 +22,38 @@ export class DBClient extends EventEmitter {
     }
 
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
-
-    // プロジェクトルートからの仮想環境パスを試す
-    // __dirname はビルド後は dist/ になる
     const packageRoot = path.join(__dirname, '..');  // packages/db
-    const venvPaths = [
-      path.join(packageRoot, '.venv/bin/python'), // パッケージルートの.venv
-      path.join(__dirname, '../.venv/bin/python'), // 短縮版（同じ）
-    ];
 
-    // 最初に見つかった仮想環境のPythonを使用
-    let pythonCmd = 'python3';
-    for (const venvPath of venvPaths) {
-      if (fs.existsSync(venvPath)) {
-        pythonCmd = venvPath;
-        console.log(`Using Python from venv: ${venvPath}`);
-        break;
+    // uvコマンドが利用可能かチェック
+    const uvExists = spawn('which', ['uv'], { stdio: 'pipe' }).on('exit', (code) => code === 0);
+    
+    let pythonCmd: string;
+    let pythonArgs: string[];
+    
+    // uvが利用可能で、pyproject.tomlが存在する場合はuv経由で実行
+    const pyprojectPath = path.join(packageRoot, 'pyproject.toml');
+    if (fs.existsSync(pyprojectPath)) {
+      // uv --project でPythonを実行（cwdからの相対パス）
+      pythonCmd = 'uv';
+      pythonArgs = ['--project', '.', 'run', 'python', pythonScript];
+      console.log(`Using uv to run Python script from project: ${packageRoot}`);
+    } else {
+      // フォールバック: 直接Pythonを実行
+      const venvPython = path.join(packageRoot, '.venv/bin/python');
+      if (fs.existsSync(venvPython)) {
+        pythonCmd = venvPython;
+        pythonArgs = [pythonScript];
+        console.log(`Using Python from venv: ${venvPython}`);
+      } else {
+        pythonCmd = 'python3';
+        pythonArgs = [pythonScript];
+        console.log('No venv found, using system Python');
       }
     }
 
-    if (pythonCmd === 'python3') {
-      console.log('No venv found, using system Python');
-    }
-
-    this.worker = spawn(pythonCmd, [pythonScript], {
+    this.worker = spawn(pythonCmd, pythonArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: packageRoot,  // uvコマンドを正しいディレクトリで実行
     });
 
     this.worker.stdout?.on('data', (data) => {
@@ -73,7 +80,7 @@ export class DBClient extends EventEmitter {
     });
 
     this.worker.stderr?.on('data', (data) => {
-      console.error('Python worker error:', data.toString());
+      console.error('Python stderr:', data.toString());
     });
 
     this.worker.on('error', (error) => {
@@ -138,36 +145,39 @@ export class DBClient extends EventEmitter {
     const issueWithId = { ...issue, id };
 
     // 複雑なオブジェクトはJSON文字列として保存
+    // sourceInputIds → source_input_ids に変換
     const issueData = {
       ...issueWithId,
+      source_input_ids: issueWithId.sourceInputIds,
       updates: JSON.stringify(issueWithId.updates),
       relations: JSON.stringify(issueWithId.relations),
     };
+    delete (issueData as any).sourceInputIds;
 
     await this.sendRequest('addIssue', issueData);
     return id;
   }
 
   async getIssue(id: string): Promise<Issue | null> {
-    const result = await this.sendRequest('getIssue', { id });
+    const result = await this.sendRequest('getIssue', { id }) as any;
     if (!result) return null;
 
-    // JSON文字列をパース
+    // JSON文字列をパース、source_input_ids → sourceInputIds に変換
     return {
       ...result,
-      updates: JSON.parse((result as { updates?: string }).updates || '[]'),
-      relations: JSON.parse((result as { relations?: string }).relations || '[]'),
+      sourceInputIds: result.source_input_ids || [],
+      updates: JSON.parse(result.updates || '[]'),
+      relations: JSON.parse(result.relations || '[]'),
     } as Issue;
   }
 
   async searchIssues(query: string): Promise<Issue[]> {
-    const results = (await this.sendRequest('searchIssues', { query })) as Array<
-      Record<string, unknown>
-    >;
+    const results = (await this.sendRequest('searchIssues', { query })) as Array<any>;
     return results.map((r) => ({
       ...r,
-      updates: JSON.parse((r.updates as string) || '[]'),
-      relations: JSON.parse((r.relations as string) || '[]'),
+      sourceInputIds: r.source_input_ids || [],
+      updates: JSON.parse(r.updates || '[]'),
+      relations: JSON.parse(r.relations || '[]'),
     })) as Issue[];
   }
 

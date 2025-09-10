@@ -49,7 +49,7 @@ class LanceDBWorker:
             self.db.open_table("state").add([{
                 "id": "main",
                 "content": "",
-                "updated_at": pd.Timestamp.now()
+                "updated_at": pd.Timestamp.now().floor('ms')
             }])
     
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
@@ -101,7 +101,13 @@ class LanceDBWorker:
         """IDでIssueを取得"""
         table = self.db.open_table("issues")
         results = table.search().where(f"id = '{issue_id}'").limit(1).to_list()
-        return results[0] if results else None
+        if results:
+            result = results[0]
+            # vectorフィールドをリストに変換
+            if 'vector' in result and hasattr(result['vector'], 'tolist'):
+                result['vector'] = result['vector'].tolist()
+            return result
+        return None
     
     def search_issues(self, query: str) -> list:
         """Issueを検索"""
@@ -112,7 +118,12 @@ class LanceDBWorker:
         if query:
             mask = results['title'].str.contains(query, case=False, na=False)
             results = results[mask]
-        return results.to_dict('records')
+        # vectorフィールドをリストに変換
+        records = results.to_dict('records')
+        for record in records:
+            if 'vector' in record and hasattr(record['vector'], 'tolist'):
+                record['vector'] = record['vector'].tolist()
+        return records
     
     def get_state(self) -> str:
         """State文書を取得"""
@@ -125,10 +136,11 @@ class LanceDBWorker:
         table = self.db.open_table("state")
         # LanceDBは更新をサポートしないため、削除して再挿入
         table.delete("id = 'main'")
+        # ミリ秒精度のタイムスタンプに変換
         table.add([{
             "id": "main",
             "content": content,
-            "updated_at": pd.Timestamp.now()
+            "updated_at": pd.Timestamp.now().floor('ms')
         }])
         return True
     

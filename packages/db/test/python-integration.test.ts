@@ -16,10 +16,12 @@ describe('Python LanceDB Worker Integration', () => {
     const testDbPath = path.join(__dirname, '../../../test-data/lancedb');
     await fs.mkdir(testDbPath, { recursive: true });
     
-    // Pythonワーカーを起動
+    // Pythonワーカーを起動（uvを使用）
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
-    pythonProcess = spawn('python3', [pythonScript], {
+    const packageRoot = path.join(__dirname, '..');
+    pythonProcess = spawn('uv', ['--project', '.', 'run', 'python', pythonScript], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: packageRoot,
       env: { ...process.env, PYTHONUNBUFFERED: '1', DB_PATH: testDbPath }
     });
     
@@ -292,8 +294,10 @@ describe('Vector Search Capabilities', () => {
     await fs.mkdir(testDbPath, { recursive: true });
     
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
-    pythonProcess = spawn('python3', [pythonScript], {
+    const packageRoot = path.join(__dirname, '..');
+    pythonProcess = spawn('uv', ['--project', '.', 'run', 'python', pythonScript], {
       stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: packageRoot,
       env: { ...process.env, PYTHONUNBUFFERED: '1', DB_PATH: testDbPath }
     });
     
