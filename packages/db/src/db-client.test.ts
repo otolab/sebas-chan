@@ -512,45 +512,44 @@ describe('DBClient - Vector Search', () => {
 
       // 各検索で結果が返ってくることを確認
       // ベクトル検索は意味的類似性に基づくため、完全一致は期待しない
-      
+
       // "database error"で検索
       expect(dbResults).toBeDefined();
       expect(dbResults.length).toBeGreaterThan(0);
-      
-      
+
       // 1位の結果がdatabaseを含むことを確認
       const firstResult = dbResults[0];
-      const firstHasDatabase = 
+      const firstHasDatabase =
         firstResult.title.toLowerCase().includes('database') ||
         firstResult.description.toLowerCase().includes('database');
-      
+
       expect(firstHasDatabase).toBe(true);
 
       // "user interface design"で検索
       expect(uiResults).toBeDefined();
       expect(uiResults.length).toBeGreaterThan(0);
-      
+
       // 1位の結果がUIに関連することを確認
       const firstUiResult = uiResults[0];
-      const firstHasUi = 
+      const firstHasUi =
         firstUiResult.title.toLowerCase().includes('ui') ||
         firstUiResult.title.toLowerCase().includes('button') ||
         firstUiResult.description.toLowerCase().includes('button') ||
         firstUiResult.description.toLowerCase().includes('design');
-      
+
       expect(firstHasUi).toBe(true);
 
       // "payment integration"で検索
       expect(paymentResults).toBeDefined();
       expect(paymentResults.length).toBeGreaterThan(0);
-      
+
       // 1位の結果がPaymentに関連することを確認
       const firstPaymentResult = paymentResults[0];
-      const firstHasPayment = 
+      const firstHasPayment =
         firstPaymentResult.title.toLowerCase().includes('payment') ||
         firstPaymentResult.description.toLowerCase().includes('payment') ||
         firstPaymentResult.description.toLowerCase().includes('stripe');
-      
+
       expect(firstHasPayment).toBe(true);
     },
     TEST_TIMEOUT
