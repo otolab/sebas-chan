@@ -116,7 +116,6 @@ export class DBClient extends EventEmitter {
       pythonArgs.push(`--model=${this.options.embeddingModel}`);
     }
 
-
     this.worker = spawn(pythonCmd, pythonArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: packageRoot, // uvコマンドを正しいディレクトリで実行
