@@ -41,12 +41,31 @@ def get_state_schema() -> pa.Schema:
     ])
 
 
+def get_pond_schema(vector_dimension: int = 256) -> pa.Schema:
+    """Pondテーブルのスキーマを返す
+    
+    Args:
+        vector_dimension: ベクトルの次元数（デフォルト: 256）
+    
+    Returns:
+        Pondテーブルのスキーマ
+    """
+    return pa.schema([
+        pa.field("id", pa.string()),
+        pa.field("content", pa.string()),
+        pa.field("source", pa.string()),
+        pa.field("timestamp", pa.timestamp('ms')),
+        pa.field("vector", pa.list_(pa.float32(), vector_dimension))  # ベクトル
+    ])
+
+
 # テーブル名の定義
 ISSUES_TABLE = "issues"
 STATE_TABLE = "state"
+POND_TABLE = "pond"
 
 # 全テーブルのリスト
-ALL_TABLES = [ISSUES_TABLE, STATE_TABLE]
+ALL_TABLES = [ISSUES_TABLE, STATE_TABLE, POND_TABLE]
 
 
 def validate_issue(issue_data: dict) -> None:

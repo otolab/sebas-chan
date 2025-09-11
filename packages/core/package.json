@@ -16,7 +16,9 @@
   "dependencies": {
     "@moduler-prompt/core": "^0.1.0",
     "@moduler-prompt/driver": "^0.1.1",
-    "@sebas-chan/shared-types": "*"
+    "@sebas-chan/shared-types": "*",
+    "@sebas-chan/db": "*",
+    "nanoid": "^5.0.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -280,6 +280,59 @@ export class DBClient extends EventEmitter {
     await this.sendRequest('updateState', { content });
   }
 
+  // Pond関連のメソッド
+  async addPondEntry(entry: {
+    id: string;
+    content: string;
+    source: string;
+    timestamp: Date | string;
+  }): Promise<boolean> {
+    const timestamp =
+      entry.timestamp instanceof Date ? entry.timestamp.toISOString() : entry.timestamp;
+
+    return (await this.sendRequest('addPondEntry', {
+      ...entry,
+      timestamp,
+    })) as boolean;
+  }
+
+  async getPondEntry(id: string): Promise<{
+    id: string;
+    content: string;
+    source: string;
+    timestamp: string;
+    vector?: number[];
+  } | null> {
+    return (await this.sendRequest('getPondEntry', { id })) as {
+      id: string;
+      content: string;
+      source: string;
+      timestamp: string;
+      vector?: number[];
+    } | null;
+  }
+
+  async searchPond(
+    query: string,
+    limit = 10
+  ): Promise<
+    Array<{
+      id: string;
+      content: string;
+      source: string;
+      timestamp: string;
+      vector?: number[];
+    }>
+  > {
+    return (await this.sendRequest('searchPond', { query, limit })) as Array<{
+      id: string;
+      content: string;
+      source: string;
+      timestamp: string;
+      vector?: number[];
+    }>;
+  }
+
   // テスト用メソッド
   async clearDatabase(): Promise<void> {
     await this.sendRequest('clearDatabase');

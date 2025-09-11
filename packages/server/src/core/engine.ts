@@ -4,10 +4,13 @@ export { Event };
 import { EventQueue } from './event-queue';
 import { StateManager } from './state-manager';
 import { logger } from '../utils/logger';
+import { DBClient } from '@sebas-chan/db';
+import { nanoid } from 'nanoid';
 
 export class CoreEngine extends EventEmitter implements CoreAPI {
   private eventQueue: EventQueue;
   private stateManager: StateManager;
+  private dbClient: DBClient | null = null;
   private isRunning: boolean = false;
   private processInterval: NodeJS.Timeout | null = null;
 
@@ -19,6 +22,13 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   async initialize(): Promise<void> {
     logger.info('Initializing Core Engine...');
+    
+    // DBクライアントを初期化
+    this.dbClient = new DBClient();
+    await this.dbClient.connect();
+    await this.dbClient.initModel();
+    logger.info('DB client connected and initialized');
+    
     await this.stateManager.initialize();
     this.start();
   }
@@ -85,6 +95,30 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
       case 'INGEST_INPUT':
         logger.info('Ingesting input', { payload: event.payload });
+        
+        if (this.dbClient && event.payload) {
+          const { input } = event.payload as { input: Input };
+          
+          try {
+            // PondEntryを作成してDBに保存
+            const pondEntry = {
+              id: input.id,
+              content: input.content,
+              source: input.source,
+              timestamp: input.timestamp,
+            };
+            
+            const success = await this.dbClient.addPondEntry(pondEntry);
+            
+            if (success) {
+              logger.info(`Input successfully ingested to Pond: ${pondEntry.id}`);
+            } else {
+              logger.error(`Failed to ingest input to Pond: ${pondEntry.id}`);
+            }
+          } catch (error) {
+            logger.error('Error ingesting input to Pond:', error);
+          }
+        }
         break;
 
       default:
