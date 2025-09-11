@@ -388,7 +388,7 @@ describe('CoreEngine', () => {
 
       // エラーを発生させるイベントハンドラーを設定
       const originalHandleEvent = engine['handleEvent'];
-      engine['handleEvent'] = vi.fn().mockImplementation(async (_event) => {
+      engine['handleEvent'] = vi.fn().mockImplementation(async (event) => {
         processedEvents.push(event.id);
         if (event.payload?.shouldFail) {
           errorCount++;
@@ -474,7 +474,7 @@ describe('CoreEngine', () => {
 
       // イベントチェーンを記録するハンドラー
       const originalHandleEvent = engine['handleEvent'];
-      engine['handleEvent'] = vi.fn().mockImplementation(async (_event) => {
+      engine['handleEvent'] = vi.fn().mockImplementation(async (event) => {
         eventChain.push(event.type);
 
         // INGEST_INPUTの後にANALYZE_ISSUE_IMPACTを生成
@@ -533,7 +533,7 @@ describe('CoreEngine', () => {
 
       // 処理を記録するハンドラー
       const originalHandleEvent = engine['handleEvent'];
-      engine['handleEvent'] = vi.fn().mockImplementation(async (_event) => {
+      engine['handleEvent'] = vi.fn().mockImplementation(async (event) => {
         processedEvents.push(event.id);
         await originalHandleEvent.call(engine, event);
       });
@@ -572,7 +572,7 @@ describe('CoreEngine', () => {
 
       // State更新を監視
       const originalHandleEvent = engine['handleEvent'];
-      engine['handleEvent'] = vi.fn().mockImplementation(async (_event) => {
+      engine['handleEvent'] = vi.fn().mockImplementation(async (event) => {
         if (event.type === 'REFLECT_AND_ORGANIZE_STATE') {
           engine.updateState(
             `# Updated at ${new Date().toISOString()}\n${event.payload?.content || ''}`
