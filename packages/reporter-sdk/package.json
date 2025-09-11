@@ -4,6 +4,9 @@
   "description": "SDK for creating sebas-chan reporters",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "manual-reporter": "./dist/manual-reporter/cli.js"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -12,7 +15,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@sebas-chan/shared-types": "*"
+    "@sebas-chan/shared-types": "*",
+    "chokidar": "^3.5.3",
+    "commander": "^11.1.0"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",
