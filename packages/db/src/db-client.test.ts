@@ -648,7 +648,7 @@ describe('DBClient - Error Handling', () => {
     // DBClient経由では直接テストできないが、
     // 不正なメソッド呼び出しはタイムアウトする
     // これはDBClientのsendRequestメソッドを直接呼ぶ必要がある
-    // @ts-ignore - privateメソッドへのアクセス
+    // @ts-expect-error - privateメソッドへのアクセス
     await expect(client.sendRequest('unknownMethod')).rejects.toThrow();
   });
 
