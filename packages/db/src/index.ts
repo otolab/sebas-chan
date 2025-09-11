@@ -107,13 +107,6 @@ export class DBClient extends EventEmitter {
       );
     }
 
-    // モデルの初期化を実行（初回のみダウンロードが発生）
-    try {
-      await DBClient.initialize(this.options.embeddingModel);
-    } catch (error) {
-      throw new Error(`Failed to initialize model: ${error}`);
-    }
-
     // uv --project でPythonを実行
     const pythonCmd = 'uv';
     const pythonArgs = ['--project', '.', 'run', 'python', pythonScript];
@@ -122,6 +115,7 @@ export class DBClient extends EventEmitter {
     if (this.options.embeddingModel) {
       pythonArgs.push(`--model=${this.options.embeddingModel}`);
     }
+
 
     this.worker = spawn(pythonCmd, pythonArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -178,6 +172,15 @@ export class DBClient extends EventEmitter {
     // ワーカーの起動を待つ
     await new Promise((resolve) => setTimeout(resolve, 1000));
     this.isReady = true;
+  }
+
+  /**
+   * モデルを初期化
+   * connect後に明示的に呼び出す
+   */
+  async initModel(): Promise<boolean> {
+    const result = await this.sendRequest('initModel');
+    return result as boolean;
   }
 
   async disconnect(): Promise<void> {

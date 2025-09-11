@@ -29,27 +29,31 @@ class LanceDBWorker:
         """LanceDBワーカーの初期化"""
         Path(db_path).mkdir(parents=True, exist_ok=True)
         self.db = lancedb.connect(db_path)
-        self.embedding_model = self._init_embedding_model()
+        
+        # モデルを初期化（まだロードしない）
+        model_name = self._get_model_name()
+        self.embedding_model = create_embedding_model(model_name)
         self.vector_dimension = self.embedding_model.dimension if hasattr(self.embedding_model, 'dimension') else 256
         self.init_tables()
         
-    def _init_embedding_model(self):
-        """日本語特化のRuriモデルを初期化
-        コマンドライン引数または環境変数でモデルを選択
+    def _get_model_name(self):
+        """モデル名を取得
+        
+        Returns:
+            モデル名
         """
-        import os
-        # コマンドライン引数から取得（--model=xxx形式）
+        # コマンドライン引数からモデル名を取得（--model=xxx形式）
         model_name = None
         for arg in sys.argv[1:]:
             if arg.startswith('--model='):
                 model_name = arg.split('=', 1)[1]
                 break
         
-        # 環境変数から取得
+        # デフォルトモデル名
         if not model_name:
-            model_name = os.environ.get('RURI_MODEL', 'cl-nagoya/ruri-v3-30m')
+            model_name = 'cl-nagoya/ruri-v3-30m'
         
-        return create_embedding_model(model_name)
+        return model_name
     
     def init_tables(self):
         """必要なテーブルを初期化"""
@@ -74,7 +78,9 @@ class LanceDBWorker:
         request_id = request.get("id")
         
         try:
-            if method == "addIssue":
+            if method == "initModel":
+                result = self.init_model()
+            elif method == "addIssue":
                 result = self.add_issue(params)
             elif method == "getIssue":
                 result = self.get_issue(params.get("id"))
@@ -104,6 +110,19 @@ class LanceDBWorker:
                 },
                 "id": request_id
             }
+    
+    def init_model(self) -> bool:
+        """モデルを初期化
+        
+        Returns:
+            初期化に成功した場合True
+        """
+        success = self.embedding_model.initialize()
+        if success:
+            sys.stderr.write("Model initialized successfully\n")
+        else:
+            sys.stderr.write("Model initialization failed\n")
+        return success
     
     def add_issue(self, issue_data: Dict[str, Any]) -> str:
         """Issueを追加"""

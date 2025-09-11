@@ -11,8 +11,10 @@ describe('DBClient - CRUD Operations', () => {
 
   beforeAll(async () => {
     client = new DBClient();
-    // テスト用DBに接続（初回はモデルダウンロードを含む）
+    // テスト用DBに接続
     await client.connect();
+    // モデルを初期化（初回はダウンロードが発生）
+    await client.initModel();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -218,6 +220,7 @@ describe('DBClient - Schema Validation', () => {
   beforeAll(async () => {
     client = new DBClient();
     await client.connect();
+    await client.initModel();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -371,6 +374,7 @@ describe('DBClient - Vector Search', () => {
   beforeAll(async () => {
     client = new DBClient();
     await client.connect();
+    await client.initModel();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
@@ -593,6 +597,7 @@ describe('DBClient - Error Handling', () => {
   beforeAll(async () => {
     client = new DBClient();
     await client.connect();
+    await client.initModel();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {

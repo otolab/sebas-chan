@@ -40,49 +40,53 @@ class RuriEmbedding(EmbeddingModel):
     
     def __init__(self, model_name: str = None):
         """
-        初期化
+        初期化（モデルロードは常に遅延実行）
         
         Args:
-            model_name: 使用するモデル名。Noneの場合は環境変数RURI_MODELから取得
-        
-        環境変数:
-            RURI_MODEL: 使用するモデル名 (デフォルト: cl-nagoya/ruri-v3-30m)
-            SKIP_MODEL_LOAD: テスト用にモデルロードをスキップ
+            model_name: 使用するモデル名。Noneの場合はデフォルト
         """
-        # テスト環境でモデルロードをスキップ
-        if os.environ.get('SKIP_MODEL_LOAD') == 'true':
-            sys.stderr.write("Skipping model load for testing\n")
-            self.available = False
-            self._dimension = 256
-            self.model = None
-            return
+        # モデル名を保存（後でinitialize()で使用）
+        self.model_name = model_name or 'cl-nagoya/ruri-v3-30m'
+        
+        # モデル設定を取得
+        if self.model_name not in self.MODEL_CONFIGS:
+            sys.stderr.write(f"Warning: Unknown model {self.model_name}, using ruri-v3-30m\n")
+            self.model_name = 'cl-nagoya/ruri-v3-30m'
+        
+        config = self.MODEL_CONFIGS[self.model_name]
+        self._dimension = config['dimension']
+        
+        # モデルは未ロード状態で開始
+        self.model = None
+        self.available = False
+    
+    def initialize(self) -> bool:
+        """
+        モデルを実際にロード（明示的な初期化）
+        
+        Returns:
+            初期化成功時True、失敗時False
+        """
+        if self.available:
+            # 既に初期化済み
+            return True
             
         try:
             from sentence_transformers import SentenceTransformer
             
-            # モデル名が指定されない場合は30mを使用
-            if model_name is None:
-                model_name = 'cl-nagoya/ruri-v3-30m'
-            
-            # モデル設定を取得
-            if model_name not in self.MODEL_CONFIGS:
-                sys.stderr.write(f"Warning: Unknown model {model_name}, using ruri-v3-30m\n")
-                model_name = 'cl-nagoya/ruri-v3-30m'
-            
-            config = self.MODEL_CONFIGS[model_name]
-            self.model_name = model_name
-            self._dimension = config['dimension']
+            config = self.MODEL_CONFIGS[self.model_name]
             
             # モデルをロード
-            self.model = SentenceTransformer(model_name)
+            self.model = SentenceTransformer(self.model_name)
             self.available = True
-            sys.stderr.write(f"Ruri model loaded: {model_name} - {config['description']}\n")
+            sys.stderr.write(f"Ruri model loaded: {self.model_name} - {config['description']}\n")
+            return True
             
         except (ImportError, Exception) as e:
             sys.stderr.write(f"Warning: Could not load Ruri model: {e}\n")
             self.available = False
-            self._dimension = 256  # デフォルトは小さい方
             self.model = None
+            return False
     
     @property
     def dimension(self) -> int:

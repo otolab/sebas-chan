@@ -23,7 +23,7 @@ describe('Python JSON-RPC Worker', () => {
     pythonProcess = spawn('uv', ['--project', '.', 'run', 'python', pythonScript], {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: packageRoot,
-      env: { ...process.env, PYTHONUNBUFFERED: '1', DB_PATH: testDbPath, SKIP_MODEL_LOAD: 'true' }
+      env: { ...process.env, PYTHONUNBUFFERED: '1', DB_PATH: testDbPath }
     });
     
     // エラーハンドリング
