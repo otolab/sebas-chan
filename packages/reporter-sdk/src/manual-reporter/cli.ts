@@ -10,16 +10,35 @@ const program = new Command();
 
 program
   .name('manual-reporter')
-  .description('Manual input reporter for sebas-chan system')
-  .version('0.0.1');
+  .description('Manual input reporter for sebas-chan system - A CLI tool for submitting inputs to the sebas-chan information management system')
+  .version('0.0.1')
+  .addHelpText('after', `
+Examples:
+  $ manual-reporter submit -c "Meeting notes from today"
+  $ manual-reporter submit -f ./notes.txt
+  $ manual-reporter watch -f ./inbox.txt
+  $ manual-reporter watch -d ./inputs -p "*.md"
+  $ manual-reporter health
+
+For more information, see: https://github.com/otolab/sebas-chan`);
 
 program
   .command('submit')
-  .description('Submit an input to the system')
-  .option('-u, --url <url>', 'API URL', 'http://localhost:3001')
-  .option('-s, --source <source>', 'Source name', 'manual')
-  .option('-c, --content <content>', 'Input content')
-  .option('-f, --file <file>', 'Read content from file')
+  .description('Submit a single input to the sebas-chan system')
+  .option('-u, --url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
+  .option('-s, --source <source>', 'Source identifier for tracking where the input came from (default: manual)', 'manual')
+  .option('-c, --content <content>', 'Input content as a string')
+  .option('-f, --file <file>', 'Path to file containing the input content')
+  .addHelpText('after', `
+Notes:
+  - Either --content or --file must be provided
+  - The source field helps track where information originated from
+  - File content will be read as UTF-8 text
+
+Examples:
+  $ manual-reporter submit -c "Important task: Review PR #123"
+  $ manual-reporter submit -f meeting-notes.txt -s "meeting"
+  $ manual-reporter submit --file todo.md --source "planning"`)
   .action(async (options) => {
     try {
       let content: string;
@@ -62,13 +81,26 @@ program
 
 program
   .command('watch')
-  .description('Watch files and submit changes as inputs')
-  .option('-u, --url <url>', 'API URL', 'http://localhost:3001')
-  .option('-s, --source <source>', 'Source name', 'manual')
-  .option('-f, --file <file>', 'Watch a specific file')
-  .option('-d, --dir <dir>', 'Watch a directory')
-  .option('-p, --pattern <pattern>', 'File pattern to watch (e.g., "*.txt")', '*.txt')
-  .option('-i, --interval <ms>', 'Polling interval in milliseconds', '1000')
+  .description('Watch files/directories and automatically submit new or changed content as inputs')
+  .option('-u, --url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
+  .option('-s, --source <source>', 'Source identifier for tracking where the input came from (default: manual)', 'manual')
+  .option('-f, --file <file>', 'Path to a specific file to watch')
+  .option('-d, --dir <dir>', 'Path to a directory to watch')
+  .option('-p, --pattern <pattern>', 'Glob pattern for files to watch in directory mode (default: *.txt)', '*.txt')
+  .option('-i, --interval <ms>', 'Polling interval in milliseconds for change detection (default: 1000)', '1000')
+  .addHelpText('after', `
+Notes:
+  - Either --file or --dir must be provided
+  - In directory mode, use --pattern to filter files (e.g., "*.md", "*.txt")
+  - Files are submitted when created or modified
+  - Press Ctrl+C to stop watching
+  - Each file change creates a new input in the system
+
+Examples:
+  $ manual-reporter watch -f inbox.txt
+  $ manual-reporter watch -d ./notes -p "*.md"
+  $ manual-reporter watch --dir ./inputs --pattern "*.txt" --interval 5000
+  $ manual-reporter watch -f todo.txt -s "tasks"`)
   .action(async (options) => {
     try {
       if (!options.file && !options.dir) {
@@ -148,8 +180,16 @@ program
 
 program
   .command('health')
-  .description('Check API health status')
-  .option('-u, --url <url>', 'API URL', 'http://localhost:3001')
+  .description('Check if the sebas-chan API server is running and healthy')
+  .option('-u, --url <url>', 'API endpoint URL to check (default: http://localhost:3001)', 'http://localhost:3001')
+  .addHelpText('after', `
+Notes:
+  - Returns exit code 0 if healthy, 1 if unhealthy
+  - Useful for scripts and automation
+
+Examples:
+  $ manual-reporter health
+  $ manual-reporter health --url http://localhost:8080`)
   .action(async (options) => {
     try {
       const client = new ReporterClient({
