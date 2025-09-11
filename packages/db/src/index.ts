@@ -210,7 +210,7 @@ export class DBClient extends EventEmitter {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(id);
         reject(new Error('Request timeout'));
-      }, 10000); // 10秒のタイムアウト
+      }, 30000); // 30秒のタイムアウト（CI環境での初期化を考慮）
 
       // TODO: 大きなJSONデータ（8KB以上）の送信時にバッファオーバーフローが発生する問題がある
       // Node.jsのstdioバッファサイズ制限により、大きなデータが途切れる可能性がある
