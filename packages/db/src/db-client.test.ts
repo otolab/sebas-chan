@@ -466,8 +466,8 @@ describe('DBClient - Vector Search', () => {
       // ベクトル検索が実装されたので有効化
       // 実際のembeddingとコサイン類似度によるランキングを検証
 
-      // 既存のデータをクリア
-      await client.clearAllIssues();
+      // データベース全体をクリア
+      await client.clearDatabase();
 
       // テスト用のIssueを作成
       const issues = [

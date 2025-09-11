@@ -279,8 +279,8 @@ export class DBClient extends EventEmitter {
   }
 
   // テスト用メソッド
-  async clearAllIssues(): Promise<void> {
-    await this.sendRequest('clearAllIssues');
+  async clearDatabase(): Promise<void> {
+    await this.sendRequest('clearDatabase');
   }
 }
 
