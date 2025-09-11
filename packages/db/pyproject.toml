@@ -10,12 +10,19 @@ dependencies = [
     "numpy>=1.24.0",
     "pydantic>=2.5.0",
     "jsonrpc>=3.0.0",
+    "sentence-transformers>=2.2.0",
+    "protobuf>=6.32.0",
+    "sentencepiece>=0.2.1",
 ]
 
 [project.optional-dependencies]
 test = [
     "pytest>=7.4.0",
     "pytest-asyncio>=0.21.0",
+]
+mlx = [
+    "mlx>=0.5.0",
+    "mlx-lm>=0.0.10",
 ]
 
 [build-system]

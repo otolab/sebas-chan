@@ -7,18 +7,44 @@ LanceDB JSON-RPC Worker
 import sys
 import json
 import traceback
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 import lancedb
 import pyarrow as pa
 import pandas as pd
 from pathlib import Path
+
+# 埋め込みモデルをインポート
+# 30m固定で使用
+from embedding import create_embedding_model
+
+
 
 class LanceDBWorker:
     def __init__(self, db_path: str = "./data/lancedb"):
         """LanceDBワーカーの初期化"""
         Path(db_path).mkdir(parents=True, exist_ok=True)
         self.db = lancedb.connect(db_path)
+        self.embedding_model = self._init_embedding_model()
+        self.vector_dimension = self.embedding_model.dimension if hasattr(self.embedding_model, 'dimension') else 256
         self.init_tables()
+        
+    def _init_embedding_model(self):
+        """日本語特化のRuriモデルを初期化
+        コマンドライン引数または環境変数でモデルを選択
+        """
+        import os
+        # コマンドライン引数から取得（--model=xxx形式）
+        model_name = None
+        for arg in sys.argv[1:]:
+            if arg.startswith('--model='):
+                model_name = arg.split('=', 1)[1]
+                break
+        
+        # 環境変数から取得
+        if not model_name:
+            model_name = os.environ.get('RURI_MODEL', 'cl-nagoya/ruri-v3-30m')
+        
+        return create_embedding_model(model_name)
     
     def init_tables(self):
         """必要なテーブルを初期化"""
@@ -33,7 +59,7 @@ class LanceDBWorker:
                 pa.field("updates", pa.string()),  # JSON文字列として保存
                 pa.field("relations", pa.string()),  # JSON文字列として保存
                 pa.field("source_input_ids", pa.list_(pa.string())),
-                pa.field("vector", pa.list_(pa.float32(), 384))  # ベクトル
+                pa.field("vector", pa.list_(pa.float32(), self.vector_dimension))  # ベクトル
             ])
             self.db.create_table("issues", schema=schema)
         
@@ -69,6 +95,8 @@ class LanceDBWorker:
                 result = self.get_state()
             elif method == "updateState":
                 result = self.update_state(params.get("content"))
+            elif method == "clearAllIssues":
+                result = self.clear_all_issues()
             else:
                 raise ValueError(f"Unknown method: {method}")
             
@@ -90,8 +118,26 @@ class LanceDBWorker:
     
     def add_issue(self, issue_data: Dict[str, Any]) -> str:
         """Issueを追加"""
-        # TODO: ベクトル化の実装
-        issue_data["vector"] = [0.0] * 384  # 仮のベクトル
+        # 必須フィールドの検証
+        required_fields = ['id', 'title', 'description', 'status', 'labels', 'updates', 'relations', 'source_input_ids']
+        missing_fields = [field for field in required_fields if field not in issue_data]
+        
+        if missing_fields:
+            raise ValueError(f"Missing required fields: {', '.join(missing_fields)}")
+        
+        # フィールドの型検証
+        if not isinstance(issue_data.get('title'), str):
+            raise TypeError("Field 'title' must be a string")
+        if not isinstance(issue_data.get('description'), str):
+            raise TypeError("Field 'description' must be a string")
+        if issue_data.get('status') not in ['open', 'closed']:
+            raise ValueError("Field 'status' must be 'open' or 'closed'")
+        if not isinstance(issue_data.get('labels'), list):
+            raise TypeError("Field 'labels' must be a list")
+        
+        # titleとdescriptionを結合してベクトル化
+        text_to_embed = f"{issue_data['title']} {issue_data['description']}"
+        issue_data["vector"] = self.embedding_model.encode(text_to_embed)
         
         table = self.db.open_table("issues")
         table.add([issue_data])
@@ -103,27 +149,57 @@ class LanceDBWorker:
         results = table.search().where(f"id = '{issue_id}'").limit(1).to_list()
         if results:
             result = results[0]
-            # vectorフィールドをリストに変換
+            # ndarrayをリストに変換
             if 'vector' in result and hasattr(result['vector'], 'tolist'):
                 result['vector'] = result['vector'].tolist()
+            if 'labels' in result and hasattr(result['labels'], 'tolist'):
+                result['labels'] = result['labels'].tolist()
+            if 'source_input_ids' in result and hasattr(result['source_input_ids'], 'tolist'):
+                result['source_input_ids'] = result['source_input_ids'].tolist()
             return result
         return None
     
-    def search_issues(self, query: str) -> list:
-        """Issueを検索"""
+    def search_issues(self, query: str, use_vector: bool = True, limit: int = 10) -> list:
+        """Issueを検索（ベクトル検索またはテキスト検索）"""
         table = self.db.open_table("issues")
-        # TODO: ベクトル検索の実装
-        # 現在はタイトルの部分一致検索
+        
+        if query and use_vector:
+            # ベクトル検索
+            try:
+                # クエリをベクトル化
+                query_vector = self.embedding_model.encode(query)
+                
+                # LanceDBのベクトル検索
+                results = table.search(query_vector).limit(limit).to_list()
+            except Exception as e:
+                # ベクトル検索が失敗したらテキスト検索にフォールバック
+                sys.stderr.write(f"Vector search failed, falling back to text search: {e}\n")
+                results = self._text_search(table, query)
+        else:
+            # テキスト検索
+            results = self._text_search(table, query)
+        
+        # ndarrayをリストに変換
+        for record in results:
+            # vectorフィールドをリストに変換
+            if 'vector' in record and hasattr(record['vector'], 'tolist'):
+                record['vector'] = record['vector'].tolist()
+            # labelsフィールドをリストに変換
+            if 'labels' in record and hasattr(record['labels'], 'tolist'):
+                record['labels'] = record['labels'].tolist()
+            # source_input_idsフィールドをリストに変換
+            if 'source_input_ids' in record and hasattr(record['source_input_ids'], 'tolist'):
+                record['source_input_ids'] = record['source_input_ids'].tolist()
+        
+        return results
+    
+    def _text_search(self, table, query: str) -> list:
+        """テキストベースの検索（フォールバック）"""
         results = table.to_pandas()
         if query:
             mask = results['title'].str.contains(query, case=False, na=False)
             results = results[mask]
-        # vectorフィールドをリストに変換
-        records = results.to_dict('records')
-        for record in records:
-            if 'vector' in record and hasattr(record['vector'], 'tolist'):
-                record['vector'] = record['vector'].tolist()
-        return records
+        return results.to_dict('records')
     
     def get_state(self) -> str:
         """State文書を取得"""
@@ -142,6 +218,27 @@ class LanceDBWorker:
             "content": content,
             "updated_at": pd.Timestamp.now().floor('ms')
         }])
+        return True
+    
+    def clear_all_issues(self) -> bool:
+        """すべてのIssueを削除（テスト用）"""
+        # 既存のテーブルを削除して再作成
+        if "issues" in self.db.table_names():
+            self.db.drop_table("issues")
+        
+        # テーブルを再作成
+        schema = pa.schema([
+            pa.field("id", pa.string()),
+            pa.field("title", pa.string()),
+            pa.field("description", pa.string()),
+            pa.field("status", pa.string()),
+            pa.field("labels", pa.list_(pa.string())),
+            pa.field("updates", pa.string()),  # JSON文字列として保存
+            pa.field("relations", pa.string()),  # JSON文字列として保存
+            pa.field("source_input_ids", pa.list_(pa.string())),
+            pa.field("vector", pa.list_(pa.float32(), self.vector_dimension))  # ベクトル
+        ])
+        self.db.create_table("issues", schema=schema)
         return True
     
     def run(self):
