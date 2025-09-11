@@ -46,22 +46,25 @@ class LanceDBWorker:
         
         return create_embedding_model(model_name)
     
+    def get_issues_schema(self):
+        """Issuesテーブルのスキーマを返す"""
+        return pa.schema([
+            pa.field("id", pa.string()),
+            pa.field("title", pa.string()),
+            pa.field("description", pa.string()),
+            pa.field("status", pa.string()),
+            pa.field("labels", pa.list_(pa.string())),
+            pa.field("updates", pa.string()),  # JSON文字列として保存
+            pa.field("relations", pa.string()),  # JSON文字列として保存
+            pa.field("source_input_ids", pa.list_(pa.string())),
+            pa.field("vector", pa.list_(pa.float32(), self.vector_dimension))  # ベクトル
+        ])
+    
     def init_tables(self):
         """必要なテーブルを初期化"""
         # Issues テーブル
         if "issues" not in self.db.table_names():
-            schema = pa.schema([
-                pa.field("id", pa.string()),
-                pa.field("title", pa.string()),
-                pa.field("description", pa.string()),
-                pa.field("status", pa.string()),
-                pa.field("labels", pa.list_(pa.string())),
-                pa.field("updates", pa.string()),  # JSON文字列として保存
-                pa.field("relations", pa.string()),  # JSON文字列として保存
-                pa.field("source_input_ids", pa.list_(pa.string())),
-                pa.field("vector", pa.list_(pa.float32(), self.vector_dimension))  # ベクトル
-            ])
-            self.db.create_table("issues", schema=schema)
+            self.db.create_table("issues", schema=self.get_issues_schema())
         
         # State文書テーブル
         if "state" not in self.db.table_names():
@@ -169,7 +172,7 @@ class LanceDBWorker:
                 # クエリをベクトル化
                 query_vector = self.embedding_model.encode(query)
                 
-                # LanceDBのベクトル検索
+                # LanceDBのベクトル検索（距離も含む）
                 results = table.search(query_vector).limit(limit).to_list()
             except Exception as e:
                 # ベクトル検索が失敗したらテキスト検索にフォールバック
@@ -226,19 +229,8 @@ class LanceDBWorker:
         if "issues" in self.db.table_names():
             self.db.drop_table("issues")
         
-        # テーブルを再作成
-        schema = pa.schema([
-            pa.field("id", pa.string()),
-            pa.field("title", pa.string()),
-            pa.field("description", pa.string()),
-            pa.field("status", pa.string()),
-            pa.field("labels", pa.list_(pa.string())),
-            pa.field("updates", pa.string()),  # JSON文字列として保存
-            pa.field("relations", pa.string()),  # JSON文字列として保存
-            pa.field("source_input_ids", pa.list_(pa.string())),
-            pa.field("vector", pa.list_(pa.float32(), self.vector_dimension))  # ベクトル
-        ])
-        self.db.create_table("issues", schema=schema)
+        # テーブルを再作成（共通のスキーマを使用）
+        self.db.create_table("issues", schema=self.get_issues_schema())
         return True
     
     def run(self):
