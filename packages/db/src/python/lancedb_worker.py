@@ -61,7 +61,7 @@ class LanceDBWorker:
         if ISSUES_TABLE not in self.db.table_names():
             self.db.create_table(ISSUES_TABLE, schema=get_issues_schema(self.vector_dimension))
         
-        # State文書テーブル
+        # State文書テーブル  
         if STATE_TABLE not in self.db.table_names():
             self.db.create_table(STATE_TABLE, schema=get_state_schema())
             # 初期State文書を作成
@@ -70,6 +70,16 @@ class LanceDBWorker:
                 "content": "",
                 "updated_at": pd.Timestamp.now().floor('ms')
             }])
+        else:
+            # State文書テーブルが既に存在する場合、mainレコードがなければ作成
+            table = self.db.open_table(STATE_TABLE)
+            result = table.search().where("id = 'main'").limit(1).to_list()
+            if not result:
+                table.add([{
+                    "id": "main",
+                    "content": "",
+                    "updated_at": pd.Timestamp.now().floor('ms')
+                }])
     
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """JSON-RPCリクエストを処理"""
