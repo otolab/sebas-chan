@@ -2,9 +2,11 @@
 
 ## 現在のステータス
 
-**フェーズ**: Phase 1（最小構成）実装完了
+**フェーズ**: Phase 2（基本機能実装）進行中
 
 ### 完了項目
+
+#### Phase 1（最小構成）
 - [x] プロジェクト構成（npm workspaces モノレポ）
 - [x] 設計ドキュメント作成
 - [x] システムアーキテクチャ確定
@@ -14,8 +16,16 @@
 - [x] インメモリイベントキュー（優先度付き）
 - [x] 包括的なユニットテスト（118テスト全て成功）
 
-### 次のタスク（Phase 2準備）
-- [ ] DB Bridge実装（TypeScript + Python）
+#### Phase 2（基本機能実装）
+- [x] DB Bridge実装（TypeScript + Python）
+  - LanceDB統合完了
+  - Python環境（uv）セットアップ
+  - JSON-RPC通信レイヤー実装
+  - TypeScriptラッパー作成
+  - 日本語向けベクトル埋め込みモデル（Ruri）統合
+  - 包括的なテストスイート（23テスト全て成功）
+
+### 進行中のタスク
 - [ ] Reporter SDK（TypeScript）の作成
 - [ ] Manual Input Reporter（最初のReporter）
 - [ ] 簡易Web UI（SvelteKit、読み取り専用）
@@ -204,10 +214,11 @@ packages/
 - [x] REST APIが起動し、`/request`エンドポイントが動作
 - [x] Core Agentがイベント駆動で動作
 - [x] エラーハンドリングとリトライ機構が実装
-- [ ] DB BridgeがLanceDBと通信可能（Phase 2へ延期）
-- [ ] State文書の永続化（Phase 2へ延期、現在はインメモリ実装済み）
+- [x] State文書のインメモリ実装
 
 ### Phase 2完了条件
+- [x] DB BridgeがLanceDBと通信可能
+- [x] State文書の永続化（DB Bridge経由）
 - [ ] Web UIでシステム状態を確認可能
 - [ ] ReporterからInputを投入し、Issueが作成される
 - [ ] Issue → Knowledgeの変換フローが動作
@@ -222,22 +233,30 @@ packages/
 - [ ] システムが自己調整パラメータを更新
 - [ ] 1週間以上の連続稼働テストをクリア
 
-## 次のアクション（Phase 2）
+## 次のアクション（Phase 2継続）
 
-1. **DB Bridge実装開始**
-   - Python環境セットアップ
-   - LanceDB統合
-   - JSON-RPC通信レイヤー
-   - TypeScriptラッパー作成
+1. **Reporter SDK作成** 【優先度: 高】
+   - REST APIクライアントライブラリ
+   - 標準化されたInput投入インターフェース
+   - 認証機構の実装
+   - エラーハンドリングとリトライ
+   - TypeScript型定義の提供
 
-2. **Reporter SDK作成**
-   - REST APIクライアント
-   - 認証機構
-   - エラーハンドリング
+2. **Manual Input Reporter** 【優先度: 高】
+   - 最初のReporter実装として
+   - CLI経由での手動Input投入
+   - Reporter SDKを利用した参照実装
+   - テスト用データ投入の基盤
 
-3. **Manual Input Reporter**
-   - 最初のReporter実装
-   - CLI/Web両対応
-   - Reporter SDKを利用
+3. **簡易Web UI（読み取り専用）** 【優先度: 中】
+   - SvelteKitフレームワーク使用
+   - システム状態の可視化
+   - Issue/Flow/Knowledgeの閲覧
+   - リアルタイム更新（WebSocket検討）
+
+4. **ワークフロー拡張** 【優先度: 中】
+   - A-1: INGEST_INPUT（Input取り込み）
+   - A-2: ANALYZE_ISSUE_IMPACT（Issue影響分析）
+   - A-3: EXTRACT_KNOWLEDGE（Knowledge抽出）
 
 この計画に従って、段階的かつ着実にsebas-chanシステムを構築していきます。
