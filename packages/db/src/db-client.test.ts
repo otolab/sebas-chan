@@ -643,4 +643,23 @@ describe('DBClient - Error Handling', () => {
       expect(error).toBeDefined();
     }
   });
+
+  it('should handle unknown method calls', async () => {
+    // DBClient経由では直接テストできないが、
+    // 不正なメソッド呼び出しはタイムアウトする
+    // これはDBClientのsendRequestメソッドを直接呼ぶ必要がある
+    // @ts-ignore - privateメソッドへのアクセス
+    await expect(client.sendRequest('unknownMethod')).rejects.toThrow();
+  });
+
+  it('should handle incomplete issue data', async () => {
+    // 必須フィールドが欠落したデータ
+    const incompleteIssue = {
+      title: 'Incomplete Issue',
+      // descriptionが欠落
+    } as Omit<Issue, 'id'>;
+
+    // エラーが適切に処理されることを確認
+    await expect(client.addIssue(incompleteIssue)).rejects.toThrow();
+  });
 });
