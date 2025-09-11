@@ -108,7 +108,7 @@ describe('Python JSON-RPC Worker', () => {
       
       expect(result).toBeDefined();
       expect(typeof result).toBe('string');
-    });
+    }, 15000); // 初回のモデル初期化のため時間を延長
     
     it('should handle unknown methods gracefully', async () => {
       // 存在しないメソッドを呼び出した時のエラー処理を確認
