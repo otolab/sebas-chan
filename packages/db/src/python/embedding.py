@@ -47,7 +47,16 @@ class RuriEmbedding(EmbeddingModel):
         
         環境変数:
             RURI_MODEL: 使用するモデル名 (デフォルト: cl-nagoya/ruri-v3-30m)
+            SKIP_MODEL_LOAD: テスト用にモデルロードをスキップ
         """
+        # テスト環境でモデルロードをスキップ
+        if os.environ.get('SKIP_MODEL_LOAD') == 'true':
+            sys.stderr.write("Skipping model load for testing\n")
+            self.available = False
+            self._dimension = 256
+            self.model = None
+            return
+            
         try:
             from sentence_transformers import SentenceTransformer
             

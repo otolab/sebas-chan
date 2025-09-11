@@ -23,7 +23,7 @@ describe('Python JSON-RPC Worker', () => {
     pythonProcess = spawn('uv', ['--project', '.', 'run', 'python', pythonScript], {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: packageRoot,
-      env: { ...process.env, PYTHONUNBUFFERED: '1', DB_PATH: testDbPath }
+      env: { ...process.env, PYTHONUNBUFFERED: '1', DB_PATH: testDbPath, SKIP_MODEL_LOAD: 'true' }
     });
     
     // エラーハンドリング
@@ -31,9 +31,9 @@ describe('Python JSON-RPC Worker', () => {
       console.error('Python stderr:', data.toString());
     });
     
-    // 起動を待つ（Ruriモデルの初期化に時間がかかる）
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  }, 15000);
+    // 起動を待つ
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }, 5000);
   
   afterAll(async () => {
     if (pythonProcess) {
@@ -108,7 +108,7 @@ describe('Python JSON-RPC Worker', () => {
       
       expect(result).toBeDefined();
       expect(typeof result).toBe('string');
-    }, 15000); // 初回のモデル初期化のため時間を延長
+    });
     
     it('should handle unknown methods gracefully', async () => {
       // 存在しないメソッドを呼び出した時のエラー処理を確認
