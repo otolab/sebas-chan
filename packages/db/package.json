@@ -2,6 +2,7 @@
   "name": "@sebas-chan/db",
   "version": "0.0.1",
   "description": "LanceDB データベース層",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -18,7 +19,7 @@
   "dependencies": {
     "@sebas-chan/shared-types": "*",
     "axios": "^1.11.0",
-    "nanoid": "^5.0.4",
+    "nanoid": "^5.1.5",
     "winston": "^3.17.0"
   },
   "devDependencies": {
