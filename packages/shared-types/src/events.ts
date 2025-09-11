@@ -22,7 +22,7 @@ export interface Event {
   id: string;
   type: WorkflowType;
   priority: 'high' | 'normal' | 'low';
-  payload: any;
+  payload: unknown;
   timestamp: Date;
   retryCount?: number;
   maxRetries?: number;

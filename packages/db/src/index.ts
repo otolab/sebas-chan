@@ -3,10 +3,21 @@ import { EventEmitter } from 'events';
 import { Issue } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
+import * as fs from 'fs';
 
 interface PendingRequest {
-  resolve: (value: any) => void;
-  reject: (error: any) => void;
+  resolve: (value: unknown) => void;
+  reject: (error: unknown) => void;
+}
+
+export interface DBClientOptions {
+  /**
+   * 使用する埋め込みモデル
+   * - 'cl-nagoya/ruri-v3-30m': 小型モデル (120MB, 256次元)
+   * - 'cl-nagoya/ruri-v3-310m': 大型モデル (1.2GB, 768次元)
+   * @default 'cl-nagoya/ruri-v3-30m'
+   */
+  embeddingModel?: string;
 }
 
 export class DBClient extends EventEmitter {
@@ -14,6 +25,71 @@ export class DBClient extends EventEmitter {
   private requestId = 0;
   private pendingRequests = new Map<number, PendingRequest>();
   private isReady = false;
+  private buffer = ''; // 受信データのバッファ
+  private options: DBClientOptions;
+
+  constructor(options: DBClientOptions = {}) {
+    super();
+    this.options = {
+      embeddingModel: 'cl-nagoya/ruri-v3-30m',
+      ...options,
+    };
+  }
+
+  /**
+   * モデルを事前にダウンロード・初期化
+   * connectの前に実行することで、初回接続時のタイムアウトを防ぐ
+   */
+  static async initialize(modelName?: string): Promise<void> {
+    const packageRoot = path.join(__dirname, '..');
+    const downloadScript = path.join(packageRoot, 'scripts/download_model.py');
+
+    // モデル名が指定されていない場合はデフォルト
+    const model = modelName || 'cl-nagoya/ruri-v3-30m';
+
+    return new Promise((resolve, reject) => {
+      const downloadProcess = spawn(
+        'uv',
+        ['--project', '.', 'run', 'python', downloadScript, `--model=${model}`],
+        {
+          cwd: packageRoot,
+          stdio: ['ignore', 'pipe', 'pipe'],
+          env: { ...process.env, PYTHONUNBUFFERED: '1' },
+        }
+      );
+
+      let stdout = '';
+      let stderr = '';
+
+      downloadProcess.stdout?.on('data', (data) => {
+        stdout += data.toString();
+        // プログレス表示（オプション）
+        const lines = data.toString().split('\n');
+        for (const line of lines) {
+          if (line.trim()) {
+            console.log(`[Initialize] ${line}`);
+          }
+        }
+      });
+
+      downloadProcess.stderr?.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      downloadProcess.on('close', (code) => {
+        if (code === 0) {
+          console.log(`Model ${model} initialized successfully`);
+          resolve();
+        } else {
+          reject(new Error(`Model initialization failed with code ${code}: ${stderr || stdout}`));
+        }
+      });
+
+      downloadProcess.on('error', (err) => {
+        reject(new Error(`Failed to start initialization process: ${err.message}`));
+      });
+    });
+  }
 
   async connect(): Promise<void> {
     if (this.worker) {
@@ -21,17 +97,44 @@ export class DBClient extends EventEmitter {
     }
 
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
+    const packageRoot = path.join(__dirname, '..'); // packages/db
 
-    this.worker = spawn('python3', [pythonScript], {
+    // uvを必須とする（環境未整備の場合はエラー）
+    const pyprojectPath = path.join(packageRoot, 'pyproject.toml');
+    if (!fs.existsSync(pyprojectPath)) {
+      throw new Error(
+        'pyproject.toml not found. Please ensure the Python environment is properly set up with uv.'
+      );
+    }
+
+    // uv --project でPythonを実行
+    const pythonCmd = 'uv';
+    const pythonArgs = ['--project', '.', 'run', 'python', pythonScript];
+
+    // モデル選択オプションを追加
+    if (this.options.embeddingModel) {
+      pythonArgs.push(`--model=${this.options.embeddingModel}`);
+    }
+
+    this.worker = spawn(pythonCmd, pythonArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
+      cwd: packageRoot, // uvコマンドを正しいディレクトリで実行
     });
 
     this.worker.stdout?.on('data', (data) => {
-      const lines = data
-        .toString()
-        .split('\n')
-        .filter((line: string) => line.trim());
+      // バッファに追加
+      this.buffer += data.toString();
+
+      // 改行で分割して処理
+      const lines = this.buffer.split('\n');
+
+      // 最後の要素は不完全な可能性があるので、バッファに残す
+      this.buffer = lines.pop() || '';
+
+      // 完全な行だけを処理
       for (const line of lines) {
+        if (!line.trim()) continue;
+
         try {
           const response = JSON.parse(line);
           const request = this.pendingRequests.get(response.id);
@@ -45,12 +148,13 @@ export class DBClient extends EventEmitter {
           }
         } catch (e) {
           console.error('Failed to parse response:', e);
+          console.error('Line was:', line);
         }
       }
     });
 
     this.worker.stderr?.on('data', (data) => {
-      console.error('Python worker error:', data.toString());
+      console.error('Python stderr:', data.toString());
     });
 
     this.worker.on('error', (error) => {
@@ -69,15 +173,25 @@ export class DBClient extends EventEmitter {
     this.isReady = true;
   }
 
+  /**
+   * モデルを初期化
+   * connect後に明示的に呼び出す
+   */
+  async initModel(): Promise<boolean> {
+    const result = await this.sendRequest('initModel');
+    return result as boolean;
+  }
+
   async disconnect(): Promise<void> {
     if (this.worker) {
       this.worker.kill();
       this.worker = null;
       this.isReady = false;
+      this.buffer = ''; // バッファをクリア
     }
   }
 
-  private async sendRequest(method: string, params?: any): Promise<any> {
+  private async sendRequest(method: string, params?: unknown): Promise<unknown> {
     if (!this.worker || !this.isReady) {
       throw new Error('Not connected to database');
     }
@@ -96,8 +210,12 @@ export class DBClient extends EventEmitter {
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(id);
         reject(new Error('Request timeout'));
-      }, 10000); // 10秒のタイムアウト
+      }, 30000); // 30秒のタイムアウト（CI環境での初期化を考慮）
 
+      // TODO: 大きなJSONデータ（8KB以上）の送信時にバッファオーバーフローが発生する問題がある
+      // Node.jsのstdioバッファサイズ制限により、大きなデータが途切れる可能性がある
+      // 解決策: 1) チャンク分割送信の実装, 2) spawnオプションでバッファサイズ拡張, 3) IPC通信への移行
+      // Issue: https://github.com/otolab/sebas-chan/issues/2
       this.worker!.stdin?.write(JSON.stringify(request) + '\n');
 
       // タイムアウトをクリア
@@ -115,44 +233,56 @@ export class DBClient extends EventEmitter {
     const issueWithId = { ...issue, id };
 
     // 複雑なオブジェクトはJSON文字列として保存
+    // sourceInputIds → source_input_ids に変換
     const issueData = {
       ...issueWithId,
+      source_input_ids: issueWithId.sourceInputIds,
       updates: JSON.stringify(issueWithId.updates),
       relations: JSON.stringify(issueWithId.relations),
     };
+    delete (issueData as Record<string, unknown>).sourceInputIds;
 
     await this.sendRequest('addIssue', issueData);
     return id;
   }
 
   async getIssue(id: string): Promise<Issue | null> {
-    const result = await this.sendRequest('getIssue', { id });
+    const result = (await this.sendRequest('getIssue', { id })) as Record<string, unknown>;
     if (!result) return null;
 
-    // JSON文字列をパース
+    // JSON文字列をパース、source_input_ids → sourceInputIds に変換
     return {
       ...result,
-      updates: JSON.parse(result.updates || '[]'),
-      relations: JSON.parse(result.relations || '[]'),
-    };
+      sourceInputIds: result.source_input_ids || [],
+      updates: JSON.parse((result.updates as string) || '[]'),
+      relations: JSON.parse((result.relations as string) || '[]'),
+    } as Issue;
   }
 
   async searchIssues(query: string): Promise<Issue[]> {
-    const results = await this.sendRequest('searchIssues', { query });
-    return results.map((r: any) => ({
+    const results = (await this.sendRequest('searchIssues', { query })) as Array<
+      Record<string, unknown>
+    >;
+    return results.map((r) => ({
       ...r,
-      updates: JSON.parse(r.updates || '[]'),
-      relations: JSON.parse(r.relations || '[]'),
-    }));
+      sourceInputIds: r.source_input_ids || [],
+      updates: JSON.parse((r.updates as string) || '[]'),
+      relations: JSON.parse((r.relations as string) || '[]'),
+    })) as Issue[];
   }
 
   // State文書関連のメソッド
   async getStateDocument(): Promise<string> {
-    return await this.sendRequest('getState');
+    return (await this.sendRequest('getState')) as string;
   }
 
   async updateStateDocument(content: string): Promise<void> {
     await this.sendRequest('updateState', { content });
+  }
+
+  // テスト用メソッド
+  async clearDatabase(): Promise<void> {
+    await this.sendRequest('clearDatabase');
   }
 }
 

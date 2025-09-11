@@ -30,7 +30,7 @@ export class CoreAgent {
       }
 
       console.log(`Processing event: ${event.type}`);
-      
+
       try {
         await this.processEvent(event);
       } catch (error) {
@@ -66,7 +66,7 @@ export class CoreAgent {
 export interface AgentEvent {
   type: string;
   priority: 'high' | 'normal' | 'low';
-  payload: any;
+  payload: unknown;
   timestamp: Date;
 }
 

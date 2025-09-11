@@ -2,12 +2,12 @@
  * REST API関連の型定義
  */
 
-import { Issue, Flow, Knowledge, Input } from './index';
+import { Flow, Knowledge } from './index';
 
 /**
  * APIレスポンス
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
@@ -77,12 +77,12 @@ export interface UpdateKnowledgeReputationDto {
 export interface CreateInputDto {
   source: string;
   content: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ProcessRequestDto {
   prompt: string;
-  context?: Record<string, any>;
+  context?: Record<string, unknown>;
 }
 
 /**

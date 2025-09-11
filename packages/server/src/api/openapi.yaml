@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: sebas-chan API
+  description: Safe Forgetter AI Agent System API
+  version: 0.0.1
+  contact:
+    name: sebas-chan team
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.sebas-chan.example.com
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      description: Check if the service is healthy
+      operationId: getHealth
+      tags:
+        - System
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /api/state:
+    get:
+      summary: Get current state
+      description: Retrieve the current system state or specific key
+      operationId: getState
+      tags:
+        - State
+      parameters:
+        - name: key
+          in: query
+          description: Specific state key to retrieve
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current state
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Key not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    post:
+      summary: Update state
+      description: Update the system state
+      operationId: updateState
+      tags:
+        - State
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: State updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid state update
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/request:
+    post:
+      summary: Process user request
+      description: Submit a natural language request for processing
+      operationId: processRequest
+      tags:
+        - Core
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+      responses:
+        '200':
+          description: Request accepted for processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/input:
+    post:
+      summary: Submit input
+      description: Submit an input for processing
+      operationId: submitInput
+      tags:
+        - Core
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InputRequest'
+      responses:
+        '200':
+          description: Input accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InputResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - uptime
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          description: Uptime in seconds
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          description: Error message
+        details:
+          type: object
+          description: Additional error details
+
+    SuccessResponse:
+      type: object
+      required:
+        - success
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+
+    UserRequest:
+      type: object
+      required:
+        - request
+      properties:
+        request:
+          type: string
+          description: Natural language request
+        context:
+          type: object
+          description: Optional context for the request
+
+    RequestResponse:
+      type: object
+      required:
+        - success
+        - eventId
+      properties:
+        success:
+          type: boolean
+        eventId:
+          type: string
+          description: ID of the created event
+        message:
+          type: string
+
+    InputRequest:
+      type: object
+      required:
+        - source
+        - content
+      properties:
+        source:
+          type: string
+          description: Source of the input
+        content:
+          type: string
+          description: Input content
+        metadata:
+          type: object
+          description: Additional metadata
+
+    InputResponse:
+      type: object
+      required:
+        - success
+        - inputId
+      properties:
+        success:
+          type: boolean
+        inputId:
+          type: string
+          description: ID of the created input
+        issueId:
+          type: string
+          description: ID of the created issue (if any)
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []

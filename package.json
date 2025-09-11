@@ -8,8 +8,11 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
-    "build": "npm run build --workspaces --if-present",
+    "build": "npm run build -w @sebas-chan/shared-types && npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "test:unit": "npm run test --workspaces --if-present",
+    "test:e2e": "vitest run --config test/e2e/vitest.config.ts",
+    "test:api": "npm test -w @sebas-chan/server -- test/api.test.ts",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",

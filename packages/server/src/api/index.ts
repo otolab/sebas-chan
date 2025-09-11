@@ -8,12 +8,12 @@ import { createSystemRouter } from './routes/system';
 
 export function createApiRouter(coreEngine: CoreEngine): Router {
   const router = Router();
-  
+
   router.use('/issues', createIssuesRouter(coreEngine));
   router.use('/flows', createFlowsRouter(coreEngine));
   router.use('/knowledge', createKnowledgeRouter(coreEngine));
   router.use('/inputs', createInputsRouter(coreEngine));
   router.use('/system', createSystemRouter(coreEngine));
-  
+
   return router;
 }

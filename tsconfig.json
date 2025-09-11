@@ -7,6 +7,6 @@
     { "path": "./packages/server" },
     { "path": "./packages/mcp-server" },
     { "path": "./packages/reporters" },
-    { "path": "./packages/web-ui" }
+    { "path": "./packages/reporter-sdk" }
   ]
 }
