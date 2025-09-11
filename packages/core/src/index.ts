@@ -1,25 +1,37 @@
-// import { Issue, Flow, Knowledge, Input } from '@sebas-chan/shared-types';
-import { DBClient } from '@sebas-chan/db';
-import { ingestInput, IngestInputPayload } from './workflows/ingest-input.js';
+import { Issue, Flow, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+
+// CoreEngineから提供されるコンテキスト
+export interface AgentContext {
+  // State文書の取得
+  getState(): string;
+  
+  // データ検索（Engineが適切なDBアクセスを行う）
+  searchIssues(query: string): Promise<Issue[]>;
+  searchKnowledge(query: string): Promise<Knowledge[]>;
+  searchPond(query: string): Promise<PondEntry[]>;
+  
+  // データ追加（Engineが永続化を処理）
+  addPondEntry(entry: Omit<PondEntry, 'id'>): Promise<PondEntry>;
+  
+  // イベント生成（Engineがキューに追加）
+  emitEvent(event: Omit<AgentEvent, 'id' | 'timestamp'>): void;
+}
 
 export class CoreAgent {
   private eventQueue: AgentEvent[] = [];
   private isProcessing = false;
-  private dbClient: DBClient | null = null;
+  private context: AgentContext | null = null;
 
   constructor() {
     console.log('Core Agent initialized');
   }
 
-  async start() {
+  async start(context?: AgentContext) {
     console.log('Starting Core Agent...');
     
-    // DBクライアントを初期化
-    if (!this.dbClient) {
-      this.dbClient = new DBClient();
-      await this.dbClient.connect();
-      await this.dbClient.initModel();
-      console.log('DB client connected and initialized');
+    if (context) {
+      this.context = context;
+      console.log('Agent context set');
     }
     
     this.isProcessing = true;
@@ -29,18 +41,11 @@ export class CoreAgent {
   async stop() {
     console.log('Stopping Core Agent...');
     this.isProcessing = false;
-    
-    // DBクライアントを切断
-    if (this.dbClient) {
-      await this.dbClient.disconnect();
-      this.dbClient = null;
-      console.log('DB client disconnected');
-    }
   }
   
-  // DBクライアントを設定するメソッド（テスト用）
-  setDbClient(dbClient: DBClient) {
-    this.dbClient = dbClient;
+  // コンテキストを設定するメソッド
+  setContext(context: AgentContext) {
+    this.context = context;
   }
 
   private async processEventLoop() {
@@ -75,20 +80,24 @@ export class CoreAgent {
         
       case 'INGEST_INPUT':
         // Input -> Pond変換
-        if (!this.dbClient) {
-          console.error('DB client not initialized');
+        if (!this.context) {
+          console.error('Agent context not initialized');
           break;
         }
         
-        const result = await ingestInput(
-          event.payload as IngestInputPayload,
-          this.dbClient
-        );
+        const { input } = event.payload as { input: Input };
         
-        if (result.success) {
-          console.log(`Input successfully ingested: ${result.pondEntryId}`);
-        } else {
-          console.error(`Failed to ingest input: ${result.error}`);
+        try {
+          // コンテキスト経由でPondに保存
+          const pondEntry = await this.context.addPondEntry({
+            content: input.content,
+            source: input.source,
+            timestamp: input.timestamp,
+          });
+          
+          console.log(`Input successfully ingested to Pond: ${pondEntry.id}`);
+        } catch (error) {
+          console.error(`Failed to ingest input:`, error);
         }
         break;
         
