@@ -324,6 +324,19 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     try {
       const result = await this.dbClient.searchPond(filters);
 
+      // resultまたはresult.dataがundefinedの場合の対処
+      if (!result || !result.data) {
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            limit: filters.limit || 20,
+            offset: filters.offset || 0,
+            hasMore: false,
+          },
+        };
+      }
+
       // タイムスタンプをDate型に変換（score/distanceも保持）
       const data = result.data.map((r) => ({
         id: r.id,
