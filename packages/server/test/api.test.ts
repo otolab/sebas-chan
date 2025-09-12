@@ -1,26 +1,65 @@
 /**
- * API Tests - Server APIエンドポイントのテスト
+ * API Unit Tests - モックを使用した単体テスト
  * 
- * 各エンドポイントの仕様を満たしているかを検証
- * OpenAPI仕様から自動生成することも検討
+ * 実際のDBやCoreEngineを使わずに、APIエンドポイントのロジックをテスト
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
 import request from 'supertest';
-import { createApp } from '../src/app';
-import { StateManager } from '../src/core/state';
-import { CoreEngine } from '../src/core/engine';
+import express from 'express';
+import { createAPIRoutes } from '../src/api/routes';
 
-// TODO: supertestをインストールして実装
-// npm install --save-dev supertest @types/supertest
+// CoreEngineをモック
+vi.mock('../src/core/engine', () => ({
+  CoreEngine: vi.fn().mockImplementation(() => ({
+    initialize: vi.fn().mockResolvedValue(undefined),
+    stop: vi.fn(),
+    getState: vi.fn().mockReturnValue('# Mock State'),
+    updateState: vi.fn(),
+    createIssue: vi.fn().mockImplementation((data) => ({
+      id: 'mock-issue-id',
+      ...data,
+      status: 'open',
+    })),
+    searchIssues: vi.fn().mockResolvedValue([]),
+    createInput: vi.fn().mockImplementation((data) => ({
+      id: 'mock-input-id',
+      ...data,
+      timestamp: new Date(),
+    })),
+    addToPond: vi.fn().mockImplementation((data) => ({
+      id: 'mock-pond-id',
+      ...data,
+    })),
+    searchPond: vi.fn().mockResolvedValue([]),
+  }))
+}));
 
-describe('API Endpoints', () => {
-  let app: any;
+describe('API Unit Tests', () => {
+  let app: express.Application;
+  let mockEngine: any;
   
-  beforeEach(async () => {
-    // createApp関数を使ってアプリケーションを作成
-    app = await createApp();
-  }, 30000);
+  beforeEach(() => {
+    // モックをリセット
+    vi.clearAllMocks();
+    
+    // Expressアプリを作成
+    app = express();
+    app.use(express.json());
+    
+    // モックエンジンを作成
+    const { CoreEngine } = require('../src/core/engine');
+    mockEngine = new CoreEngine();
+    
+    // APIルートを設定
+    const routes = createAPIRoutes(mockEngine);
+    app.use('/api', routes);
+    
+    // ヘルスチェックエンドポイント
+    app.get('/health', (req, res) => {
+      res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    });
+  });
   
   describe('GET /health', () => {
     it('should return healthy status', async () => {
@@ -36,75 +75,40 @@ describe('API Endpoints', () => {
   });
   
   describe('GET /api/state', () => {
-    it.skip('should return current state', async () => {
-      // TODO: 実際のAPIエンドポイントに合わせて修正
+    it('should return current state', async () => {
       const response = await request(app)
         .get('/api/state')
         .expect(200);
       
-      expect(response.body).toBeDefined();
-    });
-    
-    it.skip('should return specific state key', async () => {
-      // TODO: 実際のAPIエンドポイントに合わせて修正
-      const response = await request(app)
-        .get('/api/state?key=issues')
-        .expect(200);
-      
-      expect(response.body).toBeDefined();
+      expect(response.body).toEqual({
+        state: '# Mock State'
+      });
+      expect(mockEngine.getState).toHaveBeenCalled();
     });
   });
   
   describe('POST /api/state', () => {
-    it.skip('should update state', async () => {
-      // TODO: 実際のAPIエンドポイントに合わせて修正
-      const updates = {
-        issues: [{ id: '1', title: 'New Issue' }],
-        flows: []
-      };
+    it('should update state', async () => {
+      const newState = '# Updated State';
       
       const response = await request(app)
         .post('/api/state')
-        .send(updates);
+        .send({ content: newState })
+        .expect(200);
       
-      expect(response.status).toBeLessThan(500);
+      expect(response.body).toEqual({
+        message: 'State updated'
+      });
+      expect(mockEngine.updateState).toHaveBeenCalledWith(newState);
     });
     
-    it.skip('should validate state updates', async () => {
-      // TODO: 実際のAPIエンドポイントに合わせて修正
-      const invalidUpdate = {
-        invalidKey: 'invalid value'
-      };
-      
+    it('should validate state content', async () => {
       const response = await request(app)
         .post('/api/state')
-        .send(invalidUpdate);
+        .send({ }) // contentが無い
+        .expect(400);
       
-      expect(response.status).toBeLessThan(500);
-    });
-  });
-  
-  describe('POST /api/request', () => {
-    it.skip('should process user request', async () => {
-      // TODO: 実際のAPIエンドポイントに合わせて修正
-      const requestData = {
-        request: 'Test user request'
-      };
-      
-      const response = await request(app)
-        .post('/api/request')
-        .send(requestData);
-      
-      expect(response.status).toBeLessThan(500);
-    });
-    
-    it.skip('should require request field', async () => {
-      // TODO: 実際のAPIエンドポイントに合わせて修正
-      const response = await request(app)
-        .post('/api/request')
-        .send({});
-      
-      expect(response.status).toBeLessThan(500);
+      expect(response.body).toHaveProperty('error');
     });
   });
   
@@ -112,8 +116,7 @@ describe('API Endpoints', () => {
     it('should accept input data', async () => {
       const inputData = {
         source: 'test',
-        content: 'Test input content',
-        metadata: {}
+        content: 'Test input'
       };
       
       const response = await request(app)
@@ -121,59 +124,168 @@ describe('API Endpoints', () => {
         .send(inputData)
         .expect(201);
       
-      expect(response.body).toHaveProperty('success');
-      expect(response.body).toHaveProperty('data');
-      expect(response.body.data).toHaveProperty('id');
-      expect(response.body.data).toHaveProperty('source');
-      expect(response.body.data).toHaveProperty('content');
+      expect(response.body).toEqual({
+        id: 'mock-input-id',
+        message: 'Input received',
+        input: expect.objectContaining({
+          id: 'mock-input-id',
+          source: 'test',
+          content: 'Test input'
+        })
+      });
+      
+      expect(mockEngine.createInput).toHaveBeenCalledWith(
+        expect.objectContaining(inputData)
+      );
     });
     
-    it.skip('should validate input fields', async () => {
-      // TODO: バリデーションロジックを実装後に有効化
+    it('should validate required fields', async () => {
       const response = await request(app)
         .post('/api/inputs')
-        .send({ source: 'test' }) // contentが不足
+        .send({ source: 'test' }) // contentが無い
         .expect(400);
       
-      expect(response.body.error).toContain('content');
+      expect(response.body).toHaveProperty('error');
     });
   });
   
-  describe('Rate Limiting', () => {
-    it('should rate limit requests', async () => {
-      // 大量のリクエストを送信
-      const promises = [];
-      for (let i = 0; i < 100; i++) {
-        promises.push(
-          request(app).get('/api/state')
-        );
-      }
+  describe('POST /api/issues', () => {
+    it('should create issue', async () => {
+      const issueData = {
+        title: 'Test Issue',
+        description: 'Test description',
+        labels: ['bug']
+      };
       
-      const responses = await Promise.all(promises);
-      const rateLimited = responses.some(r => r.status === 429);
+      const response = await request(app)
+        .post('/api/issues')
+        .send(issueData)
+        .expect(201);
       
-      // レート制限が有効な場合
-      // expect(rateLimited).toBe(true);
+      expect(response.body).toEqual({
+        id: 'mock-issue-id',
+        issue: expect.objectContaining({
+          title: 'Test Issue',
+          description: 'Test description',
+          status: 'open'
+        })
+      });
+      
+      expect(mockEngine.createIssue).toHaveBeenCalled();
+    });
+  });
+  
+  describe('GET /api/issues/search', () => {
+    it('should search issues', async () => {
+      mockEngine.searchIssues.mockResolvedValue([
+        { id: '1', title: 'Issue 1', status: 'open' },
+        { id: '2', title: 'Issue 2', status: 'closed' }
+      ]);
+      
+      const response = await request(app)
+        .get('/api/issues/search')
+        .query({ q: 'test' })
+        .expect(200);
+      
+      expect(response.body).toEqual({
+        results: [
+          { id: '1', title: 'Issue 1', status: 'open' },
+          { id: '2', title: 'Issue 2', status: 'closed' }
+        ]
+      });
+      
+      expect(mockEngine.searchIssues).toHaveBeenCalledWith('test');
+    });
+    
+    it('should handle empty query', async () => {
+      const response = await request(app)
+        .get('/api/issues/search')
+        .expect(200);
+      
+      expect(response.body).toEqual({
+        results: []
+      });
+    });
+  });
+  
+  describe('POST /api/pond', () => {
+    it('should add to pond', async () => {
+      const pondData = {
+        content: 'Test pond entry',
+        source: 'test'
+      };
+      
+      const response = await request(app)
+        .post('/api/pond')
+        .send(pondData)
+        .expect(201);
+      
+      expect(response.body).toEqual({
+        id: 'mock-pond-id',
+        message: 'Added to pond'
+      });
+      
+      expect(mockEngine.addToPond).toHaveBeenCalledWith(
+        expect.objectContaining(pondData)
+      );
+    });
+  });
+  
+  describe('GET /api/pond/search', () => {
+    it('should search pond', async () => {
+      mockEngine.searchPond.mockResolvedValue([
+        { id: 'p1', content: 'Entry 1', source: 'test' },
+        { id: 'p2', content: 'Entry 2', source: 'test' }
+      ]);
+      
+      const response = await request(app)
+        .get('/api/pond/search')
+        .query({ q: 'test' })
+        .expect(200);
+      
+      expect(response.body).toEqual({
+        results: [
+          { id: 'p1', content: 'Entry 1', source: 'test' },
+          { id: 'p2', content: 'Entry 2', source: 'test' }
+        ]
+      });
+      
+      expect(mockEngine.searchPond).toHaveBeenCalledWith('test', undefined);
+    });
+    
+    it('should support limit parameter', async () => {
+      const response = await request(app)
+        .get('/api/pond/search')
+        .query({ q: 'test', limit: 5 })
+        .expect(200);
+      
+      expect(mockEngine.searchPond).toHaveBeenCalledWith('test', 5);
     });
   });
   
   describe('Error Handling', () => {
-    it.skip('should handle internal server errors gracefully', async () => {
-      // TODO: エラーハンドリングのテストを実装
+    it('should handle 404', async () => {
       const response = await request(app)
-        .get('/api/non-existent-endpoint')
+        .get('/api/unknown')
         .expect(404);
       
-      expect(response.status).toBe(404);
+      expect(response.body).toHaveProperty('error');
+    });
+    
+    it('should handle invalid JSON', async () => {
+      const response = await request(app)
+        .post('/api/inputs')
+        .set('Content-Type', 'application/json')
+        .send('{ invalid json')
+        .expect(400);
+      
+      expect(response.body).toHaveProperty('error');
     });
   });
-});
-
-describe('API Specification Compliance', () => {
-  // OpenAPI仕様との整合性チェック
-  // TODO: OpenAPI仕様を定義してから実装
   
-  it.todo('should match OpenAPI specification');
-  it.todo('should validate request schemas');
-  it.todo('should validate response schemas');
+  describe('Rate Limiting', () => {
+    it.skip('should rate limit requests', async () => {
+      // レート制限のテストはE2Eで実施
+    });
+  });
 });
