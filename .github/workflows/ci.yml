@@ -58,8 +58,14 @@ jobs:
         with:
           name: dependencies
 
-      - name: Rebuild native modules
-        run: npm rebuild
+      - name: Fix binary permissions and rebuild
+        run: |
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
 
       - name: Check TypeScript
         run: npm run typecheck
@@ -86,8 +92,14 @@ jobs:
         with:
           name: dependencies
 
-      - name: Rebuild native modules
-        run: npm rebuild
+      - name: Fix binary permissions and rebuild
+        run: |
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
 
       - name: Run unit tests
         run: npm run test:unit
@@ -119,8 +131,14 @@ jobs:
         with:
           name: dependencies
 
-      - name: Rebuild native modules
-        run: npm rebuild
+      - name: Fix binary permissions and rebuild
+        run: |
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
       
       - name: Setup Python dependencies for DB package
         run: |
@@ -161,8 +179,14 @@ jobs:
         with:
           name: dependencies
 
-      - name: Rebuild native modules
-        run: npm rebuild
+      - name: Fix binary permissions and rebuild
+        run: |
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
       
       - name: Setup Python dependencies for DB package
         run: |
