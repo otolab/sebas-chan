@@ -451,20 +451,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return this.isRunning && this.dbClient !== null && this.coreAgent !== null;
   }
 
-  getHealthStatus(): {
-    ready: boolean;
-    engine: 'starting' | 'running' | 'stopped';
-    database: boolean;
-    agent: boolean;
-  } {
-    return {
-      ready: this.isReady(),
-      engine: this.isRunning ? 'running' : this.dbClient ? 'starting' : 'stopped',
-      database: this.dbClient !== null,
-      agent: this.coreAgent !== null,
-    };
-  }
-
   updateState(content: string): void {
     this.stateManager.updateState(content);
   }

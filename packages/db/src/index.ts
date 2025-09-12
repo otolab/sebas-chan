@@ -226,7 +226,10 @@ export class DBClient extends EventEmitter {
     };
 
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(id, { resolve, reject });
+      this.pendingRequests.set(id, { 
+        resolve: resolve as (value: unknown) => void, 
+        reject 
+      });
 
       const timeout = setTimeout(() => {
         this.pendingRequests.delete(id);
@@ -465,4 +468,3 @@ export class DBClient extends EventEmitter {
 }
 
 export default DBClient;
-export type { DBStatus, DBClientOptions };
