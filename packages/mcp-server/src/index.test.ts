@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { MCPServer } from './index';
+import { MCPServer } from './index.js';
 
 describe('MCPServer', () => {
   it('should create an instance', () => {
