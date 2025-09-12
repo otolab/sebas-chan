@@ -1,8 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../../utils/logger.js';
 
+interface HttpError extends Error {
+  status?: number;
+}
+
 export function errorHandler(
-  error: any,
+  error: HttpError,
   req: Request,
   res: Response,
   next: NextFunction

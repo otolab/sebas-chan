@@ -10,8 +10,8 @@ vi.mock('@sebas-chan/db');
 
 describe('Input to Pond Flow Integration', () => {
   let engine: CoreEngine;
-  let mockDbClient: any;
-  let mockCoreAgent: any;
+  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
+  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
 
   beforeEach(async () => {
     // DBClientモックの設定

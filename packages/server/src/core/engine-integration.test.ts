@@ -17,8 +17,8 @@ vi.mock('../utils/logger', () => ({
 
 describe('CoreEngine - CoreAgent Integration', () => {
   let engine: CoreEngine;
-  let mockDbClient: any;
-  let mockCoreAgent: any;
+  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
+  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
 
   beforeEach(() => {
     // DBClientモックの設定

@@ -10,8 +10,8 @@ vi.mock('@sebas-chan/db');
 
 describe('CoreEngine', () => {
   let engine: CoreEngine;
-  let mockDbClient: any;
-  let mockCoreAgent: any;
+  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
+  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
 
   beforeEach(async () => {
     // DBClientモックの設定
@@ -319,7 +319,8 @@ describe('CoreEngine', () => {
       await engine.start();
 
       // processIntervalが重複して設定されていないことを確認
-      const processInterval = (engine as any).processInterval;
+      const processInterval = (engine as unknown as { processInterval: NodeJS.Timeout })
+        .processInterval;
       expect(processInterval).toBeDefined();
     });
 

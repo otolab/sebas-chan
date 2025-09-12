@@ -47,8 +47,9 @@ export function createAPIRoutes(engine: CoreEngine): Router {
         message: 'Input received',
         input,
       });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: message });
     }
   });
 
@@ -75,8 +76,9 @@ export function createAPIRoutes(engine: CoreEngine): Router {
         id: issue.id,
         issue,
       });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: message });
     }
   });
 
@@ -86,8 +88,9 @@ export function createAPIRoutes(engine: CoreEngine): Router {
     try {
       const results = await engine.searchIssues(query as string);
       res.json({ results });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: message });
     }
   });
 
