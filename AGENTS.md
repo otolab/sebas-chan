@@ -12,8 +12,20 @@
 # 開発環境のセットアップ
 npm install
 
-# 開発サーバーの起動
-npm run dev
+# 開発サーバーの起動（別ターミナルで実行）
+PORT=3001 npm run dev -w @sebas-chan/server  # APIサーバー（ポート3001）
+npm run dev -w @sebas-chan/web-ui             # Web UI（ポート5173）
+
+# ビルド
+npm run build
+
+# テスト実行
+npm test                                      # 全パッケージ
+npm test -w @sebas-chan/server               # 特定パッケージ
+
+# 型チェック・リント
+npm run typecheck
+npm run lint
 ```
 
 ## プロジェクト構成
@@ -21,7 +33,9 @@ npm run dev
 - **packages/** - モノレポ配下のパッケージ群
   - **server/** - メインサーバープロセス（REST API、設定管理）
   - **core/** - Core Agentと基本ロジック
-  - **db/** - データベースブリッジ層
+  - **db/** - データベースブリッジ層（LanceDB + Python）
+  - **shared-types/** - 共通型定義
+  - **reporter-sdk/** - レポーターSDK
   - **mcp-server/** - MCPサーバー実装
   - **web-ui/** - SvelteKit Web UI
 
@@ -45,11 +59,23 @@ npm run dev
 - **Core Agent**: イベントキュー型思考エンジン
 - **Reporters**: 情報収集モジュール群
 - **MCP Server**: 標準化された通信インターフェース
-- **Web UI**: ユーザー向けインターフェース
+- **Web UI**: ユーザー向けインターフェース（Pond検索機能実装済み）
+- **Pond**: ベクトルDB（LanceDB）による知識ベース
+  - 日本語対応ベクトル検索（ruri-v3モデル、256次元）
+  - DataFusion SQLクエリサポート
+
+## アクセスURL
+
+- **Web UI**: http://localhost:5173
+  - Pond検索: http://localhost:5173/pond
+- **API**: http://localhost:3001
+  - ヘルスチェック: GET /api/health
+  - Pond検索: GET /api/pond
+  - 入力投稿: POST /api/inputs
 
 ## 現在の状態
 
-Phase 1: 最小構成（準備中）
+Phase 2: DBブリッジとReporter SDK実装（進行中）
 
 ## 実装計画
 

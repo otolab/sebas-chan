@@ -308,17 +308,25 @@ describe('CoreEngine - CoreAgent Integration', () => {
     it('should search pond entries through context', async () => {
       await engine.initialize();
 
-      const mockPondResults = [
-        { id: 'pond-1', content: 'Result 1', source: 'test', timestamp: '2024-01-01T00:00:00Z' },
-        { id: 'pond-2', content: 'Result 2', source: 'test', timestamp: '2024-01-02T00:00:00Z' },
-      ];
+      const mockPondResults = {
+        data: [
+          { id: 'pond-1', content: 'Result 1', source: 'test', timestamp: '2024-01-01T00:00:00Z' },
+          { id: 'pond-2', content: 'Result 2', source: 'test', timestamp: '2024-01-02T00:00:00Z' },
+        ],
+        meta: {
+          total: 2,
+          limit: 100,
+          offset: 0,
+          hasMore: false,
+        },
+      };
 
       mockDbClient.searchPond.mockResolvedValue(mockPondResults);
 
       const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
       const results = await contextArg.searchPond('test query');
 
-      expect(mockDbClient.searchPond).toHaveBeenCalledWith('test query');
+      expect(mockDbClient.searchPond).toHaveBeenCalledWith({ q: 'test query', limit: 100 });
       expect(results).toHaveLength(2);
       expect(results[0].timestamp).toBeInstanceOf(Date);
       expect(results[1].timestamp).toBeInstanceOf(Date);
