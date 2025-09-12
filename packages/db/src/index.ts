@@ -24,6 +24,13 @@ export interface DBClientOptions {
   embeddingModel?: string;
 }
 
+export interface DBStatus {
+  status: 'ok' | 'error';
+  model_loaded?: boolean;
+  tables?: string[];
+  vector_dimension?: number;
+}
+
 export class DBClient extends EventEmitter {
   private worker: ChildProcess | null = null;
   private requestId = 0;
@@ -172,9 +179,69 @@ export class DBClient extends EventEmitter {
       this.worker = null;
     });
 
-    // ワーカーの起動を待つ
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    this.isReady = true;
+    // ワーカーの起動を待つ（実際にpingが通るまで）
+    await this.waitForReady();
+  }
+
+  /**
+   * DBが準備完了するまで待つ
+   */
+  private async waitForReady(): Promise<void> {
+    const maxRetries = 30; // 最大30秒待つ
+    const retryInterval = 1000; // 1秒ごとにリトライ
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const status = await this.ping();
+        if (status.status === 'ok') {
+          this.isReady = true;
+          console.log('DB is ready:', status);
+          return;
+        }
+      } catch (e) {
+        // pingが失敗しても続ける
+        console.log(`Waiting for DB to be ready... (${i + 1}/${maxRetries})`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryInterval));
+    }
+
+    throw new Error('Timeout waiting for DB to be ready');
+  }
+
+  /**
+   * ヘルスチェック
+   */
+  async ping(): Promise<DBStatus> {
+    // isReadyチェックをスキップ（起動中にも呼ばれるため）
+    if (!this.worker) {
+      throw new Error('Not connected to database');
+    }
+
+    const id = ++this.requestId;
+    const request = {
+      jsonrpc: '2.0',
+      method: 'ping',
+      params: {},
+      id,
+    };
+
+    return new Promise((resolve, reject) => {
+      this.pendingRequests.set(id, { resolve, reject });
+
+      const timeout = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error('Ping timeout'));
+      }, 5000); // 5秒のタイムアウト
+
+      this.worker!.stdin?.write(JSON.stringify(request) + '\n');
+
+      // タイムアウトをクリア
+      const originalResolve = this.pendingRequests.get(id)!.resolve;
+      this.pendingRequests.get(id)!.resolve = (value) => {
+        clearTimeout(timeout);
+        originalResolve(value);
+      };
+    }) as Promise<DBStatus>;
   }
 
   /**
@@ -375,6 +442,27 @@ export class DBClient extends EventEmitter {
   async clearDatabase(): Promise<void> {
     await this.sendRequest('clearDatabase');
   }
+
+  /**
+   * 現在のステータスを取得
+   */
+  async getStatus(): Promise<DBStatus> {
+    if (!this.isReady) {
+      return {
+        status: 'error',
+        model_loaded: false,
+      };
+    }
+    try {
+      return await this.ping();
+    } catch (e) {
+      return {
+        status: 'error',
+        model_loaded: false,
+      };
+    }
+  }
 }
 
 export default DBClient;
+export type { DBStatus, DBClientOptions };

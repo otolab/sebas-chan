@@ -18,6 +18,14 @@ import { DBClient } from '@sebas-chan/db';
 import { CoreAgent, AgentContext } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 
+export interface EngineStatus {
+  isRunning: boolean;
+  dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected';
+  modelLoaded: boolean;
+  queueSize: number;
+  lastError?: string;
+}
+
 export class CoreEngine extends EventEmitter implements CoreAPI {
   private eventQueue: EventQueue;
   private stateManager: StateManager;
@@ -25,6 +33,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private coreAgent: CoreAgent | null = null;
   private isRunning: boolean = false;
   private processInterval: NodeJS.Timeout | null = null;
+  private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
+  private lastError?: string;
 
   constructor() {
     super();
@@ -35,20 +45,29 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   async initialize(): Promise<void> {
     logger.info('Initializing Core Engine...');
 
-    // DBクライアントを初期化
-    this.dbClient = new DBClient();
-    await this.dbClient.connect();
-    await this.dbClient.initModel();
-    logger.info('DB client connected and initialized');
+    try {
+      // DBクライアントを初期化
+      this.dbStatus = 'connecting';
+      this.dbClient = new DBClient();
+      await this.dbClient.connect();
+      await this.dbClient.initModel();
+      this.dbStatus = 'ready';
+      logger.info('DB client connected and initialized');
 
-    // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
-    this.coreAgent = new CoreAgent();
-    const agentContext = this.createAgentContext();
-    this.coreAgent.setContext(agentContext);
-    logger.info('Core Agent initialized with context');
+      // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
+      this.coreAgent = new CoreAgent();
+      const agentContext = this.createAgentContext();
+      this.coreAgent.setContext(agentContext);
+      logger.info('Core Agent initialized with context');
 
-    await this.stateManager.initialize();
-    // startは別途呼び出す必要がある
+      await this.stateManager.initialize();
+      // startは別途呼び出す必要がある
+    } catch (error) {
+      this.dbStatus = 'error';
+      this.lastError = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to initialize Core Engine:', error);
+      throw error;
+    }
   }
 
   // CoreAgent用のコンテキストを作成
@@ -117,7 +136,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     logger.info('Core Engine started');
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     if (!this.isRunning) return;
 
     this.isRunning = false;
@@ -126,7 +145,65 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       this.processInterval = null;
     }
 
+    // DBクライアントを切断
+    if (this.dbClient) {
+      try {
+        await this.dbClient.disconnect();
+        this.dbStatus = 'disconnected';
+      } catch (error) {
+        logger.error('Error disconnecting DB client:', error);
+      }
+    }
+
     logger.info('Core Engine stopped');
+  }
+
+  /**
+   * エンジンの現在のステータスを取得
+   */
+  async getStatus(): Promise<EngineStatus> {
+    let modelLoaded = false;
+    
+    // DBのステータスを確認
+    if (this.dbClient && this.dbStatus === 'ready') {
+      try {
+        const dbStatus = await this.dbClient.getStatus();
+        modelLoaded = dbStatus.model_loaded || false;
+        if (dbStatus.status === 'error') {
+          this.dbStatus = 'error';
+        }
+      } catch (error) {
+        this.dbStatus = 'error';
+        this.lastError = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    return {
+      isRunning: this.isRunning,
+      dbStatus: this.dbStatus,
+      modelLoaded,
+      queueSize: this.eventQueue.size(),
+      lastError: this.lastError,
+    };
+  }
+
+  /**
+   * ヘルスチェック用のステータスを取得（同期的）
+   */
+  getHealthStatus(): {
+    ready: boolean;
+    engine: string;
+    database: string;
+    agent: string;
+  } {
+    const ready = this.isRunning && this.dbStatus === 'ready';
+    
+    return {
+      ready,
+      engine: this.isRunning ? 'running' : 'stopped',
+      database: this.dbStatus,
+      agent: this.coreAgent ? 'initialized' : 'not initialized',
+    };
   }
 
   private async processNextEvent(): Promise<void> {

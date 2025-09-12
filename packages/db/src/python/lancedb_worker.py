@@ -92,7 +92,9 @@ class LanceDBWorker:
         request_id = request.get("id")
         
         try:
-            if method == "initModel":
+            if method == "ping":
+                result = self.ping()
+            elif method == "initModel":
                 result = self.init_model()
             elif method == "addIssue":
                 result = self.add_issue(params)
@@ -132,6 +134,19 @@ class LanceDBWorker:
                 },
                 "id": request_id
             }
+    
+    def ping(self) -> Dict[str, Any]:
+        """ヘルスチェック用のping
+        
+        Returns:
+            ステータス情報を含む辞書
+        """
+        return {
+            "status": "ok",
+            "model_loaded": self.embedding_model.is_loaded if hasattr(self.embedding_model, 'is_loaded') else False,
+            "tables": self.db.table_names(),
+            "vector_dimension": self.vector_dimension
+        }
     
     def init_model(self) -> bool:
         """モデルを初期化

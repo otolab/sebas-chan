@@ -31,11 +31,18 @@ export async function setupTestEnvironment(): Promise<DBClient> {
     const startTime = Date.now();
     
     globalDbClient = new DBClient();
-    await globalDbClient.connect();
+    await globalDbClient.connect(); // waitForReadyを内部で呼ぶ
     await globalDbClient.initModel();
+    
+    // 追加の確認：DBが本当に使える状態か確認
+    const status = await globalDbClient.getStatus();
+    if (status.status !== 'ok') {
+      throw new Error(`DB is not ready: ${JSON.stringify(status)}`);
+    }
     
     const duration = Date.now() - startTime;
     console.log(`✅ Test environment ready (${duration}ms)`);
+    console.log(`   DB Status: ${JSON.stringify(status)}`);
     
     return globalDbClient;
   })();
