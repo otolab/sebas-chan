@@ -58,12 +58,8 @@ jobs:
         with:
           name: dependencies
 
-      - name: Fix permissions for binaries
-        run: |
-          chmod +x node_modules/.bin/* || true
-          chmod +x node_modules/**/*.node || true
-          find node_modules -name "*.node" -exec chmod +x {} \; || true
-          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
+      - name: Rebuild native modules
+        run: npm rebuild
 
       - name: Check TypeScript
         run: npm run typecheck
@@ -90,12 +86,8 @@ jobs:
         with:
           name: dependencies
 
-      - name: Fix permissions for binaries
-        run: |
-          chmod +x node_modules/.bin/* || true
-          chmod +x node_modules/**/*.node || true
-          find node_modules -name "*.node" -exec chmod +x {} \; || true
-          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
+      - name: Rebuild native modules
+        run: npm rebuild
 
       - name: Run unit tests
         run: npm run test:unit
@@ -127,12 +119,8 @@ jobs:
         with:
           name: dependencies
 
-      - name: Fix permissions for binaries
-        run: |
-          chmod +x node_modules/.bin/* || true
-          chmod +x node_modules/**/*.node || true
-          find node_modules -name "*.node" -exec chmod +x {} \; || true
-          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
+      - name: Rebuild native modules
+        run: npm rebuild
       
       - name: Setup Python dependencies for DB package
         run: |
@@ -173,12 +161,8 @@ jobs:
         with:
           name: dependencies
 
-      - name: Fix permissions for binaries
-        run: |
-          chmod +x node_modules/.bin/* || true
-          chmod +x node_modules/**/*.node || true
-          find node_modules -name "*.node" -exec chmod +x {} \; || true
-          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
+      - name: Rebuild native modules
+        run: npm rebuild
       
       - name: Setup Python dependencies for DB package
         run: |
