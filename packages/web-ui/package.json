@@ -10,7 +10,8 @@
 		"test": "vitest run",
 		"lint": "eslint .",
 		"typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"prepare": "svelte-kit sync || echo ''"
+		"prepare": "svelte-kit sync || echo ''",
+		"postinstall": "chmod +x node_modules/.bin/* 2>/dev/null || true"
 	},
 	"dependencies": {
 		"@sebas-chan/shared-types": "*"
