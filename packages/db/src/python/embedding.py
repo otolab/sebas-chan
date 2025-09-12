@@ -93,6 +93,11 @@ class RuriEmbedding(EmbeddingModel):
         """モデルの出力次元数"""
         return self._dimension
     
+    @property
+    def is_loaded(self) -> bool:
+        """モデルがロード済みかどうか"""
+        return self.available
+    
     def encode(self, text: str, dimension: int = None) -> List[float]:
         """
         テキストをベクトル化

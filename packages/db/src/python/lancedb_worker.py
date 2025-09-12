@@ -237,7 +237,7 @@ class LanceDBWorker:
     def add_pond_entry(self, entry_data: dict) -> bool:
         """Pondエントリーを追加"""
         # テキストコンテンツからベクトルを生成
-        if self.embedding_model.is_loaded():
+        if self.embedding_model.is_loaded:
             vector = self.embedding_model.encode(entry_data["content"])
             entry_data["vector"] = vector.tolist() if hasattr(vector, 'tolist') else vector
         else:
@@ -272,7 +272,7 @@ class LanceDBWorker:
         table = self.db.open_table(POND_TABLE)
         
         # ベクトル検索
-        if query and self.embedding_model.is_loaded():
+        if query and self.embedding_model.is_loaded:
             try:
                 query_vector = self.embedding_model.encode(query)
                 results = table.search(query_vector).limit(limit).to_list()
