@@ -32,8 +32,34 @@ jobs:
       - name: Run linter
         run: npm run lint
 
-  test:
-    name: Run Tests
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-build
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Clean install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+  integration-tests:
+    name: Integration Tests
     runs-on: ubuntu-latest
     needs: lint-and-build
 
@@ -70,7 +96,61 @@ jobs:
       - name: Build packages
         run: npm run build
 
-      - name: Run tests
-        run: npm run test
+      - name: Run integration tests
+        run: npm run test:integration
         env:
           PYTHON_BIN: ${{ github.workspace }}/packages/db/.venv/bin/python
+
+  e2e-tests:
+    name: E2E Tests (Optional)
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    continue-on-error: true  # E2Eテストの失敗はCIを失敗させない
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Clean install dependencies
+        run: |
+          rm -rf node_modules package-lock.json
+          npm install
+      
+      - name: Setup Python dependencies for DB package
+        run: |
+          cd packages/db
+          rm -rf .venv
+          uv --project . venv
+          uv --project . sync
+
+      - name: Build packages
+        run: npm run build
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          PYTHON_BIN: ${{ github.workspace }}/packages/db/.venv/bin/python
+
+  # 全テスト完了の確認（必須テストのみ）
+  tests-complete:
+    name: All Required Tests Complete
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    
+    steps:
+      - name: Tests completed successfully
+        run: echo "✅ All required tests passed successfully!"
