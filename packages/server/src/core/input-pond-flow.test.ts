@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreEngine } from './engine';
 import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
-import { Input, PondEntry } from '@sebas-chan/shared-types';
+import { Input } from '@sebas-chan/shared-types';
 
 // モックを作成
 vi.mock('@sebas-chan/core');
@@ -23,7 +23,7 @@ describe('Input to Pond Flow Integration', () => {
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
     };
-    
+
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);
 
     // CoreAgentモックの設定
@@ -33,7 +33,7 @@ describe('Input to Pond Flow Integration', () => {
       queueEvent: vi.fn(),
       setContext: vi.fn(),
     };
-    
+
     vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
 
     engine = new CoreEngine();
@@ -60,11 +60,11 @@ describe('Input to Pond Flow Integration', () => {
       expect(input.content).toContain('バックアップ処理');
 
       // Wait for event processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
       // Search in pond for the processed content
-      const results = await engine.searchPond('バックアップ エラー');
-      
+      await engine.searchPond('バックアップ エラー');
+
       // Since we're using mocked DB in tests, verify the flow was triggered
       const event = engine.dequeueEvent();
       if (event) {
@@ -99,9 +99,9 @@ describe('Input to Pond Flow Integration', () => {
       }
 
       expect(createdInputs).toHaveLength(3);
-      
+
       // Verify all inputs have unique IDs
-      const ids = new Set(createdInputs.map(i => i.id));
+      const ids = new Set(createdInputs.map((i) => i.id));
       expect(ids.size).toBe(3);
 
       // Check that events were enqueued
@@ -184,7 +184,7 @@ describe('Input to Pond Flow Integration', () => {
   describe('Event Processing Flow', () => {
     it('should process INGEST_INPUT events', async () => {
       const processedEvents: string[] = [];
-      
+
       engine.on('event:processed', (event) => {
         processedEvents.push(event.type);
       });
@@ -197,7 +197,7 @@ describe('Input to Pond Flow Integration', () => {
       });
 
       // Give time for event processing
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Manual processing since we're in test mode
       const event = engine.dequeueEvent();
@@ -259,7 +259,7 @@ describe('Input to Pond Flow Integration', () => {
 
     it('should handle very long content', async () => {
       const longContent = 'あ'.repeat(10000);
-      
+
       const input = await engine.createInput({
         source: 'stress-test',
         content: longContent,
@@ -273,8 +273,8 @@ describe('Input to Pond Flow Integration', () => {
 
   describe('State Integration', () => {
     it('should reflect input processing in state', async () => {
-      const initialState = engine.getState();
-      
+      engine.getState();
+
       await engine.createInput({
         source: 'state-test',
         content: 'State integration test input',

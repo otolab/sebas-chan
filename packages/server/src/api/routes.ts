@@ -1,6 +1,6 @@
 /**
  * API Routes
- * 
+ *
  * APIエンドポイントの定義
  */
 
@@ -18,11 +18,11 @@ export function createAPIRoutes(engine: CoreEngine): Router {
 
   router.post('/state', (req, res) => {
     const { content } = req.body;
-    
+
     if (!content) {
       return res.status(400).json({ error: 'Content is required' });
     }
-    
+
     engine.updateState(content);
     res.json({ message: 'State updated' });
   });
@@ -30,18 +30,18 @@ export function createAPIRoutes(engine: CoreEngine): Router {
   // Input管理
   router.post('/inputs', async (req, res) => {
     const { source, content } = req.body;
-    
+
     if (!source || !content) {
       return res.status(400).json({ error: 'Source and content are required' });
     }
-    
+
     try {
       const input = await engine.createInput({
         source,
         content,
         timestamp: new Date(),
       });
-      
+
       res.status(201).json({
         id: input.id,
         message: 'Input received',
@@ -55,11 +55,11 @@ export function createAPIRoutes(engine: CoreEngine): Router {
   // Issue管理
   router.post('/issues', async (req, res) => {
     const { title, description, labels = [] } = req.body;
-    
+
     if (!title || !description) {
       return res.status(400).json({ error: 'Title and description are required' });
     }
-    
+
     try {
       const issue = await engine.createIssue({
         title,
@@ -70,7 +70,7 @@ export function createAPIRoutes(engine: CoreEngine): Router {
         relations: [],
         sourceInputIds: [],
       });
-      
+
       res.status(201).json({
         id: issue.id,
         issue,
@@ -82,7 +82,7 @@ export function createAPIRoutes(engine: CoreEngine): Router {
 
   router.get('/issues/search', async (req, res) => {
     const { q: query = '' } = req.query;
-    
+
     try {
       const results = await engine.searchIssues(query as string);
       res.json({ results });
@@ -94,18 +94,18 @@ export function createAPIRoutes(engine: CoreEngine): Router {
   // Pond管理
   router.post('/pond', async (req, res) => {
     const { content, source } = req.body;
-    
+
     if (!content || !source) {
       return res.status(400).json({ error: 'Content and source are required' });
     }
-    
+
     try {
       const entry = await engine.addToPond({
         content,
         source,
         timestamp: new Date(),
       });
-      
+
       res.status(201).json({
         id: entry.id,
         message: 'Added to pond',
@@ -117,7 +117,7 @@ export function createAPIRoutes(engine: CoreEngine): Router {
 
   router.get('/pond/search', async (req, res) => {
     const { q: query = '', limit } = req.query;
-    
+
     try {
       const results = await engine.searchPond(
         query as string,

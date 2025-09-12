@@ -1,18 +1,18 @@
-import { Issue, Flow, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
 
 // CoreEngineから提供されるコンテキスト
 export interface AgentContext {
   // State文書の取得
   getState(): string;
-  
+
   // データ検索（Engineが適切なDBアクセスを行う）
   searchIssues(query: string): Promise<Issue[]>;
   searchKnowledge(query: string): Promise<Knowledge[]>;
   searchPond(query: string): Promise<PondEntry[]>;
-  
+
   // データ追加（Engineが永続化を処理）
   addPondEntry(entry: Omit<PondEntry, 'id'>): Promise<PondEntry>;
-  
+
   // イベント生成（Engineがキューに追加）
   emitEvent(event: Omit<AgentEvent, 'id' | 'timestamp'>): void;
 }
@@ -28,12 +28,12 @@ export class CoreAgent {
 
   async start(context?: AgentContext) {
     console.log('Starting Core Agent...');
-    
+
     if (context) {
       this.context = context;
       console.log('Agent context set');
     }
-    
+
     this.isProcessing = true;
     await this.processEventLoop();
   }
@@ -42,7 +42,7 @@ export class CoreAgent {
     console.log('Stopping Core Agent...');
     this.isProcessing = false;
   }
-  
+
   // コンテキストを設定するメソッド
   setContext(context: AgentContext) {
     this.context = context;
@@ -71,22 +71,22 @@ export class CoreAgent {
 
   private async processEvent(event: AgentEvent) {
     console.log(`Processing event: ${event.type}`);
-    
+
     switch (event.type) {
       case 'PROCESS_USER_REQUEST':
         // ユーザーリクエストの処理
         console.log('Processing user request...');
         break;
-        
-      case 'INGEST_INPUT':
+
+      case 'INGEST_INPUT': {
         // Input -> Pond変換
         if (!this.context) {
           console.error('Agent context not initialized');
           break;
         }
-        
+
         const { input } = event.payload as { input: Input };
-        
+
         try {
           // コンテキスト経由でPondに保存
           const pondEntry = await this.context.addPondEntry({
@@ -94,18 +94,19 @@ export class CoreAgent {
             source: input.source,
             timestamp: input.timestamp,
           });
-          
+
           console.log(`Input successfully ingested to Pond: ${pondEntry.id}`);
         } catch (error) {
           console.error(`Failed to ingest input:`, error);
         }
         break;
-        
+      }
+
       case 'ANALYZE_ISSUE_IMPACT':
         // Issue影響分析
         console.log('Analyzing issue impact...');
         break;
-        
+
       default:
         console.warn(`Unknown event type: ${event.type}`);
     }

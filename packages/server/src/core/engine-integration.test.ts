@@ -30,7 +30,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
     };
-    
+
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);
 
     // CoreAgentモックの設定
@@ -40,7 +40,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       queueEvent: vi.fn(),
       setContext: vi.fn(),
     };
-    
+
     vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
 
     engine = new CoreEngine();
@@ -125,7 +125,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       // 両方のイベントがCoreAgentに転送されることを確認
       expect(mockCoreAgent.queueEvent).toHaveBeenCalledTimes(2);
-      
+
       const calls = mockCoreAgent.queueEvent.mock.calls;
       expect(calls[0][0].type).toBe('PROCESS_USER_REQUEST');
       expect(calls[1][0].type).toBe('ANALYZE_ISSUE_IMPACT');
@@ -162,7 +162,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
     it('should handle DB operation failures gracefully', async () => {
       await engine.initialize();
-      
+
       // DBエラーをシミュレート
       mockDbClient.addPondEntry.mockResolvedValue(false);
 
@@ -190,7 +190,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.initialize();
 
       const contextArg = mockCoreAgent.start.mock.calls[0][0];
-      
+
       // contextのemitEventを呼び出し
       contextArg.emitEvent({
         type: 'CUSTOM_EVENT',
@@ -219,7 +219,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       mockDbClient.connect.mockRejectedValue(new Error('Connection failed'));
 
       await expect(engine.initialize()).rejects.toThrow('Connection failed');
-      
+
       // CoreAgentが初期化されないことを確認
       expect(mockCoreAgent.start).not.toHaveBeenCalled();
     });
@@ -241,9 +241,9 @@ describe('CoreEngine - CoreAgent Integration', () => {
         content: 'Complete flow test',
         timestamp: new Date(),
       };
-      
+
       const input = await engine.createInput(inputData);
-      
+
       // Inputが正しく作成される
       expect(input.id).toBeDefined();
       expect(input.source).toBe('manual');
@@ -287,7 +287,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       // すべてのイベントがCoreAgentに転送される
       expect(mockCoreAgent.queueEvent).toHaveBeenCalledTimes(3);
-      
+
       // 各イベントの内容を確認
       for (let i = 0; i < 3; i++) {
         const call = mockCoreAgent.queueEvent.mock.calls[i];
@@ -304,7 +304,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         { id: 'pond-1', content: 'Result 1', source: 'test', timestamp: '2024-01-01T00:00:00Z' },
         { id: 'pond-2', content: 'Result 2', source: 'test', timestamp: '2024-01-02T00:00:00Z' },
       ];
-      
+
       mockDbClient.searchPond.mockResolvedValue(mockPondResults);
 
       const contextArg = mockCoreAgent.start.mock.calls[0][0];
@@ -331,7 +331,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
           sourceInputIds: [],
         },
       ];
-      
+
       mockDbClient.searchIssues.mockResolvedValue(mockIssueResults);
 
       const contextArg = mockCoreAgent.start.mock.calls[0][0];
@@ -346,7 +346,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
     it('should handle events locally when CoreAgent is not initialized', async () => {
       // initializeを呼ばずにengineを使用
       engine = new CoreEngine();
-      
+
       const listener = vi.fn();
       engine.on('event:processed', listener);
 

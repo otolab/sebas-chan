@@ -23,7 +23,7 @@ describe('CoreEngine', () => {
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
     };
-    
+
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);
 
     // CoreAgentモックの設定
@@ -33,7 +33,7 @@ describe('CoreEngine', () => {
       queueEvent: vi.fn(),
       setContext: vi.fn(),
     };
-    
+
     vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
 
     engine = new CoreEngine();
@@ -78,7 +78,7 @@ describe('CoreEngine', () => {
           payload: { test: true },
         })
       );
-      
+
       // CoreAgentにイベントが転送されることを確認
       expect(mockCoreAgent.queueEvent).toHaveBeenCalled();
     });

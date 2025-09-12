@@ -39,7 +39,7 @@ describe('API Unit Tests', () => {
   let app: express.Application;
   let mockEngine: any;
   
-  beforeEach(() => {
+  beforeEach(async () => {
     // モックをリセット
     vi.clearAllMocks();
     
@@ -48,7 +48,7 @@ describe('API Unit Tests', () => {
     app.use(express.json());
     
     // モックエンジンを作成
-    const { CoreEngine } = require('../src/core/engine');
+    const { CoreEngine } = await import('../src/core/engine');
     mockEngine = new CoreEngine();
     
     // APIルートを設定

@@ -24,44 +24,44 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   async initialize(): Promise<void> {
     logger.info('Initializing Core Engine...');
-    
+
     // DBクライアントを初期化
     this.dbClient = new DBClient();
     await this.dbClient.connect();
     await this.dbClient.initModel();
     logger.info('DB client connected and initialized');
-    
+
     // CoreAgentを初期化し、コンテキストを提供
     this.coreAgent = new CoreAgent();
     const agentContext = this.createAgentContext();
     await this.coreAgent.start(agentContext);
     logger.info('Core Agent initialized with context');
-    
+
     await this.stateManager.initialize();
     this.start();
   }
-  
+
   // CoreAgent用のコンテキストを作成
   private createAgentContext(): AgentContext {
     return {
       getState: () => this.stateManager.getState(),
-      
+
       searchIssues: async (query: string) => {
         if (!this.dbClient) throw new Error('DB client not initialized');
         return this.dbClient.searchIssues(query);
       },
-      
+
       searchKnowledge: async (query: string) => {
         // TODO: Implement when Knowledge methods are added to DBClient
         logger.debug('Searching knowledge', { query });
         return [];
       },
-      
+
       searchPond: async (query: string) => {
         if (!this.dbClient) throw new Error('DB client not initialized');
         const results = await this.dbClient.searchPond(query);
         // DBClientのレスポンスをPondEntry型に変換
-        return results.map(r => ({
+        return results.map((r) => ({
           id: r.id,
           content: r.content,
           source: r.source,
@@ -69,7 +69,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
           vector: r.vector,
         }));
       },
-      
+
       addPondEntry: async (entry: Omit<PondEntry, 'id'>) => {
         if (!this.dbClient) throw new Error('DB client not initialized');
         const id = nanoid();
@@ -77,14 +77,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
           id,
           ...entry,
         });
-        
+
         if (success) {
           return { id, ...entry };
         } else {
           throw new Error('Failed to add pond entry');
         }
       },
-      
+
       emitEvent: (event: Omit<Event, 'id' | 'timestamp'>) => {
         this.enqueueEvent(event);
       },
@@ -155,23 +155,23 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         payload: event.payload,
         timestamp: event.timestamp,
       };
-      
+
       // CoreAgentのキューに追加
       this.coreAgent.queueEvent(agentEvent);
       logger.debug('Event forwarded to Core Agent', { eventType: event.type });
     } else {
       logger.warn('Core Agent not initialized, handling event locally');
-      
+
       // フォールバック処理
       switch (event.type) {
         case 'PROCESS_USER_REQUEST':
           logger.info('Processing user request', { payload: event.payload });
           break;
-          
+
         case 'INGEST_INPUT':
           logger.info('Ingesting input', { payload: event.payload });
           break;
-          
+
         default:
           logger.warn(`Unhandled event type: ${event.type}`);
       }
@@ -259,7 +259,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     this.enqueueEvent({
       type: 'INGEST_INPUT',
       priority: 'normal',
-      payload: { input },  // Inputオブジェクト全体を渡す
+      payload: { input }, // Inputオブジェクト全体を渡す
     });
     return input;
   }
