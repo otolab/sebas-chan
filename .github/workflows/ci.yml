@@ -58,10 +58,12 @@ jobs:
         with:
           name: dependencies
 
-      - name: Install dependencies (for postinstall)
+      - name: Fix permissions for binaries
         run: |
-          rm -f package-lock.json
-          npm install
+          chmod +x node_modules/.bin/* || true
+          chmod +x node_modules/**/*.node || true
+          find node_modules -name "*.node" -exec chmod +x {} \; || true
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
 
       - name: Check TypeScript
         run: npm run typecheck
@@ -88,10 +90,12 @@ jobs:
         with:
           name: dependencies
 
-      - name: Install dependencies (for postinstall)
+      - name: Fix permissions for binaries
         run: |
-          rm -f package-lock.json
-          npm install
+          chmod +x node_modules/.bin/* || true
+          chmod +x node_modules/**/*.node || true
+          find node_modules -name "*.node" -exec chmod +x {} \; || true
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
 
       - name: Run unit tests
         run: npm run test:unit
@@ -123,10 +127,12 @@ jobs:
         with:
           name: dependencies
 
-      - name: Install dependencies (for postinstall)
+      - name: Fix permissions for binaries
         run: |
-          rm -f package-lock.json
-          npm install
+          chmod +x node_modules/.bin/* || true
+          chmod +x node_modules/**/*.node || true
+          find node_modules -name "*.node" -exec chmod +x {} \; || true
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
       
       - name: Setup Python dependencies for DB package
         run: |
@@ -167,10 +173,12 @@ jobs:
         with:
           name: dependencies
 
-      - name: Install dependencies (for postinstall)
+      - name: Fix permissions for binaries
         run: |
-          rm -f package-lock.json
-          npm install
+          chmod +x node_modules/.bin/* || true
+          chmod +x node_modules/**/*.node || true
+          find node_modules -name "*.node" -exec chmod +x {} \; || true
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; || true
       
       - name: Setup Python dependencies for DB package
         run: |
