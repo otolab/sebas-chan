@@ -226,9 +226,9 @@ export class DBClient extends EventEmitter {
     };
 
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(id, { 
-        resolve: resolve as (value: unknown) => void, 
-        reject 
+      this.pendingRequests.set(id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
       });
 
       const timeout = setTimeout(() => {

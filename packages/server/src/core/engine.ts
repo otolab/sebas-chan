@@ -163,7 +163,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
    */
   async getStatus(): Promise<EngineStatus> {
     let modelLoaded = false;
-    
+
     // DBのステータスを確認
     if (this.dbClient && this.dbStatus === 'ready') {
       try {
@@ -197,7 +197,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     agent: string;
   } {
     const ready = this.isRunning && this.dbStatus === 'ready';
-    
+
     return {
       ready,
       engine: this.isRunning ? 'running' : 'stopped',
