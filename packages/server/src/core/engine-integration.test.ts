@@ -56,12 +56,13 @@ describe('CoreEngine - CoreAgent Integration', () => {
   describe('CoreAgent initialization', () => {
     it('should initialize CoreAgent with proper context', async () => {
       await engine.initialize();
+      await engine.start();
 
       // CoreAgentが作成されることを確認
       expect(CoreAgent).toHaveBeenCalled();
 
-      // CoreAgent.startがcontextとともに呼ばれることを確認
-      expect(mockCoreAgent.start).toHaveBeenCalledWith(
+      // CoreAgent.setContextがcontextとともに呼ばれることを確認
+      expect(mockCoreAgent.setContext).toHaveBeenCalledWith(
         expect.objectContaining({
           getState: expect.any(Function),
           searchIssues: expect.any(Function),
@@ -71,12 +72,16 @@ describe('CoreEngine - CoreAgent Integration', () => {
           emitEvent: expect.any(Function),
         })
       );
+
+      // CoreAgent.startが呼ばれることを確認
+      expect(mockCoreAgent.start).toHaveBeenCalled();
     });
   });
 
   describe('Event forwarding to CoreAgent', () => {
     it('should forward INGEST_INPUT event to CoreAgent', async () => {
       await engine.initialize();
+      await engine.start();
 
       // createInputを呼び出してINGEST_INPUTイベントを生成
       const input = await engine.createInput({
@@ -106,6 +111,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
     it('should forward multiple event types to CoreAgent', async () => {
       await engine.initialize();
+      await engine.start();
 
       // 異なるタイプのイベントを追加
       engine.enqueueEvent({
@@ -137,7 +143,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.initialize();
 
       // contextを取得
-      const contextArg = mockCoreAgent.start.mock.calls[0][0];
+      const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
 
       // addPondEntry のテスト
       const pondEntry = {
@@ -166,7 +172,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       // DBエラーをシミュレート
       mockDbClient.addPondEntry.mockResolvedValue(false);
 
-      const contextArg = mockCoreAgent.start.mock.calls[0][0];
+      const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
       const pondEntry = {
         content: 'Test content',
         source: 'test',
@@ -179,7 +185,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
     it('should provide state access through context', async () => {
       await engine.initialize();
 
-      const contextArg = mockCoreAgent.start.mock.calls[0][0];
+      const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
       const state = contextArg.getState();
 
       expect(state).toBeDefined();
@@ -189,7 +195,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
     it('should allow event emission through context', async () => {
       await engine.initialize();
 
-      const contextArg = mockCoreAgent.start.mock.calls[0][0];
+      const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
 
       // contextのemitEventを呼び出し
       contextArg.emitEvent({
@@ -221,7 +227,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await expect(engine.initialize()).rejects.toThrow('Connection failed');
 
       // CoreAgentが初期化されないことを確認
-      expect(mockCoreAgent.start).not.toHaveBeenCalled();
+      expect(mockCoreAgent.setContext).not.toHaveBeenCalled();
     });
 
     it('should handle DB model initialization failure', async () => {
@@ -234,6 +240,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
   describe('Input to Pond flow', () => {
     it('should complete full flow: createInput -> INGEST_INPUT -> CoreAgent', async () => {
       await engine.initialize();
+      await engine.start();
 
       // 1. Input作成
       const inputData = {
@@ -268,6 +275,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
     it('should handle multiple inputs in sequence', async () => {
       await engine.initialize();
+      await engine.start();
 
       // 複数のInputを作成
       const inputs = [];
@@ -307,7 +315,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       mockDbClient.searchPond.mockResolvedValue(mockPondResults);
 
-      const contextArg = mockCoreAgent.start.mock.calls[0][0];
+      const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
       const results = await contextArg.searchPond('test query');
 
       expect(mockDbClient.searchPond).toHaveBeenCalledWith('test query');
@@ -334,7 +342,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       mockDbClient.searchIssues.mockResolvedValue(mockIssueResults);
 
-      const contextArg = mockCoreAgent.start.mock.calls[0][0];
+      const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
       const results = await contextArg.searchIssues('test query');
 
       expect(mockDbClient.searchIssues).toHaveBeenCalledWith('test query');
