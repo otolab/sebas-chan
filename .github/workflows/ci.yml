@@ -64,6 +64,9 @@ jobs:
         with:
           name: dependencies
 
+      - name: Rebuild npm packages
+        run: npm rebuild
+
       - name: Run unit tests
         run: npm run test:unit
 
@@ -93,6 +96,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dependencies
+
+      - name: Rebuild npm packages
+        run: npm rebuild
       
       - name: Setup Python dependencies for DB package
         run: |
@@ -132,6 +138,9 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: dependencies
+
+      - name: Rebuild npm packages
+        run: npm rebuild
       
       - name: Setup Python dependencies for DB package
         run: |
