@@ -3,16 +3,16 @@ import { ServerAPIClient } from '$lib/server/api';
 
 export const load: PageServerLoad = async () => {
   const api = new ServerAPIClient();
-  
+
   try {
     const issues = await api.getIssues();
     return {
-      issues
+      issues,
     };
   } catch (error) {
     console.error('Failed to load issues:', error);
     return {
-      issues: []
+      issues: [],
     };
   }
 };

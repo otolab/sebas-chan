@@ -9,14 +9,14 @@ export class ServerAPIClient {
     const data = await res.json();
     return data.data;
   }
-  
+
   async getIssues(): Promise<Issue[]> {
     const res = await fetch(`${API_BASE}/issues`);
     if (!res.ok) throw new Error('Failed to fetch issues');
     const data = await res.json();
     return data.data;
   }
-  
+
   async getState(): Promise<string> {
     const res = await fetch(`${API_BASE}/state`);
     if (!res.ok) throw new Error('Failed to fetch state');
