@@ -19,6 +19,7 @@ export async function createApp() {
   
   const coreEngine = new CoreEngine();
   await coreEngine.initialize();
+  // E2Eテストではstart()を呼ばない（無限ループを避けるため）
   
   const apiRouter = createApiRouter(coreEngine);
   app.use('/api', apiRouter);

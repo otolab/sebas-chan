@@ -35,7 +35,10 @@ export class CoreAgent {
     }
 
     this.isProcessing = true;
-    await this.processEventLoop();
+    // イベントループを非同期で開始（awaitしない）
+    this.processEventLoop().catch((error) => {
+      console.error('Event loop error:', error);
+    });
   }
 
   async stop() {

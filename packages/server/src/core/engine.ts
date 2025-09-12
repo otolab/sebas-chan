@@ -31,14 +31,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     await this.dbClient.initModel();
     logger.info('DB client connected and initialized');
 
-    // CoreAgentを初期化し、コンテキストを提供
+    // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
     this.coreAgent = new CoreAgent();
     const agentContext = this.createAgentContext();
-    await this.coreAgent.start(agentContext);
+    this.coreAgent.setContext(agentContext);
     logger.info('Core Agent initialized with context');
 
     await this.stateManager.initialize();
-    this.start();
+    // startは別途呼び出す必要がある
   }
 
   // CoreAgent用のコンテキストを作成
@@ -91,8 +91,13 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     };
   }
 
-  private start(): void {
+  async start(): Promise<void> {
     if (this.isRunning) return;
+
+    // CoreAgentを開始
+    if (this.coreAgent) {
+      await this.coreAgent.start();
+    }
 
     this.isRunning = true;
     this.processInterval = setInterval(() => {
