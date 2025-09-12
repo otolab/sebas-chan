@@ -277,8 +277,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return pondEntry;
   }
 
-  async searchPond(query: string): Promise<PondEntry[]> {
-    logger.debug('Searching pond', { query });
+  async searchPond(query: string, limit?: number): Promise<PondEntry[]> {
+    logger.debug('Searching pond', { query, limit });
     return [];
   }
 
