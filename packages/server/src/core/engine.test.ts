@@ -303,10 +303,10 @@ describe('CoreEngine', () => {
     it('should not start if already running', async () => {
       await engine.initialize();
       await engine.start();
-      
+
       // 2回目のstartは何もしない
       await engine.start();
-      
+
       // processIntervalが重複して設定されていないことを確認
       const processInterval = (engine as any).processInterval;
       expect(processInterval).toBeDefined();

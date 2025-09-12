@@ -31,6 +31,13 @@ export async function createApp() {
     });
   });
   
+  // 404ハンドラー（全ルートの最後に配置）
+  app.use((req, res) => {
+    res.status(404).json({
+      error: 'Not Found'
+    });
+  });
+  
   app.use(errorHandler);
   
   return app;
