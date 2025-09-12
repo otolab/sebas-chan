@@ -14,7 +14,8 @@
     "lint:fix": "eslint src/**/*.ts --fix",
     "clean": "rm -rf dist",
     "postinstall": "npm run setup-python || true",
-    "setup-python": "if command -v uv >/dev/null 2>&1; then uv venv && uv sync; elif [ -f pyproject.toml ]; then pip install -e .; fi"
+    "setup-python": "if command -v uv >/dev/null 2>&1; then uv venv && uv sync; elif [ -f pyproject.toml ]; then pip install -e .; fi",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@sebas-chan/shared-types": "*",
