@@ -516,6 +516,7 @@ describe('CoreEngine', () => {
   describe('complex workflow scenarios', () => {
     it('should handle cascade of events', async () => {
       await engine.initialize();
+      await engine.start();
 
       const eventChain: string[] = [];
 
@@ -582,6 +583,7 @@ describe('CoreEngine', () => {
 
     it('should handle concurrent event processing correctly', async () => {
       await engine.initialize();
+      await engine.start();
 
       const processedEvents: string[] = [];
 
@@ -620,6 +622,7 @@ describe('CoreEngine', () => {
   describe('state synchronization', () => {
     it('should maintain state consistency during event processing', async () => {
       await engine.initialize();
+      await engine.start();
 
       let stateUpdated = false;
       const originalState = engine.getState();
