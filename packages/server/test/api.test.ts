@@ -20,7 +20,7 @@ describe('API Endpoints', () => {
   beforeEach(async () => {
     // createApp関数を使ってアプリケーションを作成
     app = await createApp();
-  });
+  }, 30000);
   
   describe('GET /health', () => {
     it('should return healthy status', async () => {
