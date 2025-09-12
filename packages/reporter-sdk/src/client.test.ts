@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterEach, vi, SpyInstance } from 'vitest';
 import { ReporterClient } from './client';
 
 describe('ReporterClient', () => {
   let client: ReporterClient;
+  let mockedFetch: SpyInstance;
 
   beforeAll(() => {
     client = new ReporterClient({
@@ -14,14 +15,18 @@ describe('ReporterClient', () => {
     });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe('submitInput', () => {
     it('should submit input successfully', async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({ id: 'test-id-123' }),
-      };
-      
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(mockResponse as any);
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
+        new Response(JSON.stringify({ id: 'test-id-123' }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      );
 
       const result = await client.submitInput({
         source: 'test',
@@ -34,14 +39,12 @@ describe('ReporterClient', () => {
     });
 
     it('should handle API errors', async () => {
-      const mockResponse = {
-        ok: false,
-        status: 400,
-        statusText: 'Bad Request',
-        text: async () => 'Invalid input format',
-      };
-      
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce(mockResponse as any);
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
+        new Response('Invalid input format', { 
+          status: 400,
+          statusText: 'Bad Request'
+        })
+      );
 
       const result = await client.submitInput({
         source: 'test',
@@ -54,32 +57,35 @@ describe('ReporterClient', () => {
     });
 
     it('should retry on server errors', async () => {
-      const fetchSpy = vi.spyOn(global, 'fetch');
-      
-      fetchSpy
-        .mockResolvedValueOnce({
-          ok: false,
-          status: 500,
-          statusText: 'Internal Server Error',
-          text: async () => '',
-        } as any)
-        .mockResolvedValueOnce({
-          ok: true,
-          json: async () => ({ id: 'retry-success-id' }),
-        } as any);
+      let callCount = 0;
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          return new Response('', { 
+            status: 500,
+            statusText: 'Internal Server Error'
+          });
+        }
+        return new Response(JSON.stringify({ id: 'retry-success-id' }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      });
 
       const result = await client.submitInput({
         source: 'test',
         content: 'Test with retry',
       });
 
-      expect(fetchSpy).toHaveBeenCalledTimes(2);
+      expect(mockedFetch).toHaveBeenCalledTimes(2);
       expect(result.success).toBe(true);
       expect(result.inputId).toBe('retry-success-id');
     });
 
-    it.skip('should handle network errors', async () => {
-      vi.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('Network error'));
+    it('should handle network errors', async () => {
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => {
+        throw new Error('Network error');
+      });
 
       const result = await client.submitInput({
         source: 'test',
@@ -93,12 +99,12 @@ describe('ReporterClient', () => {
 
   describe('submitBatch', () => {
     it('should submit multiple inputs', async () => {
-      const mockResponse = {
-        ok: true,
-        json: async () => ({ id: 'batch-id' }),
-      };
-      
-      vi.spyOn(global, 'fetch').mockResolvedValue(mockResponse as any);
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
+        new Response(JSON.stringify({ id: 'batch-id' }), { 
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      );
 
       const inputs = [
         { source: 'test', content: 'Input 1' },
@@ -114,32 +120,30 @@ describe('ReporterClient', () => {
 
   describe('checkHealth', () => {
     it('should return true when API is healthy', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
-        ok: true,
-      } as any);
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
+        new Response('', { status: 200 })
+      );
 
       const isHealthy = await client.checkHealth();
       expect(isHealthy).toBe(true);
     });
 
     it('should return false when API is unhealthy', async () => {
-      vi.spyOn(global, 'fetch').mockResolvedValueOnce({
-        ok: false,
-      } as any);
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
+        new Response('', { status: 503 })
+      );
 
       const isHealthy = await client.checkHealth();
       expect(isHealthy).toBe(false);
     });
 
     it('should return false on network error', async () => {
-      vi.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('Network error'));
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => {
+        throw new Error('Network error');
+      });
 
       const isHealthy = await client.checkHealth();
       expect(isHealthy).toBe(false);
     });
-  });
-
-  afterAll(() => {
-    vi.restoreAllMocks();
   });
 });
