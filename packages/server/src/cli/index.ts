@@ -1,5 +1,5 @@
 import * as readline from 'readline';
-import { CoreEngine } from '../core/engine';
+import { CoreEngine } from '../core/engine.js';
 
 export class CLI {
   private rl: readline.Interface;

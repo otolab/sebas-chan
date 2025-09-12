@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { EventQueue } from './event-queue';
+import { EventQueue } from './event-queue.js';
 import { Event, WorkflowType } from '@sebas-chan/shared-types';
 
 describe('EventQueue', () => {

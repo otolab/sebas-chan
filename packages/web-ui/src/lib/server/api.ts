@@ -24,9 +24,47 @@ export class ServerAPIClient {
     return data.state;
   }
 
-  async getPond(): Promise<PondEntry[]> {
-    const res = await fetch(`${API_BASE}/pond`);
+  async getPond(params?: {
+    q?: string;
+    source?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    data: PondEntry[];
+    meta: { total: number; limit: number; offset: number; hasMore: boolean };
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+
+    const url = searchParams.toString() ? `${API_BASE}/pond?${searchParams}` : `${API_BASE}/pond`;
+    console.log('[API] Pond検索リクエスト:', { url, params });
+
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch pond');
+    const result = await res.json();
+
+    console.log('[API] Pond検索レスポンス:', {
+      dataCount: result.data?.length || 0,
+      meta: result.meta,
+    });
+
+    return {
+      data: result.data,
+      meta: result.meta,
+    };
+  }
+
+  async getPondSources(): Promise<string[]> {
+    const res = await fetch(`${API_BASE}/pond/sources`);
+    if (!res.ok) throw new Error('Failed to fetch pond sources');
     const data = await res.json();
     return data.data;
   }

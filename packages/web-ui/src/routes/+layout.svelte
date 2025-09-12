@@ -1,5 +1,6 @@
 <script lang="ts">
 	import '../app.css';
+	import HealthIndicator from '$lib/components/HealthIndicator.svelte';
 
 	let { children } = $props();
 </script>
@@ -34,4 +35,6 @@
   <main>
     {@render children?.()}
   </main>
+  
+  <HealthIndicator />
 </div>

@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-import { createApp } from './app';
-import { CLI } from './cli';
-import { logger } from './utils/logger';
+import { createApp } from './app.js';
+import { CLI } from './cli/index.js';
+import { logger } from './utils/logger.js';
 
 async function main() {
   const args = process.argv.slice(2);

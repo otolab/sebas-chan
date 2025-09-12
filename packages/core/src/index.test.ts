@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent } from './index';
+import { CoreAgent, AgentEvent } from './index.js';
 
 describe('CoreAgent', () => {
   let agent: CoreAgent;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { CoreEngine } from './engine';
+import { CoreEngine } from './engine.js';
 import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 

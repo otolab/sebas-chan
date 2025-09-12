@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
-import { errorHandler } from './error-handler';
+import { errorHandler } from './error-handler.js';
 
 describe('Error Handler Middleware', () => {
   it('should handle errors with status and message', () => {

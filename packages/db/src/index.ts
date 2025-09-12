@@ -4,6 +4,10 @@ import { Issue } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -312,25 +316,59 @@ export class DBClient extends EventEmitter {
     } | null;
   }
 
-  async searchPond(
-    query: string,
-    limit = 10
-  ): Promise<
-    Array<{
+  async getPondSources(): Promise<string[]> {
+    return (await this.sendRequest('getPondSources')) as string[];
+  }
+
+  async searchPond(filters: {
+    q?: string;
+    source?: string;
+    dateFrom?: string | Date;
+    dateTo?: string | Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    data: Array<{
       id: string;
       content: string;
       source: string;
       timestamp: string;
       vector?: number[];
-    }>
-  > {
-    return (await this.sendRequest('searchPond', { query, limit })) as Array<{
-      id: string;
-      content: string;
-      source: string;
-      timestamp: string;
-      vector?: number[];
+      score?: number;
+      distance?: number;
     }>;
+    meta: {
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  }> {
+    console.log('[DBClient] searchPond called with filters:', filters);
+
+    // 日付をISO文字列に変換
+    const params = {
+      ...filters,
+      dateFrom:
+        filters.dateFrom instanceof Date ? filters.dateFrom.toISOString() : filters.dateFrom,
+      dateTo: filters.dateTo instanceof Date ? filters.dateTo.toISOString() : filters.dateTo,
+    };
+
+    return (await this.sendRequest('searchPond', params)) as {
+      data: Array<{
+        id: string;
+        content: string;
+        source: string;
+        timestamp: string;
+        vector?: number[];
+      }>;
+      meta: {
+        total: number;
+        limit: number;
+        offset: number;
+        hasMore: boolean;
+      };
+    };
   }
 
   // テスト用メソッド

@@ -1,9 +1,19 @@
 import { EventEmitter } from 'events';
-import { Event, CoreAPI, Issue, Flow, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+import {
+  Event,
+  CoreAPI,
+  Issue,
+  Flow,
+  Knowledge,
+  Input,
+  PondEntry,
+  PondSearchFilters,
+  PondSearchResponse,
+} from '@sebas-chan/shared-types';
 export { Event };
-import { EventQueue } from './event-queue';
-import { StateManager } from './state-manager';
-import { logger } from '../utils/logger';
+import { EventQueue } from './event-queue.js';
+import { StateManager } from './state-manager.js';
+import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
 import { CoreAgent, AgentContext } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
@@ -59,9 +69,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
       searchPond: async (query: string) => {
         if (!this.dbClient) throw new Error('DB client not initialized');
-        const results = await this.dbClient.searchPond(query);
+        const results = await this.dbClient.searchPond({ q: query, limit: 100 });
         // DBClientのレスポンスをPondEntry型に変換
-        return results.map((r) => ({
+        return results.data.map((r) => ({
           id: r.id,
           content: r.content,
           source: r.source,
@@ -282,13 +292,87 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return pondEntry;
   }
 
-  async searchPond(query: string, limit?: number): Promise<PondEntry[]> {
-    logger.debug('Searching pond', { query, limit });
-    return [];
+  async getPondSources(): Promise<string[]> {
+    logger.debug('Getting pond sources');
+    if (!this.dbClient) {
+      logger.warn('DB client not initialized');
+      return [];
+    }
+    try {
+      return await this.dbClient.getPondSources();
+    } catch (error) {
+      logger.error('Failed to get pond sources', { error });
+      return [];
+    }
+  }
+
+  async searchPond(filters: PondSearchFilters): Promise<PondSearchResponse> {
+    logger.debug('Searching pond with filters', filters);
+    if (!this.dbClient) {
+      logger.warn('DB client not initialized');
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          limit: filters.limit || 20,
+          offset: filters.offset || 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    try {
+      const result = await this.dbClient.searchPond(filters);
+
+      // タイムスタンプをDate型に変換（score/distanceも保持）
+      const data = result.data.map((r) => ({
+        id: r.id,
+        content: r.content,
+        source: r.source,
+        timestamp: new Date(r.timestamp),
+        vector: r.vector,
+        score: r.score,
+        distance: r.distance,
+      }));
+
+      return {
+        data,
+        meta: result.meta,
+      };
+    } catch (error) {
+      logger.error('Failed to search pond with filters', { error });
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          limit: filters.limit || 20,
+          offset: filters.offset || 0,
+          hasMore: false,
+        },
+      };
+    }
   }
 
   getState(): string {
     return this.stateManager.getState();
+  }
+
+  isReady(): boolean {
+    return this.isRunning && this.dbClient !== null && this.coreAgent !== null;
+  }
+
+  getHealthStatus(): {
+    ready: boolean;
+    engine: 'starting' | 'running' | 'stopped';
+    database: boolean;
+    agent: boolean;
+  } {
+    return {
+      ready: this.isReady(),
+      engine: this.isRunning ? 'running' : this.dbClient ? 'starting' : 'stopped',
+      database: this.dbClient !== null,
+      agent: this.coreAgent !== null,
+    };
   }
 
   updateState(content: string): void {

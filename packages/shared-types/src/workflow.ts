@@ -2,8 +2,16 @@
  * ワークフロー実行関連の型定義
  */
 
-import { Issue, Flow, Knowledge, Input, PondEntry } from './index';
-import { Event, WorkflowType } from './events';
+import {
+  Issue,
+  Flow,
+  Knowledge,
+  Input,
+  PondEntry,
+  PondSearchFilters,
+  PondSearchResponse,
+} from './index.js';
+import { Event, WorkflowType } from './events.js';
 
 /**
  * Core APIインターフェース
@@ -34,7 +42,7 @@ export interface CoreAPI {
 
   // Pond操作
   addToPond(entry: Omit<PondEntry, 'id'>): Promise<PondEntry>;
-  searchPond(query: string): Promise<PondEntry[]>;
+  searchPond(filters: PondSearchFilters): Promise<PondSearchResponse>;
 
   // State文書
   getState(): string;

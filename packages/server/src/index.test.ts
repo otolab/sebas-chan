@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createServer } from './index';
+import { createServer } from './index.js';
 
 describe('API REST Server', () => {
   it('should create a server instance', () => {

@@ -39,6 +39,10 @@ export class CoreAgent {
     this.processEventLoop().catch((error) => {
       console.error('Event loop error:', error);
     });
+
+    console.log('Core Agent started');
+    // start()メソッドを完了させる
+    return Promise.resolve();
   }
 
   async stop() {
