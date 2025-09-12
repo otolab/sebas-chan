@@ -41,6 +41,7 @@ jobs:
           name: dependencies
           path: |
             node_modules
+            packages/*/node_modules
             packages/*/dist
           retention-days: 1
 
