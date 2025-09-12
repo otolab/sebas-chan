@@ -119,10 +119,7 @@ export function createAPIRoutes(engine: CoreEngine): Router {
     const { q: query = '', limit } = req.query;
 
     try {
-      const results = await engine.searchPond(
-        query as string,
-        limit ? Number(limit) : undefined
-      );
+      const results = await engine.searchPond(query as string, limit ? Number(limit) : undefined);
       res.json({ results });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
