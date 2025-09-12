@@ -59,6 +59,14 @@ describe('API Unit Tests', () => {
     app.get('/health', (req, res) => {
       res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
+    
+    // エラーハンドリングミドルウェア（JSONパースエラーを含む）
+    app.use((err: any, req: any, res: any, next: any) => {
+      if (err instanceof SyntaxError && 'body' in err) {
+        return res.status(400).json({ error: 'Invalid JSON' });
+      }
+      res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
+    });
   });
   
   describe('GET /health', () => {
