@@ -2,6 +2,7 @@
   "name": "@sebas-chan/shared-types",
   "version": "0.0.1",
   "description": "共有型定義",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -11,7 +12,8 @@
     "test:watch": "vitest",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.3.3"

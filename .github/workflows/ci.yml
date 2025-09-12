@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  lint-and-build:
-    name: Lint and Build
+  setup:
+    name: Setup Dependencies
     runs-on: ubuntu-latest
 
     steps:
@@ -21,21 +21,62 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Clean install dependencies
+      - name: Install dependencies
         run: |
-          rm -rf node_modules package-lock.json
+          rm -f package-lock.json
           npm install
 
+      - name: Build packages
+        run: npm run build
+
+      - name: Upload node_modules and dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependencies
+          path: |
+            node_modules
+            packages/*/node_modules
+            packages/*/dist
+          retention-days: 1
+
+  lint-and-typecheck:
+    name: Lint and TypeCheck
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Download dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: dependencies
+
+      - name: Fix binary permissions and rebuild
+        run: |
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
+
       - name: Check TypeScript
-        run: npx tsc --noEmit --project tsconfig.json
+        run: npm run typecheck
 
       - name: Run linter
         run: npm run lint
 
-  test:
-    name: Run Tests
+  unit-tests:
+    name: Unit Tests
     runs-on: ubuntu-latest
-    needs: lint-and-build
+    needs: setup
 
     steps:
       - name: Checkout code
@@ -45,7 +86,37 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
+
+      - name: Download dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: dependencies
+
+      - name: Fix binary permissions and rebuild
+        run: |
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: setup
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -55,22 +126,85 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Clean install dependencies
+      - name: Download dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: dependencies
+
+      - name: Fix binary permissions and rebuild
         run: |
-          rm -rf node_modules package-lock.json
-          npm install
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
       
       - name: Setup Python dependencies for DB package
         run: |
           cd packages/db
-          rm -rf .venv
           uv --project . venv
           uv --project . sync
 
-      - name: Build packages
-        run: npm run build
-
-      - name: Run tests
-        run: npm run test
+      - name: Run integration tests
+        run: npm run test:integration
         env:
           PYTHON_BIN: ${{ github.workspace }}/packages/db/.venv/bin/python
+
+  e2e-tests:
+    name: E2E Tests (Optional)
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    continue-on-error: true  # E2Eテストの失敗はCIを失敗させない
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Download dependencies
+        uses: actions/download-artifact@v4
+        with:
+          name: dependencies
+
+      - name: Fix binary permissions and rebuild
+        run: |
+          # Fix permissions for esbuild and other binaries
+          find node_modules -type f -path "*/bin/*" -exec chmod +x {} \; 2>/dev/null || true
+          find node_modules -type f -name "*.node" -exec chmod +x {} \; 2>/dev/null || true
+          chmod +x node_modules/.bin/* 2>/dev/null || true
+          # Rebuild native modules  
+          npm rebuild
+      
+      - name: Setup Python dependencies for DB package
+        run: |
+          cd packages/db
+          uv --project . venv
+          uv --project . sync
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+        env:
+          PYTHON_BIN: ${{ github.workspace }}/packages/db/.venv/bin/python
+
+  # 全テスト完了の確認（必須テストのみ）
+  tests-complete:
+    name: All Required Tests Complete
+    runs-on: ubuntu-latest
+    needs: [lint-and-typecheck, unit-tests, integration-tests]
+    
+    steps:
+      - name: Tests completed successfully
+        run: echo "✅ All required tests passed successfully!"

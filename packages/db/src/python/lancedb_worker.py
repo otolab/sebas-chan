@@ -17,8 +17,8 @@ from pathlib import Path
 from embedding import create_embedding_model
 # スキーマ定義をインポート
 from schemas import (
-    get_issues_schema, get_state_schema, 
-    ISSUES_TABLE, STATE_TABLE, ALL_TABLES,
+    get_issues_schema, get_state_schema, get_pond_schema,
+    ISSUES_TABLE, STATE_TABLE, POND_TABLE, ALL_TABLES,
     validate_issue
 )
 
@@ -80,6 +80,10 @@ class LanceDBWorker:
                     "content": "",
                     "updated_at": pd.Timestamp.now().floor('ms')
                 }])
+        
+        # Pond テーブル
+        if POND_TABLE not in self.db.table_names():
+            self.db.create_table(POND_TABLE, schema=get_pond_schema(self.vector_dimension))
     
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """JSON-RPCリクエストを処理"""
@@ -100,6 +104,12 @@ class LanceDBWorker:
                 result = self.get_state()
             elif method == "updateState":
                 result = self.update_state(params.get("content"))
+            elif method == "addPondEntry":
+                result = self.add_pond_entry(params)
+            elif method == "getPondEntry":
+                result = self.get_pond_entry(params.get("id"))
+            elif method == "searchPond":
+                result = self.search_pond(params.get("query", ""), params.get("limit", 10))
             elif method == "clearDatabase":
                 result = self.clear_database()
             else:
@@ -223,6 +233,76 @@ class LanceDBWorker:
             "updated_at": pd.Timestamp.now().floor('ms')
         }])
         return True
+    
+    def add_pond_entry(self, entry_data: dict) -> bool:
+        """Pondエントリーを追加"""
+        # テキストコンテンツからベクトルを生成
+        if self.embedding_model.is_loaded:
+            vector = self.embedding_model.encode(entry_data["content"])
+            entry_data["vector"] = vector.tolist() if hasattr(vector, 'tolist') else vector
+        else:
+            # モデルが読み込まれていない場合はダミーベクトル
+            entry_data["vector"] = [0.0] * self.vector_dimension
+        
+        # タイムスタンプをパース
+        if isinstance(entry_data.get("timestamp"), str):
+            entry_data["timestamp"] = pd.Timestamp(entry_data["timestamp"]).floor('ms')
+        
+        table = self.db.open_table(POND_TABLE)
+        table.add([entry_data])
+        return True
+    
+    def get_pond_entry(self, entry_id: str) -> Optional[dict]:
+        """PondエントリーをIDで取得"""
+        table = self.db.open_table(POND_TABLE)
+        result = table.search().where(f"id = '{entry_id}'").limit(1).to_list()
+        if result:
+            entry = result[0]
+            # ベクトルをリストに変換
+            if 'vector' in entry and hasattr(entry['vector'], 'tolist'):
+                entry['vector'] = entry['vector'].tolist()
+            # タイムスタンプをISO形式に変換
+            if 'timestamp' in entry:
+                entry['timestamp'] = entry['timestamp'].isoformat()
+            return entry
+        return None
+    
+    def search_pond(self, query: str, limit: int = 10) -> list:
+        """Pondエントリーを検索"""
+        table = self.db.open_table(POND_TABLE)
+        
+        # ベクトル検索
+        if query and self.embedding_model.is_loaded:
+            try:
+                query_vector = self.embedding_model.encode(query)
+                results = table.search(query_vector).limit(limit).to_list()
+            except Exception as e:
+                # ベクトル検索が失敗したらテキスト検索にフォールバック
+                sys.stderr.write(f"Vector search failed, falling back to text search: {e}\n")
+                results = self._pond_text_search(table, query, limit)
+        else:
+            # テキスト検索
+            results = self._pond_text_search(table, query, limit)
+        
+        # 結果を整形
+        for record in results:
+            # vectorフィールドをリストに変換
+            if 'vector' in record and hasattr(record['vector'], 'tolist'):
+                record['vector'] = record['vector'].tolist()
+            # タイムスタンプをISO形式に変換
+            if 'timestamp' in record:
+                record['timestamp'] = record['timestamp'].isoformat()
+        
+        return results
+    
+    def _pond_text_search(self, table, query: str, limit: int) -> list:
+        """Pondテーブルのテキストベース検索"""
+        results = table.to_pandas()
+        if query:
+            mask = results['content'].str.contains(query, case=False, na=False)
+            results = results[mask]
+        results = results.head(limit)
+        return results.to_dict('records')
     
     def clear_database(self) -> bool:
         """データベース全体をクリア（テスト用）"""

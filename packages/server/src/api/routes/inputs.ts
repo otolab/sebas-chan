@@ -34,6 +34,20 @@ export function createInputsRouter(coreEngine: CoreEngine): Router {
   router.post('/', async (req, res, next) => {
     try {
       const dto: CreateInputDto = req.body;
+      
+      // バリデーション
+      if (!dto.source || typeof dto.source !== 'string') {
+        return res.status(400).json({
+          error: 'source is required and must be a string'
+        });
+      }
+      
+      if (!dto.content || typeof dto.content !== 'string') {
+        return res.status(400).json({
+          error: 'content is required and must be a string'
+        });
+      }
+      
       const input = await coreEngine.createInput({
         source: dto.source,
         content: dto.content,

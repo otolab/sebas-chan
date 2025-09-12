@@ -79,6 +79,6 @@ export interface PondEntry {
 }
 
 // 追加の型定義をエクスポート
-export * from './events';
-export * from './workflow';
-export * from './api';
+export * from './events.js';
+export * from './workflow.js';
+export * from './api.js';

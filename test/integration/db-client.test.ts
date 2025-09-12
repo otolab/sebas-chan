@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
-import { DBClient } from './index';
+import { DBClient } from '../../packages/db/src/index';
 import { Issue } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 

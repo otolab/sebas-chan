@@ -19,6 +19,7 @@ export async function createApp() {
   
   const coreEngine = new CoreEngine();
   await coreEngine.initialize();
+  // E2Eテストではstart()を呼ばない（無限ループを避けるため）
   
   const apiRouter = createApiRouter(coreEngine);
   app.use('/api', apiRouter);
@@ -27,6 +28,13 @@ export async function createApp() {
     res.json({ 
       status: 'ok',
       timestamp: new Date().toISOString()
+    });
+  });
+  
+  // 404ハンドラー（全ルートの最後に配置）
+  app.use((req, res) => {
+    res.status(404).json({
+      error: 'Not Found'
     });
   });
   
