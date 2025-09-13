@@ -59,11 +59,11 @@ async function executeExtractKnowledge(
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
   const { logger, storage, driver } = context;
-  const payload = event.payload;
+  const payload = event.payload as Record<string, unknown>;
 
   try {
     // 1. 抽出対象の内容を整理
-    const content = payload.question || payload.feedback || payload.impactAnalysis || payload.content || '';
+    const content = String(payload.question || payload.feedback || payload.impactAnalysis || payload.content || '');
 
     await logger.log('info', 'Extracting knowledge', { contentLength: content.length });
 
@@ -81,7 +81,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 抽出した知識を簡潔に日本語でまとめてください。
 `;
 
-    const extractedKnowledge = await driver.call(prompt, {
+    const extractedKnowledge = await (driver as any).call(prompt, {
       model: 'standard',
       temperature: 0.2,
     });
@@ -97,10 +97,10 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 
     if (!isDuplicate && extractedKnowledge.length > 20) {
       // 5. 新規Knowledge作成
-      const knowledgeType = determineKnowledgeType(extractedKnowledge, payload.source);
+      const knowledgeType = determineKnowledgeType(extractedKnowledge, payload.source as string);
       const sources = createKnowledgeSources(payload);
 
-      const newKnowledge: Omit<Knowledge, 'id'> = {
+      const newKnowledge: Omit<Knowledge, 'id' | 'createdAt'> = {
         type: knowledgeType,
         content: extractedKnowledge,
         reputation: {
@@ -110,7 +110,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
         sources,
       };
 
-      const createdKnowledge = await storage.addKnowledge(newKnowledge);
+      const createdKnowledge = await storage.createKnowledge(newKnowledge);
       knowledgeId = createdKnowledge.id;
 
       await logger.log('info', 'Created new knowledge', { knowledgeId, type: knowledgeType });
@@ -134,7 +134,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
     const updatedState = context.state + `
 ## 知識抽出 (${timestamp})
 - Knowledge ID: ${knowledgeId || 'N/A'}
-- Type: ${determineKnowledgeType(extractedKnowledge, payload.source)}
+- Type: ${determineKnowledgeType(extractedKnowledge, payload.source as string)}
 - Duplicate: ${isDuplicate}
 - Content preview: ${extractedKnowledge.substring(0, 100)}...
 `;

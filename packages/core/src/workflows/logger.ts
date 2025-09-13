@@ -212,14 +212,14 @@ export class WorkflowLogger {
   async log(
     level: 'info' | 'debug' | 'warn' | 'error',
     message: string,
-    data?: any
+    data?: unknown
   ): Promise<void> {
     const entry: WorkflowLogEntry = {
       executionId: this.executionId,
       workflowName: this.workflowName,
       timestamp: new Date(),
       phase: 'custom',
-      data: { message, metadata: { ...data, level } },
+      data: { message, metadata: { ...(data as Record<string, unknown> || {}), level } },
     };
 
     await this.logEntry(entry);

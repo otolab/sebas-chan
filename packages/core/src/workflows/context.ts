@@ -26,7 +26,7 @@ export interface WorkflowContext {
    * AIドライバー（オプション）
    * @moduler-prompt/driverのインスタンス（1モデル固定）
    */
-  driver?: any;
+  driver?: unknown;
 
   /**
    * 実行時設定
@@ -36,7 +36,7 @@ export interface WorkflowContext {
   /**
    * 実行時メタデータ
    */
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 /**
@@ -90,5 +90,5 @@ export interface WorkflowEventEmitter {
   /**
    * 次のイベントを発行
    */
-  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: any }): void;
+  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void;
 }

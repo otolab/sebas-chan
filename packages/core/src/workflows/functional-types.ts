@@ -4,7 +4,7 @@ import type { WorkflowContext, WorkflowEventEmitter } from './context.js';
 /**
  * ワークフローの実行結果
  */
-export interface WorkflowResult<T = any> {
+export interface WorkflowResult<T = unknown> {
   success: boolean;
   context: WorkflowContext; // 更新されたcontext（state含む）
   output?: T;

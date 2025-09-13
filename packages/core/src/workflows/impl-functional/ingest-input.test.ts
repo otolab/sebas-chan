@@ -4,6 +4,7 @@ import { ingestInputWorkflow } from './ingest-input.js';
 import { executeWorkflow } from '../functional-types.js';
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
+import { createMockWorkflowLogger } from '../test-utils.js';
 
 describe('IngestInput Workflow (Functional)', () => {
   let mockContext: WorkflowContext;
@@ -25,20 +26,14 @@ describe('IngestInput Workflow (Functional)', () => {
         addPondEntry: vi.fn().mockResolvedValue({ id: 'pond-123', content: 'test content' }),
         searchIssues: vi.fn().mockResolvedValue([]),
         searchKnowledge: vi.fn().mockResolvedValue([]),
-        addIssue: vi.fn(),
-        addKnowledge: vi.fn(),
-        searchPondEntries: vi.fn(),
+        searchPond: vi.fn().mockResolvedValue([]),
+        getIssue: vi.fn(),
+        createIssue: vi.fn(),
         updateIssue: vi.fn(),
+        createKnowledge: vi.fn(),
         updateKnowledge: vi.fn(),
       },
-      logger: {
-        log: vi.fn(),
-        logInput: vi.fn(),
-        logOutput: vi.fn(),
-        logError: vi.fn(),
-        logDbQuery: vi.fn(),
-        logAiCall: vi.fn(),
-      },
+      logger: createMockWorkflowLogger(),
       driver: testDriver,
       metadata: {},
     };
@@ -52,6 +47,7 @@ describe('IngestInput Workflow (Functional)', () => {
     mockEvent = {
       type: 'INGEST_INPUT',
       priority: 'normal',
+      timestamp: new Date(),
       payload: {
         input: {
           id: 'input-123',
@@ -103,13 +99,13 @@ describe('IngestInput Workflow (Functional)', () => {
       priority: 'normal',
       payload: {
         pondEntryId: 'pond-123',
-        originalInput: mockEvent.payload.input,
+        originalInput: (mockEvent.payload as any).input,
       },
     });
   });
 
   it('should not trigger analysis when no keywords are detected', async () => {
-    mockEvent.payload.input.content = '今日の天気はどうですか？';
+    (mockEvent.payload as any).input.content = '今日の天気はどうですか？';
 
     const result = await executeWorkflow(
       ingestInputWorkflow,
@@ -119,7 +115,7 @@ describe('IngestInput Workflow (Functional)', () => {
     );
 
     expect(result.success).toBe(true);
-    expect(result.output.analyzed).toBe(false);
+    expect((result.output as any).analyzed).toBe(false);
 
     // イベントが発行されないことを確認
     expect(mockEmitter.emit).not.toHaveBeenCalled();

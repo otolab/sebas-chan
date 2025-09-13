@@ -7,16 +7,16 @@ import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js'
  */
 function determineNextEvents(
   requestType: string,
-  request: any,
-  aiResponse: any
-): Array<{ type: string; priority: string; payload: any }> {
-  const events = [];
+  request: unknown,
+  aiResponse: unknown
+): Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: unknown }> {
+  const events: Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: unknown }> = [];
 
   switch (requestType) {
     case 'issue':
       events.push({
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'high',
+        priority: 'high' as const,
         payload: {
           issue: request,
           aiResponse,
@@ -27,9 +27,9 @@ function determineNextEvents(
     case 'question':
       events.push({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'normal',
+        priority: 'normal' as const,
         payload: {
-          question: request.content,
+          question: (request as Record<string, unknown>).content,
           context: aiResponse,
         },
       });
@@ -39,9 +39,9 @@ function determineNextEvents(
       // フィードバックの場合は知識として保存
       events.push({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'low',
+        priority: 'low' as const,
         payload: {
-          feedback: request.content,
+          feedback: (request as Record<string, unknown>).content,
           source: 'user_feedback',
         },
       });
@@ -90,7 +90,7 @@ async function executeProcessUserRequest(
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
   const { logger, storage, driver } = context;
-  const { request } = event.payload as { request: any };
+  const { request } = event.payload as { request: Record<string, unknown> };
 
   try {
     // 1. リクエストをログ
@@ -104,7 +104,7 @@ async function executeProcessUserRequest(
 タイプ（issue/question/feedback）と概要を日本語で返してください。
 `;
 
-    const aiResponse = await driver.call(prompt, {
+    const aiResponse = await (driver as any).call(prompt, {
       model: 'fast',
       temperature: 0.3,
     });
@@ -112,7 +112,7 @@ async function executeProcessUserRequest(
     await logger.logAiCall(prompt, aiResponse, { model: 'fast' });
 
     // 3. リクエストタイプを判定（簡易版）
-    const requestType = classifyRequest(request.content);
+    const requestType = classifyRequest(String(request.content));
 
     // 4. 後続のイベントを生成
     const nextEvents = determineNextEvents(requestType, request, aiResponse);

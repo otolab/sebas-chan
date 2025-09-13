@@ -2,9 +2,9 @@
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
-  let isRefreshing = false;
-  let currentState = data.state;
-  let lastUpdate = data.lastUpdate;
+  let isRefreshing = $state(false);
+  let currentState = $state(data.state);
+  let lastUpdate = $state(data.lastUpdate);
 
   async function refreshState() {
     isRefreshing = true;

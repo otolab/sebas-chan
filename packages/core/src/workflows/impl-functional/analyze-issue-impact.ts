@@ -73,7 +73,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 影響範囲と優先度を日本語で説明してください。
 `;
 
-    const impactAnalysis = await driver.call(prompt, {
+    const impactAnalysis = await (driver as any).call(prompt, {
       model: 'standard',
       temperature: 0.3,
     });
@@ -89,7 +89,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 
     if (shouldCreateNewIssue(relatedIssues, issue.content || issue.description)) {
       // 新規Issue作成
-      const newIssue: Omit<Issue, 'id'> = {
+      const newIssue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'> = {
         title: issue.title || `Issue: ${issue.content?.substring(0, 50)}...`,
         description: issue.content || issue.description,
         status: 'open',
@@ -108,7 +108,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
         sourceInputIds: issue.inputId ? [issue.inputId] : [],
       };
 
-      const createdIssue = await storage.addIssue(newIssue);
+      const createdIssue = await storage.createIssue(newIssue);
       issueId = createdIssue.id;
 
       await logger.log('info', 'Created new issue', { issueId });
