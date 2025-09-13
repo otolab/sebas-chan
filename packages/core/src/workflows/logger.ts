@@ -7,16 +7,16 @@ export interface WorkflowLogEntry {
   timestamp: Date;
   phase: 'start' | 'input' | 'output' | 'error' | 'db_query' | 'ai_call' | 'custom';
   data: {
-    input?: any;
-    output?: any;
-    query?: any;
+    input?: unknown;
+    output?: unknown;
+    query?: unknown;
     resultIds?: string[];
     aiModule?: string;
-    aiParams?: any;
-    aiResponse?: any;
-    error?: any;
+    aiParams?: unknown;
+    aiResponse?: unknown;
+    error?: unknown;
     message?: string;
-    metadata?: Record<string, any>;
+    metadata?: Record<string, unknown>;
   };
   duration?: number;
   parentExecutionId?: string;
@@ -106,7 +106,7 @@ export class WorkflowLogger {
   /**
    * 入力データをログ
    */
-  async logInput(input: any): Promise<void> {
+  async logInput(input: unknown): Promise<void> {
     const entry: WorkflowLogEntry = {
       executionId: this.executionId,
       workflowName: this.workflowName,
@@ -121,7 +121,7 @@ export class WorkflowLogger {
   /**
    * 出力データをログ
    */
-  async logOutput(output: any): Promise<void> {
+  async logOutput(output: unknown): Promise<void> {
     const entry: WorkflowLogEntry = {
       executionId: this.executionId,
       workflowName: this.workflowName,
@@ -137,7 +137,7 @@ export class WorkflowLogger {
   /**
    * DBクエリをログ
    */
-  async logDbQuery(operation: string, query: any, resultIds: string[]): Promise<void> {
+  async logDbQuery(operation: string, query: unknown, resultIds: string[]): Promise<void> {
     const entry: WorkflowLogEntry = {
       executionId: this.executionId,
       workflowName: this.workflowName,
@@ -160,7 +160,7 @@ export class WorkflowLogger {
   /**
    * AI呼び出しをログ
    */
-  async logAiCall(module: string, params: any, response: any): Promise<void> {
+  async logAiCall(module: string, params: unknown, response: unknown): Promise<void> {
     const entry: WorkflowLogEntry = {
       executionId: this.executionId,
       workflowName: this.workflowName,
@@ -179,7 +179,7 @@ export class WorkflowLogger {
   /**
    * エラーをログ
    */
-  async logError(error: Error, context?: any): Promise<void> {
+  async logError(error: Error, context?: unknown): Promise<void> {
     const entry: WorkflowLogEntry = {
       executionId: this.executionId,
       workflowName: this.workflowName,
@@ -219,7 +219,7 @@ export class WorkflowLogger {
       workflowName: this.workflowName,
       timestamp: new Date(),
       phase: 'custom',
-      data: { message, metadata: { ...(data as Record<string, unknown> || {}), level } },
+      data: { message, metadata: { ...((data as Record<string, unknown>) || {}), level } },
     };
 
     await this.logEntry(entry);

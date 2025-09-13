@@ -5,7 +5,7 @@ import type {
   WorkflowConfig,
   WorkflowLogger,
 } from '@sebas-chan/core';
-import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
+import type { Issue, Knowledge, PondEntry, WorkflowType } from '@sebas-chan/shared-types';
 import type { DBClient } from '@sebas-chan/db';
 import type { StateManager } from './state-manager.js';
 import type { CoreEngine } from './engine.js';
@@ -99,13 +99,12 @@ export class EngineWorkflowStorage implements WorkflowStorage {
 export class EngineWorkflowEventEmitter implements WorkflowEventEmitter {
   constructor(private engine: CoreEngine) {}
 
-  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: any }): void {
+  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void {
     // EngineのenqueueEventを使用してイベントをキューに追加
     this.engine.enqueueEvent({
-      type: event.type,
+      type: event.type as WorkflowType,
       priority: event.priority || 'normal',
       payload: event.payload,
-      timestamp: new Date(),
     });
   }
 }
@@ -122,9 +121,9 @@ export class EngineWorkflowContext implements WorkflowContext {
     private db: DBClient,
     private engine: CoreEngine,
     public readonly logger: WorkflowLogger,
-    public readonly driver?: any,
+    public readonly driver?: unknown,
     public readonly config?: WorkflowConfig,
-    public readonly metadata?: Record<string, any>
+    public readonly metadata?: Record<string, unknown>
   ) {
     this.storage = new EngineWorkflowStorage(db, engine);
     this.state = stateManager.getState();
@@ -162,9 +161,9 @@ export function createWorkflowContext(
   stateManager: StateManager,
   db: DBClient,
   logger: WorkflowLogger,
-  driver?: any,
+  driver?: unknown,
   config?: WorkflowConfig,
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 ): EngineWorkflowContext {
   return new EngineWorkflowContext(stateManager, db, engine, logger, driver, config, metadata);
 }

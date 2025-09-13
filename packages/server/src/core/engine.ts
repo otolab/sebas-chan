@@ -16,7 +16,6 @@ import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
 import { CoreAgent, AgentContext } from '@sebas-chan/core';
-import type { AgentEvent } from '@sebas-chan/core';
 // TODO: WorkflowLoggerの型エクスポート修正後に有効化
 // import { WorkflowLogger } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';

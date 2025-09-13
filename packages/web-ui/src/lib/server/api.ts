@@ -29,7 +29,9 @@ export class ServerAPIClient {
   }
 
   async getKnowledge(query?: string): Promise<Knowledge[]> {
-    const url = query ? `${API_BASE}/knowledge?q=${encodeURIComponent(query)}` : `${API_BASE}/knowledge`;
+    const url = query
+      ? `${API_BASE}/knowledge?q=${encodeURIComponent(query)}`
+      : `${API_BASE}/knowledge`;
     const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch knowledge');
     const data = await res.json();
@@ -102,7 +104,7 @@ export class ServerAPIClient {
     limit?: number;
     offset?: number;
   }): Promise<{
-    data: any[];
+    data: unknown[];
     meta: { total: number; limit: number; offset: number; hasMore: boolean };
   }> {
     const searchParams = new URLSearchParams();
@@ -125,7 +127,7 @@ export class ServerAPIClient {
     };
   }
 
-  async getLogDetail(executionId: string): Promise<any> {
+  async getLogDetail(executionId: string): Promise<unknown> {
     const res = await fetch(`${API_BASE}/logs/${executionId}`);
     if (!res.ok) throw new Error('Failed to fetch log detail');
     const data = await res.json();

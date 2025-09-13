@@ -1,28 +1,26 @@
 import {
   CoreAgent,
-  IngestInputWorkflow,
-  ProcessUserRequestWorkflow,
-  AnalyzeIssueImpactWorkflow,
-  ExtractKnowledgeWorkflow,
+  ingestInputWorkflow,
+  processUserRequestWorkflow,
+  analyzeIssueImpactWorkflow,
+  extractKnowledgeWorkflow,
 } from '@sebas-chan/core';
 
 /**
  * ワークフローをCoreAgentに登録
  */
 export function registerWorkflows(agent: CoreAgent): void {
-  const registry = agent.getWorkflowRegistry();
-
   // A-1: INGEST_INPUT
-  registry.register('INGEST_INPUT', new IngestInputWorkflow());
+  agent.registerWorkflow('INGEST_INPUT', ingestInputWorkflow);
 
   // A-0: PROCESS_USER_REQUEST
-  registry.register('PROCESS_USER_REQUEST', new ProcessUserRequestWorkflow());
+  agent.registerWorkflow('PROCESS_USER_REQUEST', processUserRequestWorkflow);
 
   // A-2: ANALYZE_ISSUE_IMPACT
-  registry.register('ANALYZE_ISSUE_IMPACT', new AnalyzeIssueImpactWorkflow());
+  agent.registerWorkflow('ANALYZE_ISSUE_IMPACT', analyzeIssueImpactWorkflow);
 
   // A-3: EXTRACT_KNOWLEDGE
-  registry.register('EXTRACT_KNOWLEDGE', new ExtractKnowledgeWorkflow());
+  agent.registerWorkflow('EXTRACT_KNOWLEDGE', extractKnowledgeWorkflow);
 
   console.log('Workflows registered:', {
     workflows: [
