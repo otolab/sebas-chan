@@ -1,4 +1,4 @@
-import type { Input, Issue, Flow, PondEntry } from '@sebas-chan/shared-types';
+import type { Input, Issue, Flow, PondEntry, Knowledge } from '@sebas-chan/shared-types';
 
 const API_BASE = process.env.API_BASE_URL || 'http://localhost:3001/api';
 
@@ -10,18 +10,30 @@ export class ServerAPIClient {
     return data.data;
   }
 
-  async getIssues(): Promise<Issue[]> {
-    const res = await fetch(`${API_BASE}/issues`);
+  async getIssues(query?: string): Promise<Issue[]> {
+    const url = query ? `${API_BASE}/issues?q=${encodeURIComponent(query)}` : `${API_BASE}/issues`;
+    const res = await fetch(url);
     if (!res.ok) throw new Error('Failed to fetch issues');
     const data = await res.json();
-    return data.data;
+    return data.data || [];
   }
 
-  async getState(): Promise<string> {
+  async getState(): Promise<{ content: string; lastUpdate: Date | null }> {
     const res = await fetch(`${API_BASE}/state`);
     if (!res.ok) throw new Error('Failed to fetch state');
     const data = await res.json();
-    return data.state;
+    return {
+      content: data.data?.content || '',
+      lastUpdate: data.data?.lastUpdate ? new Date(data.data.lastUpdate) : null,
+    };
+  }
+
+  async getKnowledge(query?: string): Promise<Knowledge[]> {
+    const url = query ? `${API_BASE}/knowledge?q=${encodeURIComponent(query)}` : `${API_BASE}/knowledge`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch knowledge');
+    const data = await res.json();
+    return data.data || [];
   }
 
   async getPond(params?: {

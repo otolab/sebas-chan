@@ -6,6 +6,7 @@ import { createKnowledgeRouter } from './routes/knowledge.js';
 import { createInputsRouter } from './routes/inputs.js';
 import { createSystemRouter } from './routes/system.js';
 import { createPondRouter } from './routes/pond.js';
+import { createStateRouter } from './routes/state.js';
 
 export function createApiRouter(coreEngine: CoreEngine): Router {
   const router = Router();
@@ -16,6 +17,7 @@ export function createApiRouter(coreEngine: CoreEngine): Router {
   router.use('/inputs', createInputsRouter(coreEngine));
   router.use('/system', createSystemRouter(coreEngine));
   router.use('/pond', createPondRouter(coreEngine));
+  router.use('/state', createStateRouter(coreEngine));
 
   return router;
 }

@@ -15,9 +15,12 @@ import { EventQueue } from './event-queue.js';
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
-import { CoreAgent, AgentContext, AgentEvent, WorkflowLogger } from '@sebas-chan/core';
+import { CoreAgent, AgentContext, AgentEvent } from '@sebas-chan/core';
+// TODO: WorkflowLoggerの型エクスポート修正後に有効化
+// import { WorkflowLogger } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
-import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
+// TODO: ワークフロー関連のインポートは型エクスポート修正後に有効化
+// import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
 
 export interface EngineStatus {
   isRunning: boolean;
@@ -58,8 +61,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
       this.coreAgent = new CoreAgent();
 
-      // ワークフローを登録
-      registerWorkflows(this.coreAgent);
+      // TODO: ワークフロー登録は型エクスポート修正後に有効化
+      // registerWorkflows(this.coreAgent);
 
       const agentContext = this.createAgentContext();
       this.coreAgent.setContext(agentContext);
@@ -245,56 +248,21 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     // CoreAgentにイベントを渡す
     if (this.coreAgent) {
-      const workflowRegistry = this.coreAgent.getWorkflowRegistry();
-      const workflow = workflowRegistry.get(event.type);
+      // TODO: ワークフロー実行は型エクスポート修正後に有効化
+      // const workflowRegistry = this.coreAgent.getWorkflowRegistry();
+      // const workflow = workflowRegistry.get(event.type);
+      // if (workflow) { ... }
 
-      if (workflow) {
-        // ワークフローが登録されている場合、直接実行
-        try {
-          const workflowLogger = new WorkflowLogger(event.type);
-          const workflowContext = createWorkflowContext(
-            this,
-            this.stateManager,
-            this.dbClient!,
-            workflowLogger
-          );
-          const workflowEmitter = createWorkflowEventEmitter(this);
+      // 現時点では従来通りCoreAgentに渡す
+      const agentEvent = {
+        type: event.type,
+        priority: event.priority,
+        payload: event.payload,
+        timestamp: event.timestamp,
+      };
 
-          // AgentEvent形式に変換
-          const agentEvent: AgentEvent = {
-            type: event.type,
-            priority: event.priority,
-            payload: event.payload,
-            timestamp: event.timestamp,
-          };
-
-          const result = await workflow.execute(agentEvent, workflowContext, workflowEmitter);
-
-          // 結果のコンテキストからStateを更新
-          if (result.success && result.context.state !== workflowContext.state) {
-            this.stateManager.updateState(result.context.state);
-          }
-
-          logger.debug('Workflow executed successfully', {
-            eventType: event.type,
-            success: result.success
-          });
-        } catch (error) {
-          logger.error(`Workflow execution failed for ${event.type}:`, error);
-          throw error;
-        }
-      } else {
-        // ワークフロー未登録の場合は従来通りCoreAgentに渡す
-        const agentEvent = {
-          type: event.type,
-          priority: event.priority,
-          payload: event.payload,
-          timestamp: event.timestamp,
-        };
-
-        this.coreAgent.queueEvent(agentEvent);
-        logger.debug('Event forwarded to Core Agent', { eventType: event.type });
-      }
+      this.coreAgent.queueEvent(agentEvent);
+      logger.debug('Event forwarded to Core Agent', { eventType: event.type });
     } else {
       logger.warn('Core Agent not initialized, handling event locally');
 
@@ -497,6 +465,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   updateState(content: string): void {
     this.stateManager.updateState(content);
+  }
+
+  appendToState(section: string, content: string): void {
+    this.stateManager.appendToState(section, content);
+  }
+
+  getStateLastUpdate(): Date | null {
+    return this.stateManager.getLastUpdate();
   }
 
   enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void {
