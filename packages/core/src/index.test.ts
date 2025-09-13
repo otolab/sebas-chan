@@ -21,7 +21,7 @@ describe('CoreAgent', () => {
 
   it('should create an instance', () => {
     expect(agent).toBeInstanceOf(CoreAgent);
-    expect(consoleLogSpy).toHaveBeenCalledWith('Core Agent initialized');
+    expect(consoleLogSpy).toHaveBeenCalledWith('Core Agent initialized with workflow support');
   });
 
   it('should queue events', () => {
