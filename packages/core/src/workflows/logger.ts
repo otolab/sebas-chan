@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 export interface WorkflowLogEntry {
-  executionId: string;  // 実行ID
+  executionId: string; // 実行ID
   workflowName: string;
   timestamp: Date;
   phase: 'start' | 'input' | 'output' | 'error' | 'db_query' | 'ai_call' | 'custom';
@@ -203,17 +203,17 @@ export class WorkflowLogger {
    * サブワークフロー用のロガーを作成
    */
   createChildLogger(workflowName: string): WorkflowLogger {
-    return new WorkflowLogger(
-      workflowName,
-      this.options,
-      this.executionId
-    );
+    return new WorkflowLogger(workflowName, this.options, this.executionId);
   }
 
   /**
    * カスタムログエントリ
    */
-  async log(level: 'info' | 'debug' | 'warn' | 'error', message: string, data?: any): Promise<void> {
+  async log(
+    level: 'info' | 'debug' | 'warn' | 'error',
+    message: string,
+    data?: any
+  ): Promise<void> {
     const entry: WorkflowLogEntry = {
       executionId: this.executionId,
       workflowName: this.workflowName,

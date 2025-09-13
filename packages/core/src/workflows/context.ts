@@ -1,4 +1,4 @@
-import type { Issue, Knowledge, PondEntry, Input } from '@sebas-chan/shared-types';
+import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 import type { WorkflowLogger } from './logger.js';
 
 /**
@@ -90,9 +90,5 @@ export interface WorkflowEventEmitter {
   /**
    * 次のイベントを発行
    */
-  emit(event: {
-    type: string;
-    priority?: 'high' | 'normal' | 'low';
-    payload: any;
-  }): void;
+  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: any }): void;
 }

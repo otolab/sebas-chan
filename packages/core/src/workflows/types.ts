@@ -3,7 +3,7 @@ import type { WorkflowContext, WorkflowEventEmitter } from './context.js';
 
 export interface WorkflowResult<T = any> {
   success: boolean;
-  context: WorkflowContext;  // 更新されたcontext（state含む）
+  context: WorkflowContext; // 更新されたcontext（state含む）
   output?: T;
   error?: Error;
 }
