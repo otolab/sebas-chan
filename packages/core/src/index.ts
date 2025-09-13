@@ -1,4 +1,8 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+import type { WorkflowLogger } from './workflows/logger.js';
+import { WorkflowRegistry } from './workflows/registry.js';
+import type { BaseWorkflow, WorkflowResult } from './workflows/types.js';
+import type { WorkflowContext, WorkflowEventEmitter } from './workflows/context.js';
 
 // CoreEngineから提供されるコンテキスト
 export interface AgentContext {
@@ -21,9 +25,11 @@ export class CoreAgent {
   private eventQueue: AgentEvent[] = [];
   private isProcessing = false;
   private context: AgentContext | null = null;
+  private workflowRegistry: WorkflowRegistry;
 
   constructor() {
-    console.log('Core Agent initialized');
+    this.workflowRegistry = new WorkflowRegistry();
+    console.log('Core Agent initialized with workflow support');
   }
 
   async start(context?: AgentContext) {
@@ -79,43 +85,66 @@ export class CoreAgent {
   private async processEvent(event: AgentEvent) {
     console.log(`Processing event: ${event.type}`);
 
-    switch (event.type) {
-      case 'PROCESS_USER_REQUEST':
-        // ユーザーリクエストの処理
-        console.log('Processing user request...');
-        break;
+    // ワークフローレジストリから対応するワークフローを取得
+    const workflow = this.workflowRegistry.get(event.type);
 
-      case 'INGEST_INPUT': {
-        // Input -> Pond変換
-        if (!this.context) {
-          console.error('Agent context not initialized');
+    if (workflow) {
+      // ワークフローが登録されている場合
+      if (!this.context) {
+        console.error('Agent context not initialized for workflow execution');
+        return;
+      }
+
+      // WorkflowContextとEventEmitterを準備
+      // 注：実際の実装はEngine側で行う必要がある
+      // ここでは仮実装としてコメントアウト
+
+      // const workflowContext: WorkflowContext = /* Engineが提供 */;
+      // const emitter: WorkflowEventEmitter = /* Engineが提供 */;
+      // const result = await workflow.execute(event, workflowContext, emitter);
+
+      // TODO: Engine側でWorkflowContextを実装後に有効化
+      console.log('Workflow execution will be implemented with Engine integration');
+    } else {
+      // レガシー処理（ワークフロー未登録の場合）
+      switch (event.type) {
+        case 'PROCESS_USER_REQUEST':
+          // ユーザーリクエストの処理
+          console.log('Processing user request...');
+          break;
+
+        case 'INGEST_INPUT': {
+          // Input -> Pond変換
+          if (!this.context) {
+            console.error('Agent context not initialized');
+            break;
+          }
+
+          const { input } = event.payload as { input: Input };
+
+          try {
+            // コンテキスト経由でPondに保存
+            const pondEntry = await this.context.addPondEntry({
+              content: input.content,
+              source: input.source,
+              timestamp: input.timestamp,
+            });
+
+            console.log(`Input successfully ingested to Pond: ${pondEntry.id}`);
+          } catch (error) {
+            console.error(`Failed to ingest input:`, error);
+          }
           break;
         }
 
-        const { input } = event.payload as { input: Input };
+        case 'ANALYZE_ISSUE_IMPACT':
+          // Issue影響分析
+          console.log('Analyzing issue impact...');
+          break;
 
-        try {
-          // コンテキスト経由でPondに保存
-          const pondEntry = await this.context.addPondEntry({
-            content: input.content,
-            source: input.source,
-            timestamp: input.timestamp,
-          });
-
-          console.log(`Input successfully ingested to Pond: ${pondEntry.id}`);
-        } catch (error) {
-          console.error(`Failed to ingest input:`, error);
-        }
-        break;
+        default:
+          console.warn(`Unknown event type: ${event.type}`);
       }
-
-      case 'ANALYZE_ISSUE_IMPACT':
-        // Issue影響分析
-        console.log('Analyzing issue impact...');
-        break;
-
-      default:
-        console.warn(`Unknown event type: ${event.type}`);
     }
   }
 
@@ -123,6 +152,21 @@ export class CoreAgent {
     this.eventQueue.push(event);
     console.log(`Event queued: ${event.type}`);
   }
+
+  /**
+   * ワークフローを登録
+   */
+  public registerWorkflow(eventType: string, workflow: BaseWorkflow): void {
+    this.workflowRegistry.register(eventType, workflow);
+  }
+
+  /**
+   * ワークフローレジストリを取得
+   */
+  public getWorkflowRegistry(): WorkflowRegistry {
+    return this.workflowRegistry;
+  }
+
 }
 
 export interface AgentEvent {
@@ -131,5 +175,8 @@ export interface AgentEvent {
   payload: unknown;
   timestamp: Date;
 }
+
+// ワークフロー関連のエクスポート
+export * from './workflows/index.js';
 
 export default CoreAgent;
