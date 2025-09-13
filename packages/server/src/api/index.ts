@@ -7,6 +7,7 @@ import { createInputsRouter } from './routes/inputs.js';
 import { createSystemRouter } from './routes/system.js';
 import { createPondRouter } from './routes/pond.js';
 import { createStateRouter } from './routes/state.js';
+import { createLogsRouter } from './routes/logs.js';
 
 export function createApiRouter(coreEngine: CoreEngine): Router {
   const router = Router();
@@ -18,6 +19,7 @@ export function createApiRouter(coreEngine: CoreEngine): Router {
   router.use('/system', createSystemRouter(coreEngine));
   router.use('/pond', createPondRouter(coreEngine));
   router.use('/state', createStateRouter(coreEngine));
+  router.use('/logs', createLogsRouter(coreEngine));
 
   return router;
 }

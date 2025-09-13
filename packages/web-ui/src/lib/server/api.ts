@@ -94,4 +94,41 @@ export class ServerAPIClient {
     const data = await res.json();
     return data.data;
   }
+
+  async getLogs(params?: {
+    executionId?: string;
+    workflowType?: string;
+    level?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    data: any[];
+    meta: { total: number; limit: number; offset: number; hasMore: boolean };
+  }> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, String(value));
+        }
+      });
+    }
+
+    const url = searchParams.toString() ? `${API_BASE}/logs?${searchParams}` : `${API_BASE}/logs`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch logs');
+    const result = await res.json();
+
+    return {
+      data: result.data || [],
+      meta: result.meta || { total: 0, limit: 50, offset: 0, hasMore: false },
+    };
+  }
+
+  async getLogDetail(executionId: string): Promise<any> {
+    const res = await fetch(`${API_BASE}/logs/${executionId}`);
+    if (!res.ok) throw new Error('Failed to fetch log detail');
+    const data = await res.json();
+    return data.data;
+  }
 }

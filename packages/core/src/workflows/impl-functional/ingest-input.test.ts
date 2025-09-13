@@ -1,0 +1,154 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ingestInputWorkflow } from './ingest-input.js';
+import { executeWorkflow } from '../functional-types.js';
+import type { AgentEvent } from '../../index.js';
+import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
+
+describe('IngestInput Workflow (Functional)', () => {
+  let mockContext: WorkflowContext;
+  let mockEmitter: WorkflowEventEmitter;
+  let mockEvent: AgentEvent;
+
+  beforeEach(() => {
+    // モックコンテキストの準備
+    mockContext = {
+      state: 'Initial state',
+      storage: {
+        addPondEntry: vi.fn().mockResolvedValue({ id: 'pond-123', content: 'test content' }),
+        searchIssues: vi.fn().mockResolvedValue([]),
+        searchKnowledge: vi.fn().mockResolvedValue([]),
+        addIssue: vi.fn(),
+        addKnowledge: vi.fn(),
+      },
+      logger: {
+        log: vi.fn(),
+        logInput: vi.fn(),
+        logOutput: vi.fn(),
+        logError: vi.fn(),
+        logDbQuery: vi.fn(),
+        logAiCall: vi.fn(),
+      },
+      driver: {
+        call: vi.fn(),
+      },
+      metadata: {},
+    };
+
+    // モックイベントエミッター
+    mockEmitter = {
+      emit: vi.fn(),
+    };
+
+    // モックイベント
+    mockEvent = {
+      type: 'INGEST_INPUT',
+      priority: 'normal',
+      payload: {
+        input: {
+          id: 'input-123',
+          content: 'システムでエラーが発生しました',
+          source: 'slack',
+        },
+      },
+    };
+  });
+
+  it('should successfully ingest input to pond', async () => {
+    const result = await executeWorkflow(
+      ingestInputWorkflow,
+      mockEvent,
+      mockContext,
+      mockEmitter
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.output).toEqual({
+      pondEntryId: 'pond-123',
+      analyzed: true, // "エラー"キーワードを含むため
+    });
+
+    // Pondエントリが作成されたことを確認
+    expect(mockContext.storage.addPondEntry).toHaveBeenCalledWith({
+      content: 'システムでエラーが発生しました',
+      source: 'slack',
+    });
+
+    // ログが記録されたことを確認
+    expect(mockContext.logger.logInput).toHaveBeenCalled();
+    expect(mockContext.logger.logOutput).toHaveBeenCalled();
+  });
+
+  it('should trigger analysis when error keywords are detected', async () => {
+    const result = await executeWorkflow(
+      ingestInputWorkflow,
+      mockEvent,
+      mockContext,
+      mockEmitter
+    );
+
+    expect(result.success).toBe(true);
+
+    // ANALYZE_ISSUE_IMPACTイベントが発行されたことを確認
+    expect(mockEmitter.emit).toHaveBeenCalledWith({
+      type: 'ANALYZE_ISSUE_IMPACT',
+      priority: 'normal',
+      payload: {
+        pondEntryId: 'pond-123',
+        originalInput: mockEvent.payload.input,
+      },
+    });
+  });
+
+  it('should not trigger analysis when no keywords are detected', async () => {
+    mockEvent.payload.input.content = '今日の天気はどうですか？';
+
+    const result = await executeWorkflow(
+      ingestInputWorkflow,
+      mockEvent,
+      mockContext,
+      mockEmitter
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.output.analyzed).toBe(false);
+
+    // イベントが発行されないことを確認
+    expect(mockEmitter.emit).not.toHaveBeenCalled();
+  });
+
+  it('should update state with processing information', async () => {
+    const result = await executeWorkflow(
+      ingestInputWorkflow,
+      mockEvent,
+      mockContext,
+      mockEmitter
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.context.state).toContain('最新の入力処理');
+    expect(result.context.state).toContain('Input ID: input-123');
+    expect(result.context.state).toContain('Source: slack');
+    expect(result.context.state).toContain('Pond Entry ID: pond-123');
+  });
+
+  it('should handle errors gracefully', async () => {
+    const error = new Error('Database connection failed');
+    mockContext.storage.addPondEntry = vi.fn().mockRejectedValue(error);
+
+    const result = await executeWorkflow(
+      ingestInputWorkflow,
+      mockEvent,
+      mockContext,
+      mockEmitter
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(error);
+
+    // エラーログが記録されたことを確認
+    expect(mockContext.logger.logError).toHaveBeenCalledWith(
+      error,
+      expect.objectContaining({ event: mockEvent })
+    );
+  });
+});
