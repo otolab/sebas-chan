@@ -12,7 +12,7 @@
     "test": "npm run test:unit",
     "test:unit": "npm run test --workspaces --if-present",
     "test:integration": "vitest run --config vitest.config.integration.mts",
-    "test:e2e": "vitest run --config vitest.config.e2e.ts",
+    "test:e2e": "vitest run --config vitest.config.e2e.mts",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:ci": "npm run test:unit && npm run test:integration",
     "typecheck": "npm run typecheck --workspaces --if-present",

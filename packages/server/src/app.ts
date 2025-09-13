@@ -21,11 +21,9 @@ export async function createApp() {
   const coreEngine = new CoreEngine();
   await coreEngine.initialize();
   
-  // E2Eテスト以外ではstart()を呼ぶ
-  if (process.env.NODE_ENV !== 'test') {
-    await coreEngine.start();
-    logger.info('Core Engine started');
-  }
+  // E2Eテストでもstart()を呼ぶ
+  await coreEngine.start();
+  logger.info('Core Engine started');
   
   const apiRouter = createApiRouter(coreEngine);
   app.use('/api', apiRouter);
