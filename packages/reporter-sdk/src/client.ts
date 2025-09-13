@@ -46,7 +46,7 @@ export class ReporterClient {
   async submitInput(input: Omit<Input, 'id' | 'timestamp'>): Promise<SubmitResult> {
     try {
       const response = await this.fetchWithRetry(
-        `${this.apiUrl}/inputs`,
+        `${this.apiUrl}/api/inputs`,
         {
           method: 'POST',
           body: JSON.stringify(input),
@@ -61,10 +61,10 @@ export class ReporterClient {
         };
       }
 
-      const data = await response.json();
+      const result = await response.json();
       return {
         success: true,
-        inputId: data.id,
+        inputId: result.data?.id || result.id,
       };
     } catch (error) {
       return {
@@ -74,17 +74,35 @@ export class ReporterClient {
     }
   }
 
-  async submitBatch(inputs: Array<Omit<Input, 'id' | 'timestamp'>>): Promise<SubmitResult[]> {
+  async submitBatch(inputs: Array<Omit<Input, 'id' | 'timestamp'>>): Promise<{
+    success: boolean;
+    succeeded: number;
+    failed: number;
+    results: SubmitResult[];
+  }> {
     const results: SubmitResult[] = [];
+    let succeeded = 0;
+    let failed = 0;
     
     for (const input of inputs) {
       const result = await this.submitInput(input);
       results.push(result);
       
+      if (result.success) {
+        succeeded++;
+      } else {
+        failed++;
+      }
+      
       await new Promise(resolve => setTimeout(resolve, 100));
     }
     
-    return results;
+    return {
+      success: failed === 0,
+      succeeded,
+      failed,
+      results
+    };
   }
 
   async checkHealth(): Promise<boolean> {

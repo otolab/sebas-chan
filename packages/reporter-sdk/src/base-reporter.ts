@@ -26,6 +26,13 @@ export abstract class BaseReporter {
     }
 
     this.isRunning = true;
+    
+    if (this.config.pollInterval) {
+      this.setupPolling(this.config.pollInterval, async () => {
+        await this.submitCollected();
+      });
+    }
+    
     await this.onStart();
   }
 
@@ -42,6 +49,21 @@ export abstract class BaseReporter {
     }
 
     await this.onStop();
+  }
+
+  async submitCollected(): Promise<number> {
+    try {
+      const inputs = await this.collect();
+      if (inputs.length === 0) {
+        return 0;
+      }
+
+      const result = await this.client.submitBatch(inputs);
+      return result.succeeded;
+    } catch (error) {
+      console.error('Error collecting or submitting inputs:', error);
+      return 0;
+    }
   }
 
   protected async submitInput(content: string, metadata?: Record<string, any>): Promise<SubmitResult> {
@@ -74,4 +96,5 @@ export abstract class BaseReporter {
 
   protected abstract onStart(): Promise<void>;
   protected abstract onStop(): Promise<void>;
+  abstract collect(): Promise<Input[]>;
 }

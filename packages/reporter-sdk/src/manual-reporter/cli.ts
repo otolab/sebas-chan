@@ -3,8 +3,8 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { watch } from 'chokidar';
 import { join, basename } from 'path';
-import { ReporterClient } from '../client';
-import type { SubmitResult } from '../types';
+import { ReporterClient } from '../client.js';
+import type { SubmitResult } from '../types.js';
 
 const program = new Command();
 
@@ -25,7 +25,7 @@ For more information, see: https://github.com/otolab/sebas-chan`);
 program
   .command('submit')
   .description('Submit a single input to the sebas-chan system')
-  .option('-u, --url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
+  .option('-a, --api-url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
   .option('-s, --source <source>', 'Source identifier for tracking where the input came from (default: manual)', 'manual')
   .option('-c, --content <content>', 'Input content as a string')
   .option('-f, --file <file>', 'Path to file containing the input content')
@@ -53,7 +53,7 @@ Examples:
       }
 
       const client = new ReporterClient({
-        apiUrl: options.url,
+        apiUrl: options.apiUrl,
         retryOptions: {
           maxRetries: 3,
           retryDelay: 1000,
@@ -82,7 +82,7 @@ Examples:
 program
   .command('watch')
   .description('Watch files/directories and automatically submit new or changed content as inputs')
-  .option('-u, --url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
+  .option('-a, --api-url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
   .option('-s, --source <source>', 'Source identifier for tracking where the input came from (default: manual)', 'manual')
   .option('-f, --file <file>', 'Path to a specific file to watch')
   .option('-d, --dir <dir>', 'Path to a directory to watch')
@@ -109,7 +109,7 @@ Examples:
       }
 
       const client = new ReporterClient({
-        apiUrl: options.url,
+        apiUrl: options.apiUrl,
         retryOptions: {
           maxRetries: 3,
           retryDelay: 1000,
@@ -181,7 +181,7 @@ Examples:
 program
   .command('health')
   .description('Check if the sebas-chan API server is running and healthy')
-  .option('-u, --url <url>', 'API endpoint URL to check (default: http://localhost:3001)', 'http://localhost:3001')
+  .option('-a, --api-url <url>', 'API endpoint URL to check (default: http://localhost:3001)', 'http://localhost:3001')
   .addHelpText('after', `
 Notes:
   - Returns exit code 0 if healthy, 1 if unhealthy
@@ -189,11 +189,11 @@ Notes:
 
 Examples:
   $ manual-reporter health
-  $ manual-reporter health --url http://localhost:8080`)
+  $ manual-reporter health --api-url http://localhost:8080`)
   .action(async (options) => {
     try {
       const client = new ReporterClient({
-        apiUrl: options.url,
+        apiUrl: options.apiUrl,
       });
 
       const isHealthy = await client.checkHealth();
