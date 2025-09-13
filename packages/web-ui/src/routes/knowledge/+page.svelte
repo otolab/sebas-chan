@@ -35,14 +35,6 @@
     }
   }
 
-  function formatDate(date: Date | string): string {
-    const d = typeof date === 'string' ? new Date(date) : date;
-    return new Intl.DateTimeFormat('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(d);
-  }
 </script>
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -81,9 +73,6 @@
                 <span>=N {item.reputation.downvotes}</span>
               </div>
             </div>
-            <span class="text-sm text-gray-500">
-              {formatDate(item.createdAt)}
-            </span>
           </div>
 
           <p class="text-gray-800 mb-3">{item.content}</p>

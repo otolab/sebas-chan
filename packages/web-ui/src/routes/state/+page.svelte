@@ -2,9 +2,9 @@
   import type { PageData } from './$types';
 
   let { data }: { data: PageData } = $props();
-  let isRefreshing = $state(false);
-  let state = $state(data.state);
-  let lastUpdate = $state(data.lastUpdate);
+  let isRefreshing = false;
+  let currentState = data.state;
+  let lastUpdate = data.lastUpdate;
 
   async function refreshState() {
     isRefreshing = true;
@@ -12,7 +12,7 @@
       const response = await fetch('/api/state');
       if (response.ok) {
         const result = await response.json();
-        state = result.state;
+        currentState = result.state;
         lastUpdate = result.lastUpdate;
       }
     } catch (error) {
@@ -72,9 +72,9 @@
 
   <div class="bg-white shadow overflow-hidden rounded-lg">
     <div class="px-6 py-4">
-      {#if state?.content}
+      {#if currentState?.content}
         <div class="prose prose-sm max-w-none">
-          {@html formatStateContent(state.content)}
+          {@html formatStateContent(currentState.content)}
         </div>
       {:else}
         <p class="text-gray-500 italic">No state information available</p>
