@@ -92,7 +92,9 @@ class LanceDBWorker:
         request_id = request.get("id")
         
         try:
-            if method == "initModel":
+            if method == "ping":
+                result = self.ping()
+            elif method == "initModel":
                 result = self.init_model()
             elif method == "addIssue":
                 result = self.add_issue(params)
@@ -109,7 +111,9 @@ class LanceDBWorker:
             elif method == "getPondEntry":
                 result = self.get_pond_entry(params.get("id"))
             elif method == "searchPond":
-                result = self.search_pond(params.get("query", ""), params.get("limit", 10))
+                result = self.search_pond(params)
+            elif method == "getPondSources":
+                result = self.get_pond_sources()
             elif method == "clearDatabase":
                 result = self.clear_database()
             else:
@@ -130,6 +134,19 @@ class LanceDBWorker:
                 },
                 "id": request_id
             }
+    
+    def ping(self) -> Dict[str, Any]:
+        """ヘルスチェック用のping
+        
+        Returns:
+            ステータス情報を含む辞書
+        """
+        return {
+            "status": "ok",
+            "model_loaded": self.embedding_model.is_loaded if hasattr(self.embedding_model, 'is_loaded') else False,
+            "tables": self.db.table_names(),
+            "vector_dimension": self.vector_dimension
+        }
     
     def init_model(self) -> bool:
         """モデルを初期化
@@ -267,22 +284,121 @@ class LanceDBWorker:
             return entry
         return None
     
-    def search_pond(self, query: str, limit: int = 10) -> list:
-        """Pondエントリーを検索"""
+    def search_pond(self, filters: dict) -> dict:
+        """Pondエントリーを高度なフィルタで検索（ベクトル検索優先）
+        
+        LanceDBはDataFusionクエリエンジンを使用しているため、
+        where句でDataFusion SQLの構文が利用可能：
+        - 文字列比較: source = 'value'
+        - IN句: source IN ('a', 'b', 'c')
+        - タイムスタンプ比較: CAST('2024-01-01T00:00:00' AS TIMESTAMP)
+        - TIMESTAMP関数: TIMESTAMP '2024-01-01 00:00:00'
+        - その他のSQL関数: https://datafusion.apache.org/user-guide/sql/
+        """
         table = self.db.open_table(POND_TABLE)
         
-        # ベクトル検索
+        # パラメータの取得
+        query = filters.get('q', '')
+        source = filters.get('source')
+        date_from = filters.get('dateFrom')
+        date_to = filters.get('dateTo')
+        limit = filters.get('limit', 20)
+        offset = filters.get('offset', 0)
+        
+        # ベクトル検索かどうかのフラグ
+        is_vector_search = False
+        
+        # ステップ1: LanceDBレベルでのフィルタリング（DataFusion SQL構文使用）
+        where_conditions = []
+        if source:
+            where_conditions.append(f"source = '{source}'")
+        if date_from:
+            # CAST関数を使用してタイムスタンプを比較
+            where_conditions.append(f"timestamp >= CAST('{date_from}' AS TIMESTAMP)")
+        if date_to:
+            # CAST関数を使用してタイムスタンプを比較
+            where_conditions.append(f"timestamp <= CAST('{date_to}' AS TIMESTAMP)")
+        
+        where_clause = " AND ".join(where_conditions) if where_conditions else None
+        
+        # ステップ2: ベクトル検索またはテーブル全体の取得
         if query and self.embedding_model.is_loaded:
             try:
+                # ベクトル検索で類似度の高い順に多めに取得
                 query_vector = self.embedding_model.encode(query)
-                results = table.search(query_vector).limit(limit).to_list()
+                # フィルタを適用してベクトル検索
+                search_results = table.search(query_vector)
+                if where_clause:
+                    search_results = search_results.where(where_clause)
+                # 十分な件数を取得（日付フィルタ後の件数を確保するため）
+                search_results = search_results.limit(2000)
+                
+                # to_pandas()を使って距離情報を含むデータフレームを取得
+                df = search_results.to_pandas()
+                is_vector_search = True
+                
+                # _distanceフィールドが存在する場合はそれを使用
+                if '_distance' in df.columns:
+                    df['distance'] = df['_distance']
+                else:
+                    # 距離情報がない場合は順位ベースで推定
+                    df['distance'] = df.index * 0.1  # 順位に基づく仮の距離
             except Exception as e:
-                # ベクトル検索が失敗したらテキスト検索にフォールバック
-                sys.stderr.write(f"Vector search failed, falling back to text search: {e}\n")
-                results = self._pond_text_search(table, query, limit)
+                sys.stderr.write(f"Vector search failed, falling back to full data: {e}\n")
+                df = table.to_pandas()
+                if source:
+                    df = df[df['source'] == source]
+                is_vector_search = False
         else:
-            # テキスト検索
-            results = self._pond_text_search(table, query, limit)
+            # 全データを取得（LanceDBのフィルタ適用）
+            try:
+                # LanceDBのsearchメソッドを使用してフィルタリング
+                search_results = table.search()
+                if where_clause:
+                    search_results = search_results.where(where_clause)
+                # 十分な件数を取得
+                df = search_results.limit(2000).to_pandas()
+            except:
+                # フォールバック：通常のpandasフィルタリング
+                df = table.to_pandas()
+                if source:
+                    df = df[df['source'] == source]
+            is_vector_search = False
+        
+        # ステップ3: スコア計算（フィルタリング後のデータセットに対して）
+        if is_vector_search and 'distance' in df.columns and len(df) > 0:
+            # 距離の最小値と最大値で正規化してスコアを計算
+            # フィルタリング後のデータセット内での正規化
+            min_dist = df['distance'].min()
+            max_dist = df['distance'].max()
+            if max_dist > min_dist:
+                # 距離を0-1に正規化して反転（近いほど高スコア）
+                df['score'] = 1 - ((df['distance'] - min_dist) / (max_dist - min_dist))
+            else:
+                # 全て同じ距離の場合
+                df['score'] = 1.0
+        elif is_vector_search:
+            # ベクトル検索だが距離情報がない場合
+            if len(df) > 1:
+                df['score'] = 1 - (df.index / (len(df) - 1)) * 0.5  # 最低でも0.5
+            elif len(df) == 1:
+                df['score'] = 1.0
+            else:
+                df['score'] = pd.Series(dtype=float)  # 空のSeries
+        
+        # ステップ4: ソート（ベクトル検索の場合はスコア順を維持、それ以外はタイムスタンプ順）
+        if not is_vector_search:
+            # タイムスタンプで降順ソート（新しいものが上）
+            df = df.sort_values('timestamp', ascending=False)
+        
+        # 総件数を保持
+        total_count = len(df)
+        
+        # ページネーション適用
+        df_paginated = df.iloc[offset:offset + limit]
+        
+        # 結果を辞書のリストに変換
+        results = df_paginated.to_dict('records')
         
         # 結果を整形
         for record in results:
@@ -292,17 +408,27 @@ class LanceDBWorker:
             # タイムスタンプをISO形式に変換
             if 'timestamp' in record:
                 record['timestamp'] = record['timestamp'].isoformat()
+            # _distanceフィールドは除去しない（デバッグ用に残す）
         
-        return results
+        return {
+            'data': results,
+            'meta': {
+                'total': total_count,
+                'limit': limit,
+                'offset': offset,
+                'hasMore': offset + limit < total_count
+            }
+        }
     
-    def _pond_text_search(self, table, query: str, limit: int) -> list:
-        """Pondテーブルのテキストベース検索"""
-        results = table.to_pandas()
-        if query:
-            mask = results['content'].str.contains(query, case=False, na=False)
-            results = results[mask]
-        results = results.head(limit)
-        return results.to_dict('records')
+    def get_pond_sources(self) -> list:
+        """利用可能なPondソース一覧を取得"""
+        table = self.db.open_table(POND_TABLE)
+        df = table.to_pandas()
+        
+        # ユニークなソース一覧を取得してソート
+        sources = sorted(df['source'].unique().tolist())
+        return sources
+    
     
     def clear_database(self) -> bool:
         """データベース全体をクリア（テスト用）"""

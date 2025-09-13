@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreEngine } from './engine';
+import { CoreEngine } from './engine.js';
 import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 import { Input } from '@sebas-chan/shared-types';
@@ -10,8 +10,8 @@ vi.mock('@sebas-chan/db');
 
 describe('Input to Pond Flow Integration', () => {
   let engine: CoreEngine;
-  let mockDbClient: any;
-  let mockCoreAgent: any;
+  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
+  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
 
   beforeEach(async () => {
     // DBClientモックの設定
@@ -164,20 +164,23 @@ describe('Input to Pond Flow Integration', () => {
       });
 
       // Search tests (with mocked DB, just verify the search is called)
-      const results1 = await engine.searchPond('Elasticsearch');
+      const results1 = await engine.searchPond({ q: 'Elasticsearch' });
       expect(results1).toBeDefined();
-      expect(Array.isArray(results1)).toBe(true);
+      expect(results1.data).toBeDefined();
+      expect(Array.isArray(results1.data)).toBe(true);
 
-      const results2 = await engine.searchPond('メモリ');
+      const results2 = await engine.searchPond({ q: 'メモリ' });
       expect(results2).toBeDefined();
-      expect(Array.isArray(results2)).toBe(true);
+      expect(results2.data).toBeDefined();
+      expect(Array.isArray(results2.data)).toBe(true);
     });
 
     it('should handle empty search results gracefully', async () => {
-      const results = await engine.searchPond('存在しないキーワード12345');
+      const results = await engine.searchPond({ q: '存在しないキーワード12345' });
       expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
-      expect(results).toEqual([]);
+      expect(results.data).toBeDefined();
+      expect(Array.isArray(results.data)).toBe(true);
+      expect(results.data).toEqual([]);
     });
   });
 

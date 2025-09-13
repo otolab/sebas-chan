@@ -4,6 +4,10 @@ import { Issue } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 import * as fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 interface PendingRequest {
   resolve: (value: unknown) => void;
@@ -18,6 +22,13 @@ export interface DBClientOptions {
    * @default 'cl-nagoya/ruri-v3-30m'
    */
   embeddingModel?: string;
+}
+
+export interface DBStatus {
+  status: 'ok' | 'error';
+  model_loaded?: boolean;
+  tables?: string[];
+  vector_dimension?: number;
 }
 
 export class DBClient extends EventEmitter {
@@ -168,9 +179,72 @@ export class DBClient extends EventEmitter {
       this.worker = null;
     });
 
-    // ワーカーの起動を待つ
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    this.isReady = true;
+    // ワーカーの起動を待つ（実際にpingが通るまで）
+    await this.waitForReady();
+  }
+
+  /**
+   * DBが準備完了するまで待つ
+   */
+  private async waitForReady(): Promise<void> {
+    const maxRetries = 30; // 最大30秒待つ
+    const retryInterval = 1000; // 1秒ごとにリトライ
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const status = await this.ping();
+        if (status.status === 'ok') {
+          this.isReady = true;
+          console.log('DB is ready:', status);
+          return;
+        }
+      } catch (e) {
+        // pingが失敗しても続ける
+        console.log(`Waiting for DB to be ready... (${i + 1}/${maxRetries})`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, retryInterval));
+    }
+
+    throw new Error('Timeout waiting for DB to be ready');
+  }
+
+  /**
+   * ヘルスチェック
+   */
+  async ping(): Promise<DBStatus> {
+    // isReadyチェックをスキップ（起動中にも呼ばれるため）
+    if (!this.worker) {
+      throw new Error('Not connected to database');
+    }
+
+    const id = ++this.requestId;
+    const request = {
+      jsonrpc: '2.0',
+      method: 'ping',
+      params: {},
+      id,
+    };
+
+    return new Promise((resolve, reject) => {
+      this.pendingRequests.set(id, {
+        resolve: resolve as (value: unknown) => void,
+        reject,
+      });
+
+      const timeout = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error('Ping timeout'));
+      }, 5000); // 5秒のタイムアウト
+
+      this.worker!.stdin?.write(JSON.stringify(request) + '\n');
+
+      // タイムアウトをクリア
+      const originalResolve = this.pendingRequests.get(id)!.resolve;
+      this.pendingRequests.get(id)!.resolve = (value) => {
+        clearTimeout(timeout);
+        originalResolve(value);
+      };
+    }) as Promise<DBStatus>;
   }
 
   /**
@@ -312,30 +386,84 @@ export class DBClient extends EventEmitter {
     } | null;
   }
 
-  async searchPond(
-    query: string,
-    limit = 10
-  ): Promise<
-    Array<{
+  async getPondSources(): Promise<string[]> {
+    return (await this.sendRequest('getPondSources')) as string[];
+  }
+
+  async searchPond(filters: {
+    q?: string;
+    source?: string;
+    dateFrom?: string | Date;
+    dateTo?: string | Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<{
+    data: Array<{
       id: string;
       content: string;
       source: string;
       timestamp: string;
       vector?: number[];
-    }>
-  > {
-    return (await this.sendRequest('searchPond', { query, limit })) as Array<{
-      id: string;
-      content: string;
-      source: string;
-      timestamp: string;
-      vector?: number[];
+      score?: number;
+      distance?: number;
     }>;
+    meta: {
+      total: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+  }> {
+    console.log('[DBClient] searchPond called with filters:', filters);
+
+    // 日付をISO文字列に変換
+    const params = {
+      ...filters,
+      dateFrom:
+        filters.dateFrom instanceof Date ? filters.dateFrom.toISOString() : filters.dateFrom,
+      dateTo: filters.dateTo instanceof Date ? filters.dateTo.toISOString() : filters.dateTo,
+    };
+
+    return (await this.sendRequest('searchPond', params)) as {
+      data: Array<{
+        id: string;
+        content: string;
+        source: string;
+        timestamp: string;
+        vector?: number[];
+      }>;
+      meta: {
+        total: number;
+        limit: number;
+        offset: number;
+        hasMore: boolean;
+      };
+    };
   }
 
   // テスト用メソッド
   async clearDatabase(): Promise<void> {
     await this.sendRequest('clearDatabase');
+  }
+
+  /**
+   * 現在のステータスを取得
+   */
+  async getStatus(): Promise<DBStatus> {
+    if (!this.isReady) {
+      return {
+        status: 'error',
+        model_loaded: false,
+      };
+    }
+    try {
+      return await this.ping();
+    } catch (e) {
+      return {
+        status: 'error',
+        model_loaded: false,
+      };
+    }
   }
 }
 

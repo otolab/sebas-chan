@@ -5,7 +5,7 @@
  */
 
 import { Router } from 'express';
-import { CoreEngine } from '../core/engine';
+import { CoreEngine } from '../core/engine.js';
 
 export function createAPIRoutes(engine: CoreEngine): Router {
   const router = Router();
@@ -47,8 +47,9 @@ export function createAPIRoutes(engine: CoreEngine): Router {
         message: 'Input received',
         input,
       });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: message });
     }
   });
 
@@ -75,8 +76,9 @@ export function createAPIRoutes(engine: CoreEngine): Router {
         id: issue.id,
         issue,
       });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: message });
     }
   });
 
@@ -86,43 +88,9 @@ export function createAPIRoutes(engine: CoreEngine): Router {
     try {
       const results = await engine.searchIssues(query as string);
       res.json({ results });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  // Pond管理
-  router.post('/pond', async (req, res) => {
-    const { content, source } = req.body;
-
-    if (!content || !source) {
-      return res.status(400).json({ error: 'Content and source are required' });
-    }
-
-    try {
-      const entry = await engine.addToPond({
-        content,
-        source,
-        timestamp: new Date(),
-      });
-
-      res.status(201).json({
-        id: entry.id,
-        message: 'Added to pond',
-      });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  router.get('/pond/search', async (req, res) => {
-    const { q: query = '', limit } = req.query;
-
-    try {
-      const results = await engine.searchPond(query as string, limit ? Number(limit) : undefined);
-      res.json({ results });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: message });
     }
   });
 

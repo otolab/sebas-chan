@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { CoreEngine } from '../../core/engine';
+import { CoreEngine } from '../../core/engine.js';
 import { CreateIssueDto, UpdateIssueDto } from '@sebas-chan/shared-types';
 
 export function createIssuesRouter(coreEngine: CoreEngine): Router {

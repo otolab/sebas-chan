@@ -5,8 +5,8 @@
  * システムの動作を検証可能にします。
  */
 
-import { Event } from './engine';
-import { StateManager } from './state-manager';
+import { Event } from './engine.js';
+import { StateManager } from './state-manager.js';
 import { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
 
 /**

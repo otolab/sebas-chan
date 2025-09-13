@@ -76,9 +76,30 @@ export interface PondEntry {
   vector?: number[]; // ベクトル化された表現
   timestamp: Date;
   source: string;
+  score?: number; // ベクトル検索時の類似度スコア（0〜1、1に近いほど類似）
+  distance?: number; // ベクトル検索時の距離（0に近いほど類似）
+}
+
+export interface PondSearchFilters {
+  q?: string;
+  source?: string;
+  dateFrom?: string | Date;
+  dateTo?: string | Date;
+  limit?: number;
+  offset?: number;
+}
+
+export interface PondSearchResponse {
+  data: PondEntry[];
+  meta: {
+    total: number;
+    limit: number;
+    offset: number;
+    hasMore: boolean;
+  };
 }
 
 // 追加の型定義をエクスポート
-export * from './events.js';
-export * from './workflow.js';
-export * from './api.js';
+export type * from './events.js';
+export type * from './workflow.js';
+export type * from './api.js';

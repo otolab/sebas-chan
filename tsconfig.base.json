@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "module": "ES2022",
+    "module": "Node16",
     "lib": ["ES2022"],
     "declaration": true,
     "declarationMap": true,
@@ -13,7 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "allowSyntheticDefaultImports": true,
-    "moduleResolution": "node"
+    "moduleResolution": "Node16"
   },
   "exclude": ["node_modules", "dist", "*.config.js", "*.config.ts"]
 }

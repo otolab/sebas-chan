@@ -1,10 +1,11 @@
 import express from 'express';
 import cors from 'cors';
-import { json } from 'body-parser';
-import { CoreEngine } from './core/engine';
-import { createApiRouter } from './api';
-import { errorHandler } from './api/middleware/error-handler';
-import { logger } from './utils/logger';
+import bodyParser from 'body-parser';
+const { json } = bodyParser;
+import { CoreEngine } from './core/engine.js';
+import { createApiRouter } from './api/index.js';
+import { errorHandler } from './api/middleware/error-handler.js';
+import { logger } from './utils/logger.js';
 
 export async function createApp() {
   const app = express();
@@ -19,14 +20,24 @@ export async function createApp() {
   
   const coreEngine = new CoreEngine();
   await coreEngine.initialize();
-  // E2Eテストではstart()を呼ばない（無限ループを避けるため）
+  
+  // E2Eテストでもstart()を呼ぶ
+  await coreEngine.start();
+  logger.info('Core Engine started');
   
   const apiRouter = createApiRouter(coreEngine);
   app.use('/api', apiRouter);
   
   app.get('/health', (req, res) => {
-    res.json({ 
-      status: 'ok',
+    const healthStatus = coreEngine.getHealthStatus();
+    const httpStatus = healthStatus.ready ? 200 : 503;
+    
+    res.status(httpStatus).json({ 
+      status: healthStatus.ready ? 'healthy' : 'unhealthy',
+      ready: healthStatus.ready,
+      engine: healthStatus.engine,
+      database: healthStatus.database,
+      agent: healthStatus.agent,
       timestamp: new Date().toISOString()
     });
   });

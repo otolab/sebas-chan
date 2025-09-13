@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreEngine } from './engine';
+import { CoreEngine } from './engine.js';
 import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 import { Event } from '@sebas-chan/shared-types';
@@ -10,8 +10,8 @@ vi.mock('@sebas-chan/db');
 
 describe('CoreEngine', () => {
   let engine: CoreEngine;
-  let mockDbClient: any;
-  let mockCoreAgent: any;
+  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
+  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
 
   beforeEach(async () => {
     // DBClientモックの設定
@@ -49,6 +49,7 @@ describe('CoreEngine', () => {
   describe('initialize', () => {
     it('should initialize and start the engine', async () => {
       await engine.initialize();
+      await engine.start();
 
       const state = engine.getState();
       expect(state).toContain('sebas-chan State Document');
@@ -222,6 +223,7 @@ describe('CoreEngine', () => {
   describe('Input operations', () => {
     it('should create input and enqueue INGEST_INPUT event', async () => {
       await engine.initialize();
+      await engine.start();
 
       const input = await engine.createInput({
         source: 'test',
@@ -262,14 +264,23 @@ describe('CoreEngine', () => {
     });
 
     it('should search pond', async () => {
-      const results = await engine.searchPond('test query');
-      expect(results).toEqual([]);
+      const results = await engine.searchPond({ q: 'test query' });
+      expect(results).toEqual({
+        data: [],
+        meta: {
+          total: 0,
+          limit: 20,
+          offset: 0,
+          hasMore: false,
+        },
+      });
     });
   });
 
   describe('State management', () => {
     it('should get and update state', async () => {
       await engine.initialize();
+      await engine.start();
 
       const initialState = engine.getState();
       expect(initialState).toContain('sebas-chan State Document');
@@ -308,7 +319,8 @@ describe('CoreEngine', () => {
       await engine.start();
 
       // processIntervalが重複して設定されていないことを確認
-      const processInterval = (engine as any).processInterval;
+      const processInterval = (engine as unknown as { processInterval: NodeJS.Timeout })
+        .processInterval;
       expect(processInterval).toBeDefined();
     });
 
@@ -665,6 +677,7 @@ describe('CoreEngine', () => {
     // 10000イベントは過剰なログを生成するためスキップ
     it.skip('should handle queue overflow gracefully', async () => {
       await engine.initialize();
+      await engine.start();
 
       // 大量のイベントを追加
       const eventCount = 10000;

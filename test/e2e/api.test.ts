@@ -16,6 +16,9 @@ describe('API E2E Tests', () => {
     
     // アプリケーションを作成（実際のDBとCoreEngineを使用）
     app = await createApp();
+    
+    // エンジンが準備できるまで待つ
+    await new Promise(resolve => setTimeout(resolve, 2000));
   }, 60000); // 60秒のタイムアウト
   
   afterAll(async () => {
@@ -28,8 +31,12 @@ describe('API E2E Tests', () => {
         .get('/health')
         .expect(200);
       
-      expect(response.body).toEqual({
-        status: 'ok',
+      expect(response.body).toMatchObject({
+        status: 'healthy',
+        ready: true,
+        engine: 'running',
+        database: 'ready',
+        agent: 'initialized',
         timestamp: expect.any(String)
       });
     });

@@ -140,13 +140,14 @@ describe('Pond Operations - Integration Tests', () => {
     });
 
     it('should search pond with Japanese query', async () => {
-      const results = await dbClient.searchPond('Elasticsearch クラスタ');
+      const response = await dbClient.searchPond({ q: 'Elasticsearch クラスタ' });
       
-      expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
+      expect(response).toBeDefined();
+      expect(response.data).toBeDefined();
+      expect(Array.isArray(response.data)).toBe(true);
       
       // Elasticsearchに関する結果が含まれることを確認
-      const elasticsearchResults = results.filter(r => 
+      const elasticsearchResults = response.data.filter(r => 
         r.content.includes('Elasticsearch')
       );
       expect(elasticsearchResults.length).toBeGreaterThan(0);
@@ -154,14 +155,15 @@ describe('Pond Operations - Integration Tests', () => {
 
     it('should search with semantic similarity', async () => {
       // "データベースの問題"で検索して関連エントリを見つける
-      const results = await dbClient.searchPond('データベースの問題');
+      const response = await dbClient.searchPond({ q: 'データベースの問題' });
       
-      expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
+      expect(response).toBeDefined();
+      expect(response.data).toBeDefined();
+      expect(Array.isArray(response.data)).toBe(true);
       
       // データベース関連の内容が見つかることを確認
-      if (results.length > 0) {
-        const hasRelevantContent = results.some(r => 
+      if (response.data.length > 0) {
+        const hasRelevantContent = response.data.some(r => 
           r.content.includes('PostgreSQL') || 
           r.content.includes('Elasticsearch') ||
           r.content.includes('データベース')
@@ -172,30 +174,33 @@ describe('Pond Operations - Integration Tests', () => {
 
     it('should limit search results', async () => {
       const limit = 5;
-      const results = await dbClient.searchPond('エラー', limit);
+      const response = await dbClient.searchPond({ q: 'エラー', limit });
       
-      expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
-      expect(results.length).toBeLessThanOrEqual(limit);
+      expect(response).toBeDefined();
+      expect(response.data).toBeDefined();
+      expect(Array.isArray(response.data)).toBe(true);
+      expect(response.data.length).toBeLessThanOrEqual(limit);
     });
 
     it('should handle search with no results gracefully', async () => {
-      const results = await dbClient.searchPond('完全に存在しないキーワード_xyz123_' + Date.now());
+      const response = await dbClient.searchPond({ q: '完全に存在しないキーワード_xyz123_' + Date.now() });
       
-      expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
+      expect(response).toBeDefined();
+      expect(response.data).toBeDefined();
+      expect(Array.isArray(response.data)).toBe(true);
       // セマンティック検索により何か返る可能性があるが、エラーにはならない
     });
 
     it('should search with English query', async () => {
-      const results = await dbClient.searchPond('replication delay');
+      const response = await dbClient.searchPond({ q: 'replication delay' });
       
-      expect(results).toBeDefined();
-      expect(Array.isArray(results)).toBe(true);
+      expect(response).toBeDefined();
+      expect(response.data).toBeDefined();
+      expect(Array.isArray(response.data)).toBe(true);
       
       // レプリケーションに関する内容が見つかることを確認
-      if (results.length > 0) {
-        const hasReplicationContent = results.some(r => 
+      if (response.data.length > 0) {
+        const hasReplicationContent = response.data.some(r => 
           r.content.toLowerCase().includes('replication') ||
           r.content.includes('レプリケーション')
         );

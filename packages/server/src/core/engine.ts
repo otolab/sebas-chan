@@ -1,12 +1,30 @@
 import { EventEmitter } from 'events';
-import { Event, CoreAPI, Issue, Flow, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+import {
+  Event,
+  CoreAPI,
+  Issue,
+  Flow,
+  Knowledge,
+  Input,
+  PondEntry,
+  PondSearchFilters,
+  PondSearchResponse,
+} from '@sebas-chan/shared-types';
 export { Event };
-import { EventQueue } from './event-queue';
-import { StateManager } from './state-manager';
-import { logger } from '../utils/logger';
+import { EventQueue } from './event-queue.js';
+import { StateManager } from './state-manager.js';
+import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
 import { CoreAgent, AgentContext } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
+
+export interface EngineStatus {
+  isRunning: boolean;
+  dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected';
+  modelLoaded: boolean;
+  queueSize: number;
+  lastError?: string;
+}
 
 export class CoreEngine extends EventEmitter implements CoreAPI {
   private eventQueue: EventQueue;
@@ -15,6 +33,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private coreAgent: CoreAgent | null = null;
   private isRunning: boolean = false;
   private processInterval: NodeJS.Timeout | null = null;
+  private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
+  private lastError?: string;
 
   constructor() {
     super();
@@ -25,20 +45,29 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   async initialize(): Promise<void> {
     logger.info('Initializing Core Engine...');
 
-    // DBクライアントを初期化
-    this.dbClient = new DBClient();
-    await this.dbClient.connect();
-    await this.dbClient.initModel();
-    logger.info('DB client connected and initialized');
+    try {
+      // DBクライアントを初期化
+      this.dbStatus = 'connecting';
+      this.dbClient = new DBClient();
+      await this.dbClient.connect();
+      await this.dbClient.initModel();
+      this.dbStatus = 'ready';
+      logger.info('DB client connected and initialized');
 
-    // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
-    this.coreAgent = new CoreAgent();
-    const agentContext = this.createAgentContext();
-    this.coreAgent.setContext(agentContext);
-    logger.info('Core Agent initialized with context');
+      // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
+      this.coreAgent = new CoreAgent();
+      const agentContext = this.createAgentContext();
+      this.coreAgent.setContext(agentContext);
+      logger.info('Core Agent initialized with context');
 
-    await this.stateManager.initialize();
-    // startは別途呼び出す必要がある
+      await this.stateManager.initialize();
+      // startは別途呼び出す必要がある
+    } catch (error) {
+      this.dbStatus = 'error';
+      this.lastError = error instanceof Error ? error.message : String(error);
+      logger.error('Failed to initialize Core Engine:', error);
+      throw error;
+    }
   }
 
   // CoreAgent用のコンテキストを作成
@@ -59,9 +88,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
       searchPond: async (query: string) => {
         if (!this.dbClient) throw new Error('DB client not initialized');
-        const results = await this.dbClient.searchPond(query);
+        const results = await this.dbClient.searchPond({ q: query, limit: 100 });
         // DBClientのレスポンスをPondEntry型に変換
-        return results.map((r) => ({
+        return results.data.map((r) => ({
           id: r.id,
           content: r.content,
           source: r.source,
@@ -107,7 +136,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     logger.info('Core Engine started');
   }
 
-  stop(): void {
+  async stop(): Promise<void> {
     if (!this.isRunning) return;
 
     this.isRunning = false;
@@ -116,7 +145,65 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       this.processInterval = null;
     }
 
+    // DBクライアントを切断
+    if (this.dbClient) {
+      try {
+        await this.dbClient.disconnect();
+        this.dbStatus = 'disconnected';
+      } catch (error) {
+        logger.error('Error disconnecting DB client:', error);
+      }
+    }
+
     logger.info('Core Engine stopped');
+  }
+
+  /**
+   * エンジンの現在のステータスを取得
+   */
+  async getStatus(): Promise<EngineStatus> {
+    let modelLoaded = false;
+
+    // DBのステータスを確認
+    if (this.dbClient && this.dbStatus === 'ready') {
+      try {
+        const dbStatus = await this.dbClient.getStatus();
+        modelLoaded = dbStatus.model_loaded || false;
+        if (dbStatus.status === 'error') {
+          this.dbStatus = 'error';
+        }
+      } catch (error) {
+        this.dbStatus = 'error';
+        this.lastError = error instanceof Error ? error.message : String(error);
+      }
+    }
+
+    return {
+      isRunning: this.isRunning,
+      dbStatus: this.dbStatus,
+      modelLoaded,
+      queueSize: this.eventQueue.size(),
+      lastError: this.lastError,
+    };
+  }
+
+  /**
+   * ヘルスチェック用のステータスを取得（同期的）
+   */
+  getHealthStatus(): {
+    ready: boolean;
+    engine: string;
+    database: string;
+    agent: string;
+  } {
+    const ready = this.isRunning && this.dbStatus === 'ready';
+
+    return {
+      ready,
+      engine: this.isRunning ? 'running' : 'stopped',
+      database: this.dbStatus,
+      agent: this.coreAgent ? 'initialized' : 'not initialized',
+    };
   }
 
   private async processNextEvent(): Promise<void> {
@@ -282,13 +369,86 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return pondEntry;
   }
 
-  async searchPond(query: string, limit?: number): Promise<PondEntry[]> {
-    logger.debug('Searching pond', { query, limit });
-    return [];
+  async getPondSources(): Promise<string[]> {
+    logger.debug('Getting pond sources');
+    if (!this.dbClient) {
+      logger.warn('DB client not initialized');
+      return [];
+    }
+    try {
+      return await this.dbClient.getPondSources();
+    } catch (error) {
+      logger.error('Failed to get pond sources', { error });
+      return [];
+    }
+  }
+
+  async searchPond(filters: PondSearchFilters): Promise<PondSearchResponse> {
+    logger.debug('Searching pond with filters', filters);
+    if (!this.dbClient) {
+      logger.warn('DB client not initialized');
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          limit: filters.limit || 20,
+          offset: filters.offset || 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    try {
+      const result = await this.dbClient.searchPond(filters);
+
+      // resultまたはresult.dataがundefinedの場合の対処
+      if (!result || !result.data) {
+        return {
+          data: [],
+          meta: {
+            total: 0,
+            limit: filters.limit || 20,
+            offset: filters.offset || 0,
+            hasMore: false,
+          },
+        };
+      }
+
+      // タイムスタンプをDate型に変換（score/distanceも保持）
+      const data = result.data.map((r) => ({
+        id: r.id,
+        content: r.content,
+        source: r.source,
+        timestamp: new Date(r.timestamp),
+        vector: r.vector,
+        score: r.score,
+        distance: r.distance,
+      }));
+
+      return {
+        data,
+        meta: result.meta,
+      };
+    } catch (error) {
+      logger.error('Failed to search pond with filters', { error });
+      return {
+        data: [],
+        meta: {
+          total: 0,
+          limit: filters.limit || 20,
+          offset: filters.offset || 0,
+          hasMore: false,
+        },
+      };
+    }
   }
 
   getState(): string {
     return this.stateManager.getState();
+  }
+
+  isReady(): boolean {
+    return this.isRunning && this.dbClient !== null && this.coreAgent !== null;
   }
 
   updateState(content: string): void {

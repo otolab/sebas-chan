@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Reporter } from './index';
+import { Reporter } from './index.js';
 
 describe('Reporter', () => {
   it('should create an instance with name', () => {

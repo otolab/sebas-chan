@@ -2,7 +2,7 @@
  * REST API関連の型定義
  */
 
-import { Flow, Knowledge } from './index';
+import { Flow, Knowledge } from './index.js';
 
 /**
  * APIレスポンス

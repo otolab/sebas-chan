@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
-import { createIssuesRouter } from './issues';
-import { CoreEngine } from '../../core/engine';
-import { errorHandler } from '../middleware/error-handler';
+import { createIssuesRouter } from './issues.js';
+import { CoreEngine } from '../../core/engine.js';
+import { errorHandler } from '../middleware/error-handler.js';
 
 describe('Issues API Routes', () => {
   let app: express.Application;
