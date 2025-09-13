@@ -3,8 +3,8 @@ import { Command } from 'commander';
 import { readFileSync } from 'fs';
 import { watch } from 'chokidar';
 import { join, basename } from 'path';
-import { ReporterClient } from '../client';
-import type { SubmitResult } from '../types';
+import { ReporterClient } from '../client.js';
+import type { SubmitResult } from '../types.js';
 
 const program = new Command();
 

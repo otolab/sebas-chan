@@ -1,9 +1,10 @@
 import type { Input } from '@sebas-chan/shared-types';
 
 export interface ReporterConfig {
-  name: string;
+  name?: string;
   source: string;
   apiUrl?: string;
+  pollInterval?: number;
 }
 
 export interface ReporterClientOptions {

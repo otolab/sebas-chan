@@ -22,7 +22,7 @@ describe('ReporterClient', () => {
   describe('submitInput', () => {
     it('should submit input successfully', async () => {
       mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
-        new Response(JSON.stringify({ id: 'test-id-123' }), { 
+        new Response(JSON.stringify({ data: { id: 'test-id-123' } }), { 
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         })
@@ -36,6 +36,10 @@ describe('ReporterClient', () => {
       expect(result.success).toBe(true);
       expect(result.inputId).toBe('test-id-123');
       expect(result.error).toBeUndefined();
+      expect(mockedFetch).toHaveBeenCalledWith(
+        'http://localhost:3001/api/inputs',
+        expect.any(Object)
+      );
     });
 
     it('should handle API errors', async () => {
@@ -66,7 +70,7 @@ describe('ReporterClient', () => {
             statusText: 'Internal Server Error'
           });
         }
-        return new Response(JSON.stringify({ id: 'retry-success-id' }), { 
+        return new Response(JSON.stringify({ data: { id: 'retry-success-id' } }), { 
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         });
@@ -100,7 +104,7 @@ describe('ReporterClient', () => {
   describe('submitBatch', () => {
     it('should submit multiple inputs', async () => {
       mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
-        new Response(JSON.stringify({ id: 'batch-id' }), { 
+        new Response(JSON.stringify({ data: { id: 'batch-id' } }), { 
           status: 200,
           headers: { 'Content-Type': 'application/json' }
         })
@@ -111,10 +115,13 @@ describe('ReporterClient', () => {
         { source: 'test', content: 'Input 2' },
       ];
 
-      const results = await client.submitBatch(inputs);
+      const result = await client.submitBatch(inputs);
 
-      expect(results).toHaveLength(2);
-      expect(results.every(r => r.success)).toBe(true);
+      expect(result.success).toBe(true);
+      expect(result.succeeded).toBe(2);
+      expect(result.failed).toBe(0);
+      expect(result.results).toHaveLength(2);
+      expect(result.results.every(r => r.success)).toBe(true);
     });
   });
 
