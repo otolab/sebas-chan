@@ -18,6 +18,7 @@ describe('Manual Reporter E2E Tests', () => {
   let server: any;
   let testDir: string;
   let serverUrl: string;
+  const cliPath = path.join(process.cwd(), 'packages/reporter-sdk/dist/manual-reporter/cli.js');
   
   beforeAll(async () => {
     // DBの初期化
@@ -60,7 +61,14 @@ describe('Manual Reporter E2E Tests', () => {
   describe('CLI Command Execution', () => {
     function runCommand(args: string[]): Promise<{ stdout: string; stderr: string; code: number | null }> {
       return new Promise((resolve) => {
-        const child = spawn('npx', ['manual-reporter', '--api-url', serverUrl, ...args], {
+        // サブコマンドとオプションを適切に配置
+        const cliArgs = [...args];
+        // --helpでない場合、サブコマンドの後に--api-urlオプションを追加
+        if (args[0] !== '--help') {
+          const subcommand = cliArgs.shift();
+          cliArgs.unshift(subcommand!, '--api-url', serverUrl);
+        }
+        const child = spawn('node', [cliPath, ...cliArgs], {
           cwd: process.cwd(),
           env: { ...process.env, NODE_ENV: 'test' },
         });
@@ -174,10 +182,10 @@ describe('Manual Reporter E2E Tests', () => {
       await fs.writeFile(watchFile, 'Initial content');
       
       // watchプロセスを開始
-      const watchProcess = spawn('npx', [
-        'manual-reporter',
-        '--api-url', serverUrl,
+      const watchProcess = spawn('node', [
+        cliPath,
         'watch',
+        '--api-url', serverUrl,
         '-f', watchFile
       ], {
         cwd: process.cwd(),
