@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TestDriver } from '@moduler-prompt/driver';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { executeWorkflow } from '../functional-types.js';
 import type { AgentEvent } from '../../index.js';
@@ -8,8 +9,15 @@ describe('IngestInput Workflow (Functional)', () => {
   let mockContext: WorkflowContext;
   let mockEmitter: WorkflowEventEmitter;
   let mockEvent: AgentEvent;
+  let testDriver: TestDriver;
 
   beforeEach(() => {
+    // テストドライバーの作成
+    testDriver = new TestDriver({
+      responses: ['AI response for testing'],
+      delay: 0,
+    });
+
     // モックコンテキストの準備
     mockContext = {
       state: 'Initial state',
@@ -19,6 +27,9 @@ describe('IngestInput Workflow (Functional)', () => {
         searchKnowledge: vi.fn().mockResolvedValue([]),
         addIssue: vi.fn(),
         addKnowledge: vi.fn(),
+        searchPondEntries: vi.fn(),
+        updateIssue: vi.fn(),
+        updateKnowledge: vi.fn(),
       },
       logger: {
         log: vi.fn(),
@@ -28,9 +39,7 @@ describe('IngestInput Workflow (Functional)', () => {
         logDbQuery: vi.fn(),
         logAiCall: vi.fn(),
       },
-      driver: {
-        call: vi.fn(),
-      },
+      driver: testDriver,
       metadata: {},
     };
 
@@ -150,5 +159,22 @@ describe('IngestInput Workflow (Functional)', () => {
       error,
       expect.objectContaining({ event: mockEvent })
     );
+  });
+
+  it('should work with different driver responses', async () => {
+    // 複数の応答を設定
+    const multiResponseDriver = new TestDriver({
+      responses: ['First response', 'Second response', 'Third response'],
+    });
+    mockContext.driver = multiResponseDriver;
+
+    const result = await executeWorkflow(
+      ingestInputWorkflow,
+      mockEvent,
+      mockContext,
+      mockEmitter
+    );
+
+    expect(result.success).toBe(true);
   });
 });

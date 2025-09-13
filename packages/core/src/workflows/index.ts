@@ -1,5 +1,8 @@
-export * from './types.js';
-export { WorkflowRegistry } from './registry.js';
-export * from './logger.js';
+// ワークフロー関連の型と実装をエクスポート
+export * from './functional-types.js';
 export * from './context.js';
-export * from './impl/index.js';
+export * from './logger.js';
+export { WorkflowRegistry, getWorkflowRegistry } from './functional-registry.js';
+
+// 実装をエクスポート
+export * from './impl-functional/index.js';

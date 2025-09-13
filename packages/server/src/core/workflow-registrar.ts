@@ -25,6 +25,11 @@ export function registerWorkflows(agent: CoreAgent): void {
   registry.register('EXTRACT_KNOWLEDGE', new ExtractKnowledgeWorkflow());
 
   console.log('Workflows registered:', {
-    workflows: ['INGEST_INPUT', 'PROCESS_USER_REQUEST', 'ANALYZE_ISSUE_IMPACT', 'EXTRACT_KNOWLEDGE'],
+    workflows: [
+      'INGEST_INPUT',
+      'PROCESS_USER_REQUEST',
+      'ANALYZE_ISSUE_IMPACT',
+      'EXTRACT_KNOWLEDGE',
+    ],
   });
 }

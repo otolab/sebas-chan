@@ -69,9 +69,7 @@ export class EngineWorkflowStorage implements WorkflowStorage {
     return result;
   }
 
-  async createKnowledge(
-    knowledge: Omit<Knowledge, 'id' | 'createdAt'>
-  ): Promise<Knowledge> {
+  async createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge> {
     return this.engine.createKnowledge(knowledge);
   }
 
@@ -101,11 +99,7 @@ export class EngineWorkflowStorage implements WorkflowStorage {
 export class EngineWorkflowEventEmitter implements WorkflowEventEmitter {
   constructor(private engine: CoreEngine) {}
 
-  emit(event: {
-    type: string;
-    priority?: 'high' | 'normal' | 'low';
-    payload: any;
-  }): void {
+  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: any }): void {
     // EngineのenqueueEventを使用してイベントをキューに追加
     this.engine.enqueueEvent({
       type: event.type,
@@ -172,15 +166,7 @@ export function createWorkflowContext(
   config?: WorkflowConfig,
   metadata?: Record<string, any>
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(
-    stateManager,
-    db,
-    engine,
-    logger,
-    driver,
-    config,
-    metadata
-  );
+  return new EngineWorkflowContext(stateManager, db, engine, logger, driver, config, metadata);
 }
 
 /**

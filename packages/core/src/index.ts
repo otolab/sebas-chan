@@ -1,7 +1,7 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
 import type { WorkflowLogger } from './workflows/logger.js';
-import { WorkflowRegistry } from './workflows/registry.js';
-import type { BaseWorkflow, WorkflowResult } from './workflows/types.js';
+import { WorkflowRegistry } from './workflows/functional-registry.js';
+import type { WorkflowDefinition, WorkflowResult } from './workflows/functional-types.js';
 import type { WorkflowContext, WorkflowEventEmitter } from './workflows/context.js';
 
 // CoreEngineから提供されるコンテキスト
@@ -156,7 +156,7 @@ export class CoreAgent {
   /**
    * ワークフローを登録
    */
-  public registerWorkflow(eventType: string, workflow: BaseWorkflow): void {
+  public registerWorkflow(eventType: string, workflow: WorkflowDefinition): void {
     this.workflowRegistry.register(eventType, workflow);
   }
 
