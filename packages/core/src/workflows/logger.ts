@@ -285,10 +285,10 @@ export class WorkflowLogger {
   private formatTextLog(entry: WorkflowLogEntry): string {
     const timestamp = entry.timestamp.toISOString();
     const duration = entry.duration ? ` (${entry.duration}ms)` : '';
-    let message = `[${timestamp}] ${entry.workflowName}:${entry.phase}${duration} - ${entry.id}`;
+    let message = `[${timestamp}] ${entry.workflowName}:${entry.phase}${duration} - ${entry.executionId}`;
 
-    if (entry.parentId) {
-      message += ` (parent: ${entry.parentId})`;
+    if (entry.parentExecutionId) {
+      message += ` (parent: ${entry.parentExecutionId})`;
     }
 
     if (entry.data.message) {
@@ -346,7 +346,7 @@ export class WorkflowLogger {
           // フィルタリング
           if (query.workflowName && entry.workflowName !== query.workflowName) continue;
           if (query.phase && entry.phase !== query.phase) continue;
-          if (query.id && entry.id !== query.id) continue;
+          if (query.id && entry.executionId !== query.id) continue;
 
           const entryDate = new Date(entry.timestamp);
           if (query.startDate && entryDate < query.startDate) continue;
@@ -393,13 +393,13 @@ export class WorkflowLogger {
 
     for (const log of logs) {
       if (log.phase === 'start') {
-        executions.add(log.id);
+        executions.add(log.executionId);
         stats.totalExecutions++;
         stats.executionsByWorkflow[log.workflowName] =
           (stats.executionsByWorkflow[log.workflowName] || 0) + 1;
       }
 
-      if (log.phase === 'complete') {
+      if (log.phase === 'output') {
         stats.successfulExecutions++;
         if (log.duration) {
           durations.push(log.duration);
@@ -436,7 +436,7 @@ let defaultLogger: WorkflowLogger | null = null;
 
 export function getDefaultLogger(): WorkflowLogger {
   if (!defaultLogger) {
-    defaultLogger = new WorkflowLogger();
+    defaultLogger = new WorkflowLogger('default');
   }
   return defaultLogger;
 }
