@@ -296,7 +296,13 @@ export class WorkflowLogger {
     }
 
     if (entry.data.error) {
-      message += `\n  Error: ${entry.data.error.message}`;
+      const errorMessage =
+        typeof entry.data.error === 'object' &&
+        entry.data.error !== null &&
+        'message' in entry.data.error
+          ? (entry.data.error as { message: string }).message
+          : String(entry.data.error);
+      message += `\n  Error: ${errorMessage}`;
     }
 
     return message;

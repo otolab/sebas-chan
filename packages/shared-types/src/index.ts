@@ -99,6 +99,28 @@ export interface PondSearchResponse {
   };
 }
 
+// ログ関連の型定義
+export interface LogEntry {
+  executionId: string;
+  workflowType: string;
+  timestamp: string | Date;
+  level: string;
+  message: string;
+  phase?: string;
+  data?: unknown;
+}
+
+export interface LogDetail {
+  executionId: string;
+  workflowType: string;
+  status: string;
+  startTime: string | Date;
+  endTime: string | Date;
+  input?: unknown;
+  output?: unknown;
+  logs?: LogEntry[];
+}
+
 // 追加の型定義をエクスポート
 export type * from './events.js';
 export type * from './workflow.js';
