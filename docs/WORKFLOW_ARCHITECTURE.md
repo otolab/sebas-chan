@@ -58,19 +58,22 @@ DB操作のインターフェース：
 
 ```typescript
 interface WorkflowStorage {
-  // Pond操作
-  addPondEntry(entry: Partial<PondEntry>): Promise<PondEntry>;
-  searchPondEntries(query: string): Promise<PondEntry[]>;
+  // 検索操作
+  searchIssues(query: string): Promise<Issue[]>;
+  searchKnowledge(query: string): Promise<Knowledge[]>;
+  searchPond(query: string): Promise<PondEntry[]>;
 
   // Issue操作
-  addIssue(issue: Partial<Issue>): Promise<Issue>;
-  searchIssues(query: string): Promise<Issue[]>;
-  updateIssue(id: string, update: Partial<Issue>): Promise<void>;
+  getIssue(id: string): Promise<Issue | null>;
+  createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
+  updateIssue(id: string, update: Partial<Issue>): Promise<Issue>;
+
+  // Pond操作
+  addPondEntry(entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry>;
 
   // Knowledge操作
-  addKnowledge(knowledge: Partial<Knowledge>): Promise<Knowledge>;
-  searchKnowledge(query: string): Promise<Knowledge[]>;
-  updateKnowledge(id: string, update: Partial<Knowledge>): Promise<void>;
+  createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge>;
+  updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
 }
 ```
 
@@ -80,7 +83,11 @@ interface WorkflowStorage {
 
 ```typescript
 interface WorkflowEventEmitter {
-  emit(event: AgentEvent): void;
+  emit(event: {
+    type: string;
+    priority?: 'high' | 'normal' | 'low';
+    payload: unknown;
+  }): void;
 }
 ```
 
@@ -199,16 +206,16 @@ packages/core/src/workflows/
 @moduler-prompt/driverのテストドライバーを使用：
 
 ```typescript
-import { createTestDriver } from '@moduler-prompt/driver/test';
-import { createEchoDriver } from '@moduler-prompt/driver/echo';
+import { TestDriver, EchoDriver } from '@moduler-prompt/driver';
 
 // テストドライバー（設定された応答を返す）
-const testDriver = createTestDriver({
-  responses: ['応答1', '応答2']
+const testDriver = new TestDriver({
+  responses: ['応答1', '応答2'],
+  delay: 0  // 遅延なし
 });
 
 // エコードライバー（入力をそのまま返す）
-const echoDriver = createEchoDriver();
+const echoDriver = new EchoDriver();
 ```
 
 ### テスト例
@@ -276,8 +283,74 @@ const myWorkflow: WorkflowDefinition = {
 - ビジュアルワークフローエディタ
 - ワークフローのバージョニング
 
+## 実装の詳細
+
+### AgentEvent
+
+ワークフローをトリガーするイベント：
+
+```typescript
+interface AgentEvent {
+  type: string;
+  priority: 'high' | 'normal' | 'low';
+  payload: unknown;
+  timestamp: Date;
+}
+```
+
+### WorkflowLogger
+
+ワークフロー実行のログ記録：
+
+```typescript
+class WorkflowLogger {
+  executionId: string;
+  workflowName: string;
+
+  // ログメソッド
+  log(level: 'info' | 'debug' | 'warn' | 'error', message: string, data?: unknown): Promise<void>;
+  logInput(input: unknown): Promise<void>;
+  logOutput(output: unknown): Promise<void>;
+  logError(error: Error, context?: unknown): Promise<void>;
+  logDbQuery(operation: string, query: unknown, resultIds: string[]): Promise<void>;
+  logAiCall(module: string, params: unknown, response: unknown): Promise<void>;
+
+  // サブワークフロー
+  createChildLogger(workflowName: string): WorkflowLogger;
+}
+```
+
+### 型の共有
+
+共通型は`@sebas-chan/shared-types`に定義：
+
+```typescript
+// ログエントリ
+export interface LogEntry {
+  executionId: string;
+  workflowType: string;
+  timestamp: string | Date;
+  level: string;
+  message: string;
+  phase?: string;
+  data?: unknown;
+}
+
+// ログ詳細
+export interface LogDetail {
+  executionId: string;
+  workflowType: string;
+  status: string;
+  startTime: string | Date;
+  endTime: string | Date;
+  input?: unknown;
+  output?: unknown;
+  logs?: LogEntry[];
+}
+```
+
 ---
 
 作成日: 2025-09-13
-更新日: 2025-09-13
-バージョン: 2.0.0 (関数ベースアーキテクチャ)
+更新日: 2025-09-15
+バージョン: 2.1.0 (関数ベースアーキテクチャ、型定義更新)
