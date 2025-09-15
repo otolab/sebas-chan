@@ -6,7 +6,13 @@ import type {
   WorkflowLogger,
 } from '@sebas-chan/core';
 import type { DriverFactory } from './driver-factory.js';
-import type { Issue, Knowledge, PondEntry, WorkflowType, EventPayload } from '@sebas-chan/shared-types';
+import type {
+  Issue,
+  Knowledge,
+  PondEntry,
+  WorkflowType,
+  EventPayload,
+} from '@sebas-chan/shared-types';
 import type { DBClient } from '@sebas-chan/db';
 import type { StateManager } from './state-manager.js';
 import type { CoreEngine } from './engine.js';
@@ -166,7 +172,15 @@ export function createWorkflowContext(
   config?: WorkflowConfig,
   metadata?: Record<string, unknown>
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(stateManager, db, engine, logger, createDriver, config, metadata);
+  return new EngineWorkflowContext(
+    stateManager,
+    db,
+    engine,
+    logger,
+    createDriver,
+    config,
+    metadata
+  );
 }
 
 /**

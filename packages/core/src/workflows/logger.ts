@@ -48,7 +48,6 @@ export class WorkflowLogger {
     this.consoleOutput = options.consoleOutput ?? false;
   }
 
-
   private generateExecutionId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
@@ -72,7 +71,6 @@ export class WorkflowLogger {
       console.log(this.formatLogEntry(entry));
     }
   }
-
 
   /**
    * ログエントリをフォーマット

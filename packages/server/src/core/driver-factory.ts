@@ -1,6 +1,10 @@
 import type { AIDriver } from '@moduler-prompt/driver';
 import { TestDriver, EchoDriver } from '@moduler-prompt/driver';
-import { DriverRegistry, type DriverSelectionCriteria, type DriverCapability } from '@moduler-prompt/utils';
+import {
+  DriverRegistry,
+  type DriverSelectionCriteria,
+  type DriverCapability,
+} from '@moduler-prompt/utils';
 
 // ドライバーファクトリの型定義（coreのものと同じ）
 export type DriverFactory = (capabilities: {
