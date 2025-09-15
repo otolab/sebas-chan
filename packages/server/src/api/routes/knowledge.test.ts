@@ -34,8 +34,7 @@ describe('Knowledge Routes', () => {
           type: 'factoid',
           content: 'System requires 8GB RAM minimum',
           reputation: { upvotes: 5, downvotes: 1 },
-          sources: ['issue-1'],
-          createdAt: new Date('2024-01-01'),
+          sources: [{ type: 'issue', issueId: 'issue-1' }],
         },
       ];
 
@@ -70,8 +69,10 @@ describe('Knowledge Routes', () => {
         type: 'solution',
         content: 'Restart the service to fix the issue',
         reputation: { upvotes: 10, downvotes: 0 },
-        sources: ['issue-2', 'issue-3'],
-        createdAt: new Date('2024-01-01'),
+        sources: [
+          { type: 'issue', issueId: 'issue-2' },
+          { type: 'issue', issueId: 'issue-3' }
+        ],
       };
 
       vi.mocked(mockCoreEngine.getKnowledge).mockResolvedValue(mockKnowledge);
@@ -100,14 +101,13 @@ describe('Knowledge Routes', () => {
       const newKnowledge = {
         type: 'pattern' as const,
         content: 'Error occurs when memory exceeds 80%',
-        sources: ['log-analysis'],
+        sources: [{ type: 'user_direct' }],
       };
 
       const createdKnowledge: Knowledge = {
         id: 'k2',
         ...newKnowledge,
         reputation: { upvotes: 0, downvotes: 0 },
-        createdAt: new Date(),
       };
 
       vi.mocked(mockCoreEngine.createKnowledge).mockResolvedValue(createdKnowledge);
@@ -153,7 +153,6 @@ describe('Knowledge Routes', () => {
         content: 'Test solution',
         reputation: { upvotes: 5, downvotes: 2 },
         sources: [],
-        createdAt: new Date(),
       };
 
       const updatedKnowledge: Knowledge = {
@@ -185,7 +184,6 @@ describe('Knowledge Routes', () => {
         content: 'Test factoid',
         reputation: { upvotes: 3, downvotes: 1 },
         sources: [],
-        createdAt: new Date(),
       };
 
       const updatedKnowledge: Knowledge = {
