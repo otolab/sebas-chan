@@ -1,4 +1,5 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+import type { AIDriver } from '@moduler-prompt/driver';
 import type { WorkflowLogger } from './workflows/logger.js';
 import { WorkflowRegistry } from './workflows/functional-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/functional-types.js';
@@ -19,6 +20,13 @@ export interface AgentContext {
 
   // イベント生成（Engineがキューに追加）
   emitEvent(event: Omit<AgentEvent, 'id' | 'timestamp'>): void;
+
+  // ドライバーファクトリ（AI モデルアクセス）
+  createDriver?: (capabilities: {
+    model: 'fast' | 'standard' | 'large';
+    temperature?: number;
+    maxTokens?: number;
+  }) => AIDriver | Promise<AIDriver>;
 }
 
 export class CoreAgent {
@@ -169,10 +177,13 @@ export class CoreAgent {
 
 }
 
+// AgentEventのペイロード型定義
+export type AgentEventPayload = Record<string, unknown>;
+
 export interface AgentEvent {
   type: string;
   priority: 'high' | 'normal' | 'low';
-  payload: unknown;
+  payload: AgentEventPayload;
   timestamp: Date;
 }
 

@@ -9,18 +9,18 @@ import {
   PondEntry,
   PondSearchFilters,
   PondSearchResponse,
+  WorkflowType,
+  EventPayload,
 } from '@sebas-chan/shared-types';
 export { Event };
 import { EventQueue } from './event-queue.js';
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
-import { CoreAgent, AgentContext } from '@sebas-chan/core';
-// TODO: WorkflowLoggerの型エクスポート修正後に有効化
-// import { WorkflowLogger } from '@sebas-chan/core';
+import { CoreAgent, AgentContext, AgentEvent, AgentEventPayload, WorkflowLogger } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
-// TODO: ワークフロー関連のインポートは型エクスポート修正後に有効化
-// import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
+import { createDriverFactory } from './driver-factory.js';
+import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
 
 export interface EngineStatus {
   isRunning: boolean;
@@ -61,8 +61,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
       this.coreAgent = new CoreAgent();
 
-      // TODO: ワークフロー登録は型エクスポート修正後に有効化
-      // registerWorkflows(this.coreAgent);
 
       const agentContext = this.createAgentContext();
       this.coreAgent.setContext(agentContext);
@@ -82,6 +80,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private createAgentContext(): AgentContext {
     return {
       getState: () => this.stateManager.getState(),
+
+      // ドライバーファクトリを提供
+      createDriver: createDriverFactory(),
 
       searchIssues: async (query: string) => {
         if (!this.dbClient) throw new Error('DB client not initialized');
@@ -122,8 +123,13 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         }
       },
 
-      emitEvent: (event: Omit<Event, 'id' | 'timestamp'>) => {
-        this.enqueueEvent(event);
+      emitEvent: (event: Omit<AgentEvent, 'id' | 'timestamp'>) => {
+        // AgentEventをEventに変換してキューに追加
+        this.enqueueEvent({
+          type: event.type as WorkflowType,
+          priority: event.priority,
+          payload: event.payload as EventPayload,
+        });
       },
     };
   }
@@ -248,21 +254,49 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     // CoreAgentにイベントを渡す
     if (this.coreAgent) {
-      // TODO: ワークフロー実行は型エクスポート修正後に有効化
-      // const workflowRegistry = this.coreAgent.getWorkflowRegistry();
-      // const workflow = workflowRegistry.get(event.type);
-      // if (workflow) { ... }
+      // ワークフローが登録されているか確認
+      // getWorkflowRegistryが存在する場合のみワークフローを確認
+      const workflowRegistry = this.coreAgent.getWorkflowRegistry ? this.coreAgent.getWorkflowRegistry() : null;
+      const workflow = workflowRegistry ? workflowRegistry.get(event.type) : null;
 
-      // 現時点では従来通りCoreAgentに渡す
-      const agentEvent = {
+      if (workflow) {
+        // ワークフロー実行コンテキストを作成
+        const executionId = nanoid();
+        const workflowLogger = new WorkflowLogger(event.type, { executionId });
+        const workflowContext = createWorkflowContext(
+          this,
+          this.stateManager,
+          this.dbClient!,
+          workflowLogger,
+          createDriverFactory()
+        );
+        const workflowEmitter = createWorkflowEventEmitter(this);
+
+        // ワークフローを実行
+        try {
+          const agentEvent: AgentEvent = {
+            type: event.type,
+            priority: event.priority,
+            payload: event.payload as AgentEventPayload,
+            timestamp: event.timestamp,
+          };
+          await workflow.executor(agentEvent, workflowContext, workflowEmitter);
+          logger.debug('Workflow executed successfully', { eventType: event.type });
+        } catch (error) {
+          logger.error('Workflow execution failed', error);
+        }
+      } else {
+        // ワークフローが登録されていない場合は従来通りCoreAgentに渡す
+      const agentEvent: AgentEvent = {
         type: event.type,
         priority: event.priority,
-        payload: event.payload,
+        payload: event.payload as AgentEventPayload,
         timestamp: event.timestamp,
       };
 
       this.coreAgent.queueEvent(agentEvent);
       logger.debug('Event forwarded to Core Agent', { eventType: event.type });
+      }
     } else {
       logger.warn('Core Agent not initialized, handling event locally');
 

@@ -1,5 +1,5 @@
-import { promises as fs } from 'fs';
-import path from 'path';
+// DBベースのログ記録システム
+// ファイルシステムへの依存を削除
 
 /**
  * 簡素化されたワークフローログエントリ
@@ -27,9 +27,8 @@ export enum LogType {
 }
 
 export interface WorkflowLoggerOptions {
-  logDir?: string;
+  executionId?: string;
   consoleOutput?: boolean;
-  jsonFormat?: boolean;
 }
 
 /**
@@ -40,43 +39,15 @@ export class WorkflowLogger {
   public readonly executionId: string;
   public readonly workflowName: string;
 
-  private options: Required<WorkflowLoggerOptions>;
-  private currentLogFile: string | null = null;
+  private consoleOutput: boolean;
   private logBuffer: WorkflowLog[] = [];
-  private flushInterval: NodeJS.Timeout | null = null;
 
   constructor(workflowName: string, options: WorkflowLoggerOptions = {}) {
-    this.executionId = this.generateExecutionId();
+    this.executionId = options.executionId || this.generateExecutionId();
     this.workflowName = workflowName;
-
-    this.options = {
-      logDir: options.logDir || path.join(process.cwd(), 'logs', 'workflows'),
-      consoleOutput: options.consoleOutput ?? false,
-      jsonFormat: options.jsonFormat ?? true,
-    };
-
-    this.initialize();
+    this.consoleOutput = options.consoleOutput ?? false;
   }
 
-  private async initialize() {
-    // ログディレクトリの作成
-    await fs.mkdir(this.options.logDir, { recursive: true });
-
-    // 現在のログファイル名を設定
-    this.currentLogFile = this.generateLogFileName();
-
-    // 定期的なフラッシュ
-    this.flushInterval = setInterval(() => {
-      this.flush().catch(console.error);
-    }, 5000);
-  }
-
-  private generateLogFileName(): string {
-    const date = new Date();
-    const dateStr = date.toISOString().split('T')[0];
-    const timeStr = date.toTimeString().split(' ')[0].replace(/:/g, '-');
-    return path.join(this.options.logDir, `workflow-${dateStr}-${timeStr}.log`);
-  }
 
   private generateExecutionId(): string {
     return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -85,7 +56,7 @@ export class WorkflowLogger {
   /**
    * ログを記録
    */
-  public async log(type: LogType, data: unknown): Promise<void> {
+  public log(type: LogType, data: unknown): void {
     const entry: WorkflowLog = {
       executionId: this.executionId,
       workflowName: this.workflowName,
@@ -94,51 +65,19 @@ export class WorkflowLogger {
       data,
     };
 
+    // メモリバッファに追加（DBストレージはEngine側で実装）
     this.logBuffer.push(entry);
 
-    if (this.options.consoleOutput) {
+    if (this.consoleOutput) {
       console.log(this.formatLogEntry(entry));
     }
-
-    // バッファが一定サイズを超えたら即座にフラッシュ
-    if (this.logBuffer.length >= 100) {
-      await this.flush();
-    }
   }
 
-  /**
-   * 入力をログ
-   */
-  public async logInput(input: unknown): Promise<void> {
-    await this.log(LogType.INPUT, { input });
-  }
-
-  /**
-   * 出力をログ
-   */
-  public async logOutput(output: unknown): Promise<void> {
-    await this.log(LogType.OUTPUT, { output });
-  }
-
-  /**
-   * エラーをログ
-   */
-  public async logError(error: Error, context?: unknown): Promise<void> {
-    await this.log(LogType.ERROR, {
-      message: error.message,
-      stack: error.stack,
-      context,
-    });
-  }
 
   /**
    * ログエントリをフォーマット
    */
   private formatLogEntry(entry: WorkflowLog): string {
-    if (this.options.jsonFormat) {
-      return JSON.stringify(entry);
-    }
-
     const timestamp = entry.timestamp.toISOString();
     const dataStr =
       typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data, null, 2);
@@ -146,29 +85,18 @@ export class WorkflowLogger {
   }
 
   /**
-   * バッファをファイルにフラッシュ
+   * バッファをクリア
    */
-  private async flush(): Promise<void> {
-    if (this.logBuffer.length === 0 || !this.currentLogFile) {
-      return;
-    }
-
-    const entries = this.logBuffer.splice(0);
-    const content = entries.map((e) => this.formatLogEntry(e)).join('\n') + '\n';
-
-    await fs.appendFile(this.currentLogFile, content, 'utf-8');
+  public clearBuffer(): WorkflowLog[] {
+    return this.logBuffer.splice(0);
   }
 
   /**
    * ロガーを終了
    */
-  public async close(): Promise<void> {
-    if (this.flushInterval) {
-      clearInterval(this.flushInterval);
-      this.flushInterval = null;
-    }
-
-    await this.flush();
+  public close(): void {
+    // DBベースのログではフラッシュ不要
+    this.logBuffer = [];
   }
 
   /**

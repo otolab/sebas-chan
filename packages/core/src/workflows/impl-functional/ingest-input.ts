@@ -42,14 +42,14 @@ async function executeIngestInput(
 
   try {
     // 1. InputをPondに保存
-    await logger.log(LogType.INFO, { message: 'Ingesting input to pond', inputId: input.id });
+    logger.log(LogType.INFO, { message: 'Ingesting input to pond', inputId: input.id });
 
     const pondEntry = await storage.addPondEntry({
       content: input.content,
       source: input.source,
     });
 
-    await logger.log(LogType.DB_QUERY, {
+    logger.log(LogType.DB_QUERY, {
       operation: 'addPondEntry',
       query: { input },
       resultIds: [pondEntry.id]
@@ -60,7 +60,7 @@ async function executeIngestInput(
 
     if (shouldAnalyze) {
       // 3. 必要に応じて後続のイベントを発行
-      await logger.log(LogType.INFO, { message: 'Triggering issue impact analysis' });
+      logger.log(LogType.INFO, { message: 'Triggering issue impact analysis' });
 
       emitter.emit({
         type: 'ANALYZE_ISSUE_IMPACT',
@@ -87,7 +87,11 @@ async function executeIngestInput(
       },
     };
   } catch (error) {
-    await logger.logError(error as Error, { input });
+    logger.log(LogType.ERROR, {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      context: { input },
+    });
     throw error;
   }
 }

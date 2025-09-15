@@ -2,8 +2,8 @@ import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
 import type { Issue, IssueUpdate, IssueRelation } from '@sebas-chan/shared-types';
-import { callDriver } from '../driver-factory.js';
 import { LogType } from '../logger.js';
+import { compile } from '@moduler-prompt/core';
 
 /**
  * 影響度スコアを計算
@@ -55,16 +55,27 @@ async function executeAnalyzeIssueImpact(
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
   const { logger, storage, createDriver } = context;
-  const { issue, aiResponse } = event.payload as { issue: any; aiResponse?: string };
+  // event.payloadの型を明示的に定義
+  interface AnalyzeIssueImpactPayload {
+    issue: {
+      id?: string;
+      title?: string;
+      content?: string;
+      description?: string;
+      inputId?: string;
+    };
+    aiResponse?: string;
+  }
+  const { issue, aiResponse } = event.payload as unknown as AnalyzeIssueImpactPayload;
 
   try {
     // 1. 関連するIssueを検索
-    await logger.log(LogType.INFO, { message: 'Analyzing issue impact', issueContent: issue.content });
+    logger.log(LogType.INFO, { message: 'Analyzing issue impact', issueContent: issue.content });
 
-    const relatedIssues = await storage.searchIssues(issue.content || issue.description);
-    await logger.log(LogType.DB_QUERY, {
+    const relatedIssues = await storage.searchIssues(issue.content || issue.description || '');
+    logger.log(LogType.DB_QUERY, {
       operation: 'searchIssues',
-      query: issue.content,
+      query: issue.content || issue.description || '',
       resultIds: relatedIssues.map((i) => i.id)
     });
 
@@ -80,27 +91,30 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 `;
 
     // ドライバーを作成（standard モデルを使用）
-    const driver = createDriver({
+    const driver = await createDriver({
       model: 'standard',
       temperature: 0.3,
     });
 
-    const impactAnalysis = await callDriver(driver, prompt, { temperature: 0.3 });
+    const promptModule = { instructions: [prompt] };
+    const compiledPrompt = compile(promptModule);
+    const result = await driver.query(compiledPrompt, { temperature: 0.3 });
+    const impactAnalysis = result.content;
 
-    await logger.log(LogType.AI_CALL, { prompt, response: impactAnalysis, model: 'standard', temperature: 0.3 });
+    logger.log(LogType.AI_CALL, { prompt, response: impactAnalysis, model: 'standard', temperature: 0.3 });
 
     // 3. 影響度スコアを計算
-    const impactScore = calculateImpactScore(issue.content || issue.description, relatedIssues);
+    const impactScore = calculateImpactScore(issue.content || issue.description || '', relatedIssues);
 
     // 4. Issue作成または更新
     let issueId: string;
     const timestamp = new Date();
 
-    if (shouldCreateNewIssue(relatedIssues, issue.content || issue.description)) {
+    if (shouldCreateNewIssue(relatedIssues, issue.content || issue.description || '')) {
       // 新規Issue作成
       const newIssue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'> = {
-        title: issue.title || `Issue: ${issue.content?.substring(0, 50)}...`,
-        description: issue.content || issue.description,
+        title: issue.title || `Issue: ${(issue.content || issue.description || '').substring(0, 50)}...`,
+        description: issue.content || issue.description || '',
         status: 'open',
         labels: impactScore > 0.7 ? ['high-priority'] : ['normal'],
         updates: [
@@ -120,7 +134,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
       const createdIssue = await storage.createIssue(newIssue);
       issueId = createdIssue.id;
 
-      await logger.log(LogType.INFO, { message: 'Created new issue', issueId });
+      logger.log(LogType.INFO, { message: 'Created new issue', issueId });
     } else {
       // 既存Issue更新
       const targetIssue = relatedIssues[0];
@@ -135,12 +149,12 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
       // TODO: updateIssueメソッドの実装が必要
       // await storage.updateIssue(issueId, { updates: [...targetIssue.updates, update] });
 
-      await logger.log(LogType.INFO, { message: 'Updated existing issue', issueId });
+      logger.log(LogType.INFO, { message: 'Updated existing issue', issueId });
     }
 
     // 5. 高影響度の場合は追加のワークフローを起動
     if (impactScore > 0.8) {
-      await logger.log(LogType.WARN, { message: 'High impact issue detected', issueId, impactScore });
+      logger.log(LogType.WARN, { message: 'High impact issue detected', issueId, impactScore });
 
       emitter.emit({
         type: 'EXTRACT_KNOWLEDGE',
@@ -176,7 +190,11 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
       },
     };
   } catch (error) {
-    await logger.logError(error as Error, { issue });
+    logger.log(LogType.ERROR, {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      context: { issue },
+    });
     throw error;
   }
 }

@@ -1,18 +1,24 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
-import { callDriver } from '../driver-factory.js';
 import { LogType } from '../logger.js';
+import { compile } from '@moduler-prompt/core';
+
+// リクエストの型定義
+interface UserRequest {
+  id?: string;
+  content?: string;
+}
 
 /**
  * 次のイベントを決定する
  */
 function determineNextEvents(
   requestType: string,
-  request: unknown,
-  aiResponse: unknown
-): Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: unknown }> {
-  const events: Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: unknown }> = [];
+  request: UserRequest,
+  aiResponse: string
+): Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: Record<string, unknown> }> {
+  const events: Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: Record<string, unknown> }> = [];
 
   switch (requestType) {
     case 'issue':
@@ -31,7 +37,7 @@ function determineNextEvents(
         type: 'EXTRACT_KNOWLEDGE',
         priority: 'normal' as const,
         payload: {
-          question: (request as Record<string, unknown>).content,
+          question: request.content,
           context: aiResponse,
         },
       });
@@ -43,7 +49,7 @@ function determineNextEvents(
         type: 'EXTRACT_KNOWLEDGE',
         priority: 'low' as const,
         payload: {
-          feedback: (request as Record<string, unknown>).content,
+          feedback: request.content,
           source: 'user_feedback',
         },
       });
@@ -92,11 +98,14 @@ async function executeProcessUserRequest(
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
   const { logger, storage, createDriver } = context;
-  const { request } = event.payload as { request: Record<string, unknown> };
+  interface ProcessUserRequestPayload {
+    request: UserRequest;
+  }
+  const { request } = event.payload as unknown as ProcessUserRequestPayload;
 
   try {
     // 1. リクエストをログ
-    await logger.log(LogType.INFO, { message: 'Processing user request', requestId: request.id });
+    logger.log(LogType.INFO, { message: 'Processing user request', requestId: request.id });
 
     // 2. AIを使ってリクエストを分類・理解
     const prompt = `
@@ -107,14 +116,17 @@ async function executeProcessUserRequest(
 `;
 
     // ドライバーを作成してプロンプトを実行
-    const driver = createDriver({
+    const driver = await createDriver({
       model: 'fast',
       temperature: 0.3,
     });
 
-    const aiResponse = await callDriver(driver, prompt, { temperature: 0.3 });
+    const promptModule = { instructions: [prompt] };
+    const compiledPrompt = compile(promptModule);
+    const result = await driver.query(compiledPrompt, { temperature: 0.3 });
+    const aiResponse = result.content;
 
-    await logger.log(LogType.AI_CALL, { prompt, response: aiResponse, model: 'fast', temperature: 0.3 });
+    logger.log(LogType.AI_CALL, { prompt, response: aiResponse, model: 'fast', temperature: 0.3 });
 
     // 3. リクエストタイプを判定（簡易版）
     const requestType = classifyRequest(String(request.content));
@@ -124,7 +136,7 @@ async function executeProcessUserRequest(
 
     // 5. イベントを発行
     for (const nextEvent of nextEvents) {
-      await logger.log(LogType.INFO, { message: `Emitting ${nextEvent.type} event`, eventType: nextEvent.type });
+      logger.log(LogType.INFO, { message: `Emitting ${nextEvent.type} event`, eventType: nextEvent.type });
       emitter.emit(nextEvent);
     }
 
@@ -151,7 +163,11 @@ async function executeProcessUserRequest(
       },
     };
   } catch (error) {
-    await logger.logError(error as Error, { request });
+    logger.log(LogType.ERROR, {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      context: { request },
+    });
     throw error;
   }
 }

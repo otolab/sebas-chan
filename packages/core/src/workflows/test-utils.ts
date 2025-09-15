@@ -10,59 +10,14 @@ export function createMockWorkflowLogger(): WorkflowLogger {
     workflowName: 'TestWorkflow',
 
     // 基本ログメソッド
-    log: vi.fn().mockResolvedValue(undefined),
-    logInput: vi.fn().mockResolvedValue(undefined),
-    logOutput: vi.fn().mockResolvedValue(undefined),
-    logError: vi.fn().mockResolvedValue(undefined),
-    logDbQuery: vi.fn().mockResolvedValue(undefined),
-    logAiCall: vi.fn().mockResolvedValue(undefined),
+    log: vi.fn(),
 
-    // ヘルパーメソッド
-    warn: vi.fn().mockResolvedValue(undefined),
-    error: vi.fn().mockResolvedValue(undefined),
-    debug: vi.fn().mockResolvedValue(undefined),
-
-    // サブワークフロー
-    createChildLogger: vi.fn().mockReturnValue({
-      executionId: 'child-execution-id',
-      workflowName: 'ChildWorkflow',
-      options: {},
-      currentLogFile: 'child.log',
-      log: vi.fn().mockResolvedValue(undefined),
-      logInput: vi.fn().mockResolvedValue(undefined),
-      logOutput: vi.fn().mockResolvedValue(undefined),
-      logError: vi.fn().mockResolvedValue(undefined),
-      logDbQuery: vi.fn().mockResolvedValue(undefined),
-      logAiCall: vi.fn().mockResolvedValue(undefined),
-      warn: vi.fn().mockResolvedValue(undefined),
-      error: vi.fn().mockResolvedValue(undefined),
-      debug: vi.fn().mockResolvedValue(undefined),
-      createChildLogger: vi.fn(),
-      getExecutionReport: vi.fn().mockResolvedValue({
-        executionId: 'child-execution-id',
-        workflowName: 'ChildWorkflow',
-        startTime: new Date(),
-        endTime: new Date(),
-        duration: 100,
-        status: 'success',
-        logs: [],
-      }),
-      close: vi.fn().mockResolvedValue(undefined),
-    }),
-
-    // レポート生成
-    getExecutionReport: vi.fn().mockResolvedValue({
-      executionId: 'test-execution-id',
-      workflowName: 'TestWorkflow',
-      startTime: new Date(),
-      endTime: new Date(),
-      duration: 100,
-      status: 'success',
-      logs: [],
-    }),
+    // バッファ管理
+    clearBuffer: vi.fn().mockReturnValue([]),
+    getLogRecords: vi.fn().mockReturnValue([]),
 
     // クローズ
-    close: vi.fn().mockResolvedValue(undefined),
+    close: vi.fn(),
   };
 
   return logger as unknown as WorkflowLogger;

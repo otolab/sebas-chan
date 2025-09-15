@@ -1,6 +1,13 @@
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 import type { WorkflowLogger } from './logger.js';
-import type { DriverFactory } from './driver-factory.js';
+import type { AIDriver } from '@moduler-prompt/driver';
+
+// ドライバーファクトリの型定義
+export type DriverFactory = (capabilities: {
+  model: 'fast' | 'standard' | 'large';
+  temperature?: number;
+  maxTokens?: number;
+}) => AIDriver | Promise<AIDriver>;
 
 /**
  * ワークフローが動作する環境のインターフェース

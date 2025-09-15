@@ -168,7 +168,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       agent.queueEvent({
         type: 'NULL_PAYLOAD',
         priority: 'normal',
-        payload: null as unknown,
+        payload: null as unknown as Record<string, unknown>,
         timestamp: new Date(),
       });
 

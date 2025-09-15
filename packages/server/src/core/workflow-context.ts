@@ -5,7 +5,8 @@ import type {
   WorkflowConfig,
   WorkflowLogger,
 } from '@sebas-chan/core';
-import type { Issue, Knowledge, PondEntry, WorkflowType } from '@sebas-chan/shared-types';
+import type { DriverFactory } from './driver-factory.js';
+import type { Issue, Knowledge, PondEntry, WorkflowType, EventPayload } from '@sebas-chan/shared-types';
 import type { DBClient } from '@sebas-chan/db';
 import type { StateManager } from './state-manager.js';
 import type { CoreEngine } from './engine.js';
@@ -104,7 +105,7 @@ export class EngineWorkflowEventEmitter implements WorkflowEventEmitter {
     this.engine.enqueueEvent({
       type: event.type as WorkflowType,
       priority: event.priority || 'normal',
-      payload: event.payload,
+      payload: event.payload as EventPayload,
     });
   }
 }
@@ -121,7 +122,7 @@ export class EngineWorkflowContext implements WorkflowContext {
     private db: DBClient,
     private engine: CoreEngine,
     public readonly logger: WorkflowLogger,
-    public readonly driver?: unknown,
+    public readonly createDriver: DriverFactory,
     public readonly config?: WorkflowConfig,
     public readonly metadata?: Record<string, unknown>
   ) {
@@ -146,7 +147,7 @@ export class EngineWorkflowContext implements WorkflowContext {
       this.db,
       this.engine,
       this.logger,
-      this.driver,
+      this.createDriver,
       this.config,
       this.metadata
     );
@@ -161,11 +162,11 @@ export function createWorkflowContext(
   stateManager: StateManager,
   db: DBClient,
   logger: WorkflowLogger,
-  driver?: unknown,
+  createDriver: DriverFactory,
   config?: WorkflowConfig,
   metadata?: Record<string, unknown>
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(stateManager, db, engine, logger, driver, config, metadata);
+  return new EngineWorkflowContext(stateManager, db, engine, logger, createDriver, config, metadata);
 }
 
 /**

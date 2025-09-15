@@ -4,7 +4,8 @@ import { executeWorkflow } from '../functional-types.js';
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import { createMockWorkflowLogger } from '../test-utils.js';
-import { createTestDriverFactory } from '../driver-factory.js';
+import { TestDriver } from '@moduler-prompt/driver';
+import { LogType } from '../logger.js';
 
 describe('IngestInput Workflow (Functional)', () => {
   let mockContext: WorkflowContext;
@@ -28,7 +29,7 @@ describe('IngestInput Workflow (Functional)', () => {
         updateKnowledge: vi.fn(),
       },
       logger: createMockWorkflowLogger(),
-      createDriver: createTestDriverFactory(['AI response for testing']),
+      createDriver: async () => new TestDriver({ responses: ['AI response for testing'] }),
       metadata: {},
     };
 
@@ -73,8 +74,8 @@ describe('IngestInput Workflow (Functional)', () => {
     });
 
     // ログが記録されたことを確認
-    expect(mockContext.logger.logInput).toHaveBeenCalled();
-    expect(mockContext.logger.logOutput).toHaveBeenCalled();
+    expect(mockContext.logger.log).toHaveBeenCalledWith(LogType.INPUT, expect.any(Object));
+    expect(mockContext.logger.log).toHaveBeenCalledWith(LogType.OUTPUT, expect.any(Object));
   });
 
   it('should trigger analysis when error keywords are detected', async () => {
@@ -145,15 +146,21 @@ describe('IngestInput Workflow (Functional)', () => {
     expect(result.error).toBe(error);
 
     // エラーログが記録されたことを確認
-    expect(mockContext.logger.logError).toHaveBeenCalledWith(
-      error,
-      expect.objectContaining({ event: mockEvent })
+    expect(mockContext.logger.log).toHaveBeenCalledWith(
+      LogType.ERROR,
+      expect.objectContaining({
+        message: error.message,
+        stack: error.stack,
+        context: expect.any(Object),
+      })
     );
   });
 
   it('should work with different driver responses', async () => {
     // 複数の応答を設定
-    mockContext.createDriver = createTestDriverFactory(['First response', 'Second response', 'Third response']);
+    mockContext.createDriver = async () => new TestDriver({
+      responses: ['First response', 'Second response', 'Third response']
+    });
 
     const result = await executeWorkflow(
       ingestInputWorkflow,

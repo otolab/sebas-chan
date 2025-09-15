@@ -292,7 +292,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       agent.queueEvent({
         type: 'UNDEFINED_PAYLOAD',
         priority: 'normal',
-        payload: undefined as unknown,
+        payload: undefined as unknown as Record<string, unknown>,
         timestamp: new Date(),
       });
 

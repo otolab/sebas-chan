@@ -1,5 +1,6 @@
 import type { AgentEvent } from '../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from './context.js';
+import { LogType } from './logger.js';
 
 /**
  * ワークフローの実行結果
@@ -42,7 +43,7 @@ export async function executeWorkflow(
 
   try {
     // 入力をログ
-    await logger.logInput({
+    logger.log(LogType.INPUT, {
       event,
       state: context.state,
       metadata: context.metadata,
@@ -52,12 +53,16 @@ export async function executeWorkflow(
     const result = await workflow.executor(event, context, emitter);
 
     // 出力をログ
-    await logger.logOutput(result.output);
+    logger.log(LogType.OUTPUT, result.output);
 
     return result;
   } catch (error) {
     // エラーをログ
-    await logger.logError(error as Error, { event, context });
+    logger.log(LogType.ERROR, {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      context: { event, context },
+    });
 
     return {
       success: false,

@@ -2,8 +2,8 @@ import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
 import type { Knowledge, KnowledgeSource } from '@sebas-chan/shared-types';
-import { callDriver } from '../driver-factory.js';
 import { LogType } from '../logger.js';
+import { compile } from '@moduler-prompt/core';
 
 /**
  * 知識タイプを決定
@@ -26,10 +26,22 @@ function determineKnowledgeType(content: string, source?: string): Knowledge['ty
   return 'factoid';
 }
 
+// ペイロードの型定義
+interface ExtractKnowledgePayload {
+  issueId?: string;
+  pondEntryId?: string;
+  source?: string;
+  question?: string;
+  feedback?: string;
+  impactAnalysis?: string;
+  content?: string;
+  context?: string;
+}
+
 /**
  * ソース情報を生成
  */
-function createKnowledgeSources(payload: any): KnowledgeSource[] {
+function createKnowledgeSources(payload: ExtractKnowledgePayload): KnowledgeSource[] {
   const sources: KnowledgeSource[] = [];
 
   if (payload.issueId) {
@@ -61,17 +73,17 @@ async function executeExtractKnowledge(
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
   const { logger, storage, createDriver } = context;
-  const payload = event.payload as Record<string, unknown>;
+  const payload = event.payload as unknown as ExtractKnowledgePayload;
 
   try {
     // 1. 抽出対象の内容を整理
     const content = String(payload.question || payload.feedback || payload.impactAnalysis || payload.content || '');
 
-    await logger.log(LogType.INFO, { message: 'Extracting knowledge', contentLength: content.length });
+    logger.log(LogType.INFO, { message: 'Extracting knowledge', contentLength: content.length });
 
     // 2. 既存の類似知識を検索
     const existingKnowledge = await storage.searchKnowledge(content);
-    await logger.log(LogType.DB_QUERY, {
+    logger.log(LogType.DB_QUERY, {
       operation: 'searchKnowledge',
       query: content,
       resultIds: existingKnowledge.map((k) => k.id)
@@ -88,14 +100,17 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 `;
 
     // ドライバーを作成してプロンプトを実行
-    const driver = createDriver({
+    const driver = await createDriver({
       model: 'standard',
       temperature: 0.2,
     });
 
-    const extractedKnowledge = await callDriver(driver, prompt, { temperature: 0.2 });
+    const promptModule = { instructions: [prompt] };
+    const compiledPrompt = compile(promptModule);
+    const result = await driver.query(compiledPrompt, { temperature: 0.2 });
+    const extractedKnowledge = result.content;
 
-    await logger.log(LogType.AI_CALL, { prompt, response: extractedKnowledge, model: 'standard', temperature: 0.2 });
+    logger.log(LogType.AI_CALL, { prompt, response: extractedKnowledge, model: 'standard', temperature: 0.2 });
 
     // 4. 重複チェック（簡易版）
     const isDuplicate = existingKnowledge.some(
@@ -122,7 +137,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       const createdKnowledge = await storage.createKnowledge(newKnowledge);
       knowledgeId = createdKnowledge.id;
 
-      await logger.log(LogType.INFO, { message: 'Created new knowledge', knowledgeId, type: knowledgeType });
+      logger.log(LogType.INFO, { message: 'Created new knowledge', knowledgeId, type: knowledgeType });
     } else if (existingKnowledge.length > 0) {
       // 6. 既存知識の評価を更新（簡易版）
       knowledgeId = existingKnowledge[0].id;
@@ -135,7 +150,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       //   },
       // });
 
-      await logger.log(LogType.INFO, { message: 'Updated existing knowledge reputation', knowledgeId });
+      logger.log(LogType.INFO, { message: 'Updated existing knowledge reputation', knowledgeId });
     }
 
     // 7. State更新
@@ -162,7 +177,11 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       },
     };
   } catch (error) {
-    await logger.logError(error as Error, { payload });
+    logger.log(LogType.ERROR, {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      context: { payload },
+    });
     throw error;
   }
 }
