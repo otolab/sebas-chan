@@ -39,7 +39,6 @@ export function createDriverByCapabilities(
     case 'anthropic':
       return new AnthropicDriver({
         apiKey: config.apiKey,
-        baseURL: config.baseURL,
         model: modelMap[capabilities.model] || 'claude-3-sonnet-20240229',
         defaultOptions: options,
       });
@@ -93,7 +92,11 @@ export async function callDriver(
   prompt: string,
   options?: QueryOptions
 ): Promise<string> {
-  const compiledPrompt = compile(prompt);
+  // Create a simple prompt module
+  const promptModule = {
+    instructions: [prompt]
+  };
+  const compiledPrompt = compile(promptModule);
   const result = await driver.query(compiledPrompt, options);
   return result.content;
 }

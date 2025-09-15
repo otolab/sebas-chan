@@ -1,23 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestDriver } from '@moduler-prompt/driver';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { executeWorkflow } from '../functional-types.js';
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import { createMockWorkflowLogger } from '../test-utils.js';
+import { createTestDriverFactory } from '../driver-factory.js';
 
 describe('IngestInput Workflow (Functional)', () => {
   let mockContext: WorkflowContext;
   let mockEmitter: WorkflowEventEmitter;
   let mockEvent: AgentEvent;
-  let testDriver: TestDriver;
 
   beforeEach(() => {
-    // テストドライバーの作成
-    testDriver = new TestDriver({
-      responses: ['AI response for testing'],
-      delay: 0,
-    });
 
     // モックコンテキストの準備
     mockContext = {
@@ -34,7 +28,7 @@ describe('IngestInput Workflow (Functional)', () => {
         updateKnowledge: vi.fn(),
       },
       logger: createMockWorkflowLogger(),
-      driver: testDriver,
+      createDriver: createTestDriverFactory(['AI response for testing']),
       metadata: {},
     };
 
@@ -159,10 +153,7 @@ describe('IngestInput Workflow (Functional)', () => {
 
   it('should work with different driver responses', async () => {
     // 複数の応答を設定
-    const multiResponseDriver = new TestDriver({
-      responses: ['First response', 'Second response', 'Third response'],
-    });
-    mockContext.driver = multiResponseDriver;
+    mockContext.createDriver = createTestDriverFactory(['First response', 'Second response', 'Third response']);
 
     const result = await executeWorkflow(
       ingestInputWorkflow,
