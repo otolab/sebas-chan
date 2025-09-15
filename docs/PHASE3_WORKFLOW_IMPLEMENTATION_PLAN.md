@@ -136,6 +136,17 @@ interface WorkflowConfig {
    }
    ```
 
+   注意: @moduler-prompt/utilsのDriverRegistryにはcapabilitiesからモデルを自動選択する機能があります。
+   ```typescript
+   import { DriverRegistry } from '@moduler-prompt/utils';
+
+   const registry = new DriverRegistry();
+   const result = registry.selectDriver({
+     requiredCapabilities: ['fast', 'japanese'],
+     preferredCapabilities: ['streaming']
+   });
+   ```
+
 2. **ログシステム簡素化**
    - WorkflowLoggerクラスの簡素化
    - 子ロガー機能の削除
