@@ -2,6 +2,8 @@ import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
 import type { Issue, IssueUpdate, IssueRelation } from '@sebas-chan/shared-types';
+import { callDriver } from '../driver-factory.js';
+import { LogType } from '../logger.js';
 
 /**
  * 影響度スコアを計算
@@ -52,15 +54,19 @@ async function executeAnalyzeIssueImpact(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger, storage, driver } = context;
+  const { logger, storage, createDriver } = context;
   const { issue, aiResponse } = event.payload as { issue: any; aiResponse?: string };
 
   try {
     // 1. 関連するIssueを検索
-    await logger.log('info', 'Analyzing issue impact', { issueContent: issue.content });
+    await logger.log(LogType.INFO, { message: 'Analyzing issue impact', issueContent: issue.content });
 
     const relatedIssues = await storage.searchIssues(issue.content || issue.description);
-    await logger.logDbQuery('searchIssues', { query: issue.content }, relatedIssues.map((i) => i.id));
+    await logger.log(LogType.DB_QUERY, {
+      operation: 'searchIssues',
+      query: issue.content,
+      resultIds: relatedIssues.map((i) => i.id)
+    });
 
     // 2. AIで影響分析
     const prompt = `
@@ -73,12 +79,15 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 影響範囲と優先度を日本語で説明してください。
 `;
 
-    const impactAnalysis = await (driver as any).call(prompt, {
+    // ドライバーを作成（standard モデルを使用）
+    const driver = createDriver({
       model: 'standard',
       temperature: 0.3,
     });
 
-    await logger.logAiCall(prompt, impactAnalysis, { model: 'standard' });
+    const impactAnalysis = await callDriver(driver, prompt, { temperature: 0.3 });
+
+    await logger.log(LogType.AI_CALL, { prompt, response: impactAnalysis, model: 'standard', temperature: 0.3 });
 
     // 3. 影響度スコアを計算
     const impactScore = calculateImpactScore(issue.content || issue.description, relatedIssues);
@@ -111,7 +120,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
       const createdIssue = await storage.createIssue(newIssue);
       issueId = createdIssue.id;
 
-      await logger.log('info', 'Created new issue', { issueId });
+      await logger.log(LogType.INFO, { message: 'Created new issue', issueId });
     } else {
       // 既存Issue更新
       const targetIssue = relatedIssues[0];
@@ -126,12 +135,12 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
       // TODO: updateIssueメソッドの実装が必要
       // await storage.updateIssue(issueId, { updates: [...targetIssue.updates, update] });
 
-      await logger.log('info', 'Updated existing issue', { issueId });
+      await logger.log(LogType.INFO, { message: 'Updated existing issue', issueId });
     }
 
     // 5. 高影響度の場合は追加のワークフローを起動
     if (impactScore > 0.8) {
-      await logger.log('warn', 'High impact issue detected', { issueId, impactScore });
+      await logger.log(LogType.WARN, { message: 'High impact issue detected', issueId, impactScore });
 
       emitter.emit({
         type: 'EXTRACT_KNOWLEDGE',

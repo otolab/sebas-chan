@@ -1,5 +1,6 @@
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 import type { WorkflowLogger } from './logger.js';
+import type { DriverFactory } from './driver-factory.js';
 
 /**
  * ワークフローが動作する環境のインターフェース
@@ -23,10 +24,10 @@ export interface WorkflowContext {
   logger: WorkflowLogger;
 
   /**
-   * AIドライバー（オプション）
-   * @moduler-prompt/driverのインスタンス（1モデル固定）
+   * AIドライバーファクトリ
+   * 必要なcapabilitiesを指定してドライバーインスタンスを作成
    */
-  driver?: unknown;
+  createDriver: DriverFactory;
 
   /**
    * 実行時設定
@@ -66,12 +67,6 @@ export interface WorkflowStorage {
  */
 export interface WorkflowConfig {
   /**
-   * AIモデル設定（driverインスタンスで固定されるため、主にtemperature等のパラメータ）
-   */
-  temperature?: number;
-  maxTokens?: number;
-
-  /**
    * リトライ設定
    */
   maxRetries?: number;
@@ -81,6 +76,11 @@ export interface WorkflowConfig {
    * タイムアウト設定
    */
   timeout?: number;
+
+  /**
+   * ログレベル
+   */
+  logLevel?: 'debug' | 'info' | 'warn' | 'error';
 }
 
 /**

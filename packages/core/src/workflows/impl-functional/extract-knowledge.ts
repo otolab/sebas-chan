@@ -2,6 +2,8 @@ import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
 import type { Knowledge, KnowledgeSource } from '@sebas-chan/shared-types';
+import { callDriver } from '../driver-factory.js';
+import { LogType } from '../logger.js';
 
 /**
  * 知識タイプを決定
@@ -58,18 +60,22 @@ async function executeExtractKnowledge(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger, storage, driver } = context;
+  const { logger, storage, createDriver } = context;
   const payload = event.payload as Record<string, unknown>;
 
   try {
     // 1. 抽出対象の内容を整理
     const content = String(payload.question || payload.feedback || payload.impactAnalysis || payload.content || '');
 
-    await logger.log('info', 'Extracting knowledge', { contentLength: content.length });
+    await logger.log(LogType.INFO, { message: 'Extracting knowledge', contentLength: content.length });
 
     // 2. 既存の類似知識を検索
     const existingKnowledge = await storage.searchKnowledge(content);
-    await logger.logDbQuery('searchKnowledge', { query: content }, existingKnowledge.map((k) => k.id));
+    await logger.log(LogType.DB_QUERY, {
+      operation: 'searchKnowledge',
+      query: content,
+      resultIds: existingKnowledge.map((k) => k.id)
+    });
 
     // 3. AIで知識を抽出・構造化
     const prompt = `
@@ -81,12 +87,15 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 抽出した知識を簡潔に日本語でまとめてください。
 `;
 
-    const extractedKnowledge = await (driver as any).call(prompt, {
+    // ドライバーを作成してプロンプトを実行
+    const driver = createDriver({
       model: 'standard',
       temperature: 0.2,
     });
 
-    await logger.logAiCall(prompt, extractedKnowledge, { model: 'standard' });
+    const extractedKnowledge = await callDriver(driver, prompt, { temperature: 0.2 });
+
+    await logger.log(LogType.AI_CALL, { prompt, response: extractedKnowledge, model: 'standard', temperature: 0.2 });
 
     // 4. 重複チェック（簡易版）
     const isDuplicate = existingKnowledge.some(
@@ -113,7 +122,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       const createdKnowledge = await storage.createKnowledge(newKnowledge);
       knowledgeId = createdKnowledge.id;
 
-      await logger.log('info', 'Created new knowledge', { knowledgeId, type: knowledgeType });
+      await logger.log(LogType.INFO, { message: 'Created new knowledge', knowledgeId, type: knowledgeType });
     } else if (existingKnowledge.length > 0) {
       // 6. 既存知識の評価を更新（簡易版）
       knowledgeId = existingKnowledge[0].id;
@@ -126,7 +135,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       //   },
       // });
 
-      await logger.log('info', 'Updated existing knowledge reputation', { knowledgeId });
+      await logger.log(LogType.INFO, { message: 'Updated existing knowledge reputation', knowledgeId });
     }
 
     // 7. State更新

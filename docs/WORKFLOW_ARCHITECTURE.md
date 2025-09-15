@@ -47,8 +47,17 @@ interface WorkflowContext {
   state: string;                    // システムの現在状態
   storage: WorkflowStorage;         // DB操作インターフェース
   logger: WorkflowLogger;          // ログ記録
-  driver: any;                     // AIドライバー（@moduler-prompt/driver）
+  createDriver: DriverFactory;      // AIドライバーファクトリ
   metadata?: Record<string, any>;  // 実行時メタデータ
+}
+
+// ドライバーファクトリの型
+type DriverFactory = (capabilities: DriverCapabilities) => Driver;
+
+interface DriverCapabilities {
+  model: 'fast' | 'standard' | 'large';  // モデルサイズ
+  temperature?: number;                    // 生成温度
+  maxTokens?: number;                     // 最大トークン数
 }
 ```
 
@@ -208,14 +217,20 @@ packages/core/src/workflows/
 ```typescript
 import { TestDriver, EchoDriver } from '@moduler-prompt/driver';
 
-// テストドライバー（設定された応答を返す）
-const testDriver = new TestDriver({
-  responses: ['応答1', '応答2'],
-  delay: 0  // 遅延なし
-});
+// テスト用のドライバーファクトリ
+function createTestDriverFactory(responses: string[]): DriverFactory {
+  return (capabilities) => {
+    return new TestDriver({
+      responses,
+      delay: 0
+    });
+  };
+}
 
-// エコードライバー（入力をそのまま返す）
-const echoDriver = new EchoDriver();
+// エコードライバーファクトリ
+function createEchoDriverFactory(): DriverFactory {
+  return (capabilities) => new EchoDriver();
+}
 ```
 
 ### テスト例
@@ -229,7 +244,7 @@ describe('IngestInput Workflow', () => {
       state: 'Initial state',
       storage: createMockStorage(),
       logger: createMockLogger(),
-      driver: createTestDriver({ responses: ['test response'] }),
+      createDriver: createTestDriverFactory(['test response']),
       metadata: {}
     };
   });
@@ -249,26 +264,38 @@ describe('IngestInput Workflow', () => {
 
 ## 移行ガイド
 
-### クラスベースから関数ベースへの移行
+### 関数ベースワークフローの実装
 
-**Before (クラスベース):**
-```typescript
-class MyWorkflow extends BaseWorkflow {
-  protected async process(event, context, emitter) {
-    // 処理
-  }
-}
-```
-
-**After (関数ベース):**
+**推奨パターン:**
 ```typescript
 const myWorkflow: WorkflowDefinition = {
   name: 'MyWorkflow',
   executor: async (event, context, emitter) => {
-    // 処理
+    // ドライバーの作成（必要なcapabilitiesを指定）
+    const driver = context.createDriver({
+      model: 'standard',
+      temperature: 0.3
+    });
+
+    // AI処理
+    const result = await driver.call(prompt);
+
+    // 次のワークフローをイベント発行で起動（サブワークフローは使用しない）
+    emitter.emit({
+      type: 'NEXT_WORKFLOW',
+      priority: 'normal',
+      payload: result
+    });
+
+    // ログ記録
+    await context.logger.log(LogType.OUTPUT, { result });
+
+    return { success: true, context, output: result };
   }
 };
 ```
+
+**重要**: クラスベースのワークフロー（BaseWorkflow）は使用しません。
 
 ## パフォーマンス最適化
 
@@ -300,23 +327,36 @@ interface AgentEvent {
 
 ### WorkflowLogger
 
-ワークフロー実行のログ記録：
+ワークフロー実行のログ記録（簡素化されたスキーマ）：
 
 ```typescript
+interface WorkflowLog {
+  executionId: string;      // 実行ID（UUID）
+  workflowName: string;     // ワークフロー名
+  type: LogType;           // ログタイプ
+  timestamp: Date;         // タイムスタンプ（自動生成）
+  data: unknown;           // ログデータ
+}
+
+enum LogType {
+  INPUT = 'input',
+  OUTPUT = 'output',
+  ERROR = 'error',
+  DB_QUERY = 'db_query',
+  AI_CALL = 'ai_call',
+  INFO = 'info',
+  DEBUG = 'debug',
+  WARN = 'warn'
+}
+
 class WorkflowLogger {
-  executionId: string;
-  workflowName: string;
+  constructor(
+    private executionId: string,
+    private workflowName: string
+  ) {}
 
-  // ログメソッド
-  log(level: 'info' | 'debug' | 'warn' | 'error', message: string, data?: unknown): Promise<void>;
-  logInput(input: unknown): Promise<void>;
-  logOutput(output: unknown): Promise<void>;
-  logError(error: Error, context?: unknown): Promise<void>;
-  logDbQuery(operation: string, query: unknown, resultIds: string[]): Promise<void>;
-  logAiCall(module: string, params: unknown, response: unknown): Promise<void>;
-
-  // サブワークフロー
-  createChildLogger(workflowName: string): WorkflowLogger;
+  // ログメソッド（サブワークフロー機能なし）
+  log(type: LogType, data: unknown): Promise<void>;
 }
 ```
 
@@ -353,4 +393,4 @@ export interface LogDetail {
 
 作成日: 2025-09-13
 更新日: 2025-09-15
-バージョン: 2.1.0 (関数ベースアーキテクチャ、型定義更新)
+バージョン: 3.0.0 (ドライバーファクトリ導入、ログスキーマ簡素化、サブワークフロー廃止)

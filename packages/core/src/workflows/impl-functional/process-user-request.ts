@@ -1,6 +1,8 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
+import { callDriver } from '../driver-factory.js';
+import { LogType } from '../logger.js';
 
 /**
  * 次のイベントを決定する
@@ -89,12 +91,12 @@ async function executeProcessUserRequest(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger, storage, driver } = context;
+  const { logger, storage, createDriver } = context;
   const { request } = event.payload as { request: Record<string, unknown> };
 
   try {
     // 1. リクエストをログ
-    await logger.log('info', 'Processing user request', { requestId: request.id });
+    await logger.log(LogType.INFO, { message: 'Processing user request', requestId: request.id });
 
     // 2. AIを使ってリクエストを分類・理解
     const prompt = `
@@ -104,12 +106,15 @@ async function executeProcessUserRequest(
 タイプ（issue/question/feedback）と概要を日本語で返してください。
 `;
 
-    const aiResponse = await (driver as any).call(prompt, {
+    // ドライバーを作成してプロンプトを実行
+    const driver = createDriver({
       model: 'fast',
       temperature: 0.3,
     });
 
-    await logger.logAiCall(prompt, aiResponse, { model: 'fast' });
+    const aiResponse = await callDriver(driver, prompt, { temperature: 0.3 });
+
+    await logger.log(LogType.AI_CALL, { prompt, response: aiResponse, model: 'fast', temperature: 0.3 });
 
     // 3. リクエストタイプを判定（簡易版）
     const requestType = classifyRequest(String(request.content));
@@ -119,7 +124,7 @@ async function executeProcessUserRequest(
 
     // 5. イベントを発行
     for (const nextEvent of nextEvents) {
-      await logger.log('info', `Emitting ${nextEvent.type} event`);
+      await logger.log(LogType.INFO, { message: `Emitting ${nextEvent.type} event`, eventType: nextEvent.type });
       emitter.emit(nextEvent);
     }
 
