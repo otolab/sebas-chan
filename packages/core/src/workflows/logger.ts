@@ -5,11 +5,11 @@ import path from 'path';
  * 簡素化されたワークフローログエントリ
  */
 export interface WorkflowLog {
-  executionId: string;      // 実行ID（UUID）
-  workflowName: string;     // ワークフロー名
-  type: LogType;           // ログタイプ
-  timestamp: Date;         // タイムスタンプ（自動生成）
-  data: unknown;           // ログデータ
+  executionId: string; // 実行ID（UUID）
+  workflowName: string; // ワークフロー名
+  type: LogType; // ログタイプ
+  timestamp: Date; // タイムスタンプ（自動生成）
+  data: unknown; // ログデータ
 }
 
 /**
@@ -23,7 +23,7 @@ export enum LogType {
   AI_CALL = 'ai_call',
   INFO = 'info',
   DEBUG = 'debug',
-  WARN = 'warn'
+  WARN = 'warn',
 }
 
 export interface WorkflowLoggerOptions {
@@ -131,7 +131,6 @@ export class WorkflowLogger {
     });
   }
 
-
   /**
    * ログエントリをフォーマット
    */
@@ -141,7 +140,8 @@ export class WorkflowLogger {
     }
 
     const timestamp = entry.timestamp.toISOString();
-    const dataStr = typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data, null, 2);
+    const dataStr =
+      typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data, null, 2);
     return `[${timestamp}] [${entry.type}] [${entry.workflowName}:${entry.executionId}] ${dataStr}`;
   }
 

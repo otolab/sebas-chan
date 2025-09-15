@@ -70,7 +70,7 @@ export function createDriverFactory(config: DriverConfig): DriverFactory {
  * テスト用のドライバーファクトリを作成
  */
 export function createTestDriverFactory(responses: string[]): DriverFactory {
-  return (capabilities: DriverCapabilities): AIDriver => {
+  return (_capabilities: DriverCapabilities): AIDriver => {
     return new TestDriver({ responses });
   };
 }
@@ -79,7 +79,7 @@ export function createTestDriverFactory(responses: string[]): DriverFactory {
  * エコードライバーファクトリを作成（入力をそのまま返す）
  */
 export function createEchoDriverFactory(): DriverFactory {
-  return (capabilities: DriverCapabilities): AIDriver => {
+  return (_capabilities: DriverCapabilities): AIDriver => {
     return new EchoDriver();
   };
 }
@@ -94,7 +94,7 @@ export async function callDriver(
 ): Promise<string> {
   // Create a simple prompt module
   const promptModule = {
-    instructions: [prompt]
+    instructions: [prompt],
   };
   const compiledPrompt = compile(promptModule);
   const result = await driver.query(compiledPrompt, options);
