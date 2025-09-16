@@ -137,19 +137,19 @@ const myWorkflow: WorkflowDefinition = {
 
     // ドライバーを作成してAI呼び出し
     const driver = await createDriver({
-      model: 'standard',
-      temperature: 0.3
+      requiredCapabilities: ['reasoning'],
+      preferredCapabilities: ['japanese']
     });
 
     // プロンプトのコンパイル
     const compiledPrompt = compile({ instructions: [prompt] });
 
-    // AI呼び出し
+    // AI呼び出し（temperatureはdriver.queryのオプションとして渡す）
     const response = await driver.query(compiledPrompt, { temperature: 0.3 });
     logger.log(LogType.AI_CALL, {
       prompt,
       response,
-      temperature: 0.3
+      capabilities: ['reasoning', 'japanese']
     });
 
     // 出力をログ

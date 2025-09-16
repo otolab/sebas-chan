@@ -106,7 +106,8 @@ interface WorkflowEventEmitter {
 
 2. **processUserRequestWorkflow** (A-0)
    - ユーザーリクエストの分類（issue/question/feedback）
-   - 適切な後続ワークフローへのルーティング
+   - AIによるリクエスト内容の理解と分析
+   - 適切な後続ワークフローを選択してイベント発行
 
 3. **analyzeIssueImpactWorkflow** (A-2)
    - Issueの影響範囲分析
@@ -122,7 +123,7 @@ interface WorkflowEventEmitter {
 
 ### executeWorkflow関数
 
-共通のログ処理を提供するラッパー関数：
+ワークフロー実行のヨントリポイントとなる関数：
 
 ```typescript
 async function executeWorkflow(
