@@ -77,24 +77,22 @@ sebas-chanシステムにおいて、CoreEngineとCoreAgentは明確に異なる
 ### インターフェース例
 
 ```typescript
-// CoreEngineがCoreAgentに提供するインターフェース
-interface AgentContext {
-  // State文書の取得（読み取り専用）
-  getState(): string;
-  
-  // データ検索（Engineが適切なDBアクセスを行う）
-  searchIssues(query: string): Promise<Issue[]>;
-  searchKnowledge(query: string): Promise<Knowledge[]>;
-  
-  // イベント生成（Engineがキューに追加）
-  emitEvent(event: AgentEvent): void;
+// CoreEngineがCoreAgentに提供するWorkflowContext
+// packages/core/src/workflows/context.tsで定義
+interface WorkflowContext {
+  state: string;                    // システムの現在状態
+  storage: WorkflowStorage;         // DB操作インターフェース
+  logger: WorkflowLogger;          // ログ記録
+  createDriver: DriverFactory;      // AIドライバーファクトリ
+  metadata?: Record<string, any>;  // 実行時メタデータ
 }
 
 // CoreAgentがCoreEngineから受け取るイベント
 interface AgentEvent {
   type: string;
-  payload: any;
-  context?: AgentContext;
+  priority: 'high' | 'normal' | 'low';
+  payload: AgentEventPayload;
+  timestamp: Date;
 }
 ```
 

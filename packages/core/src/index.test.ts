@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent } from './index.js';
+import { createMockWorkflowContext } from './test-utils.js';
 
 describe('CoreAgent', () => {
   let agent: CoreAgent;
@@ -15,6 +16,8 @@ describe('CoreAgent', () => {
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
+    // テスト用のWorkflowContextを設定
+    agent.setContext(createMockWorkflowContext());
   });
 
   afterEach(async () => {
@@ -82,7 +85,10 @@ describe('CoreAgent', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith('No workflow registered for event type: UNKNOWN_EVENT');
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      'Error processing event UNKNOWN_EVENT:',
+      expect.any(Error)
+    );
 
     await agent.stop();
     await startPromise;

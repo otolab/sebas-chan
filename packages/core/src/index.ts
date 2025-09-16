@@ -1,6 +1,6 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
-import type { WorkflowLogger } from './workflows/logger.js';
+import { WorkflowLogger } from './workflows/logger.js';
 import { WorkflowRegistry } from './workflows/functional-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/functional-types.js';
 import type { WorkflowContext, WorkflowEventEmitter, DriverFactory } from './workflows/context.js';
@@ -12,31 +12,10 @@ import {
   extractKnowledgeWorkflow
 } from './workflows/impl-functional/index.js';
 
-// CoreEngineから提供されるコンテキスト
-export interface AgentContext {
-  // State文書の取得
-  getState(): string;
-
-  // データ検索（Engineが適切なDBアクセスを行う）
-  searchIssues(query: string): Promise<Issue[]>;
-  searchKnowledge(query: string): Promise<Knowledge[]>;
-  searchPond(query: string): Promise<PondEntry[]>;
-
-  // データ追加（Engineが永続化を処理）
-  addPondEntry(entry: Omit<PondEntry, 'id'>): Promise<PondEntry>;
-
-  // イベント生成（Engineがキューに追加）
-  emitEvent(event: Omit<AgentEvent, 'id' | 'timestamp'>): void;
-
-  // ドライバーファクトリ（AI モデルアクセス）
-  // @moduler-prompt/utilsのDriverSelectionCriteriaを使用
-  createDriver?: DriverFactory;
-}
-
 export class CoreAgent {
   private eventQueue: EventQueueImpl;
   private isProcessing = false;
-  private context: AgentContext | null = null;
+  private context: WorkflowContext | null = null;
   private workflowRegistry: WorkflowRegistry;
 
   constructor(workflowRegistry?: WorkflowRegistry) {
@@ -45,13 +24,8 @@ export class CoreAgent {
     console.log('Core Agent initialized with workflow support');
   }
 
-  async start(context?: AgentContext) {
+  async start() {
     console.log('Starting Core Agent...');
-
-    if (context) {
-      this.context = context;
-      console.log('Agent context set');
-    }
 
     this.isProcessing = true;
     // イベントループを非同期で開始（awaitしない）
@@ -70,7 +44,7 @@ export class CoreAgent {
   }
 
   // コンテキストを設定するメソッド
-  setContext(context: AgentContext) {
+  setContext(context: WorkflowContext) {
     this.context = context;
   }
 
@@ -84,12 +58,17 @@ export class CoreAgent {
         continue;
       }
 
+      // contextがない場合は処理をスキップ
+      if (!this.context) {
+        console.warn(`No context available for event ${event.type}, skipping`);
+        continue;
+      }
+
       console.log(`Processing event: ${event.type}`);
 
       try {
-        // processEventを呼び出し
-        // テストではprocessEventがモックされる
-        await (this as any).processEvent(event);
+        // processEventを呼び出し（setContextで設定されたcontextを使用）
+        await this.processEvent(event, this.context);
       } catch (error) {
         console.error(`Error processing event ${event.type}:`, error);
         // エラーが発生しても処理を継続

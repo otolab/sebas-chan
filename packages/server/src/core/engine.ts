@@ -9,22 +9,14 @@ import {
   PondEntry,
   PondSearchFilters,
   PondSearchResponse,
-  WorkflowType,
-  EventPayload,
 } from '@sebas-chan/shared-types';
 export { Event };
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
-import {
-  CoreAgent,
-  AgentContext,
-  AgentEvent,
-  AgentEventPayload,
-  WorkflowLogger,
-} from '@sebas-chan/core';
+import { CoreAgent, AgentEvent, AgentEventPayload, WorkflowLogger } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
-import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
+import { createWorkflowContext } from './workflow-context.js';
 import {
   DriverRegistry,
   registerDriverFactories,
@@ -76,12 +68,27 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       this.dbStatus = 'ready';
       logger.info('DB client connected and initialized');
 
-      // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
+      // CoreAgentを初期化し、WorkflowContextを設定（startは呼ばない）
       this.coreAgent = new CoreAgent();
 
-      const agentContext = this.createAgentContext();
-      this.coreAgent.setContext(agentContext);
-      logger.info('Core Agent initialized with context');
+      // WorkflowContextを作成して設定
+      const workflowLogger = new WorkflowLogger('system');
+      const workflowContext = createWorkflowContext(
+        this,
+        this.stateManager,
+        this.dbClient!,
+        workflowLogger,
+        (async (criteria: DriverSelectionCriteria) => {
+          const result = this.driverRegistry.selectDriver(criteria);
+          if (!result) {
+            throw new Error('No suitable driver found for the given criteria');
+          }
+          return await this.driverRegistry.createDriver(result.driver);
+        }) as DriverFactory,
+        {} // config
+      );
+      this.coreAgent.setContext(workflowContext);
+      logger.info('Core Agent initialized with workflow context');
 
       await this.stateManager.initialize();
       // startは別途呼び出す必要がある
@@ -91,72 +98,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       logger.error('Failed to initialize Core Engine:', error);
       throw error;
     }
-  }
-
-  // CoreAgent用のコンテキストを作成
-  private createAgentContext(): AgentContext {
-    return {
-      getState: () => this.stateManager.getState(),
-
-      // ドライバーファクトリを提供（DriverFactory型）
-      createDriver: (async (criteria: DriverSelectionCriteria) => {
-        const result = this.driverRegistry.selectDriver(criteria);
-        if (!result) {
-          throw new Error('No suitable driver found for the given criteria');
-        }
-        return await this.driverRegistry.createDriver(result.driver);
-      }) as DriverFactory,
-
-      searchIssues: async (query: string) => {
-        if (!this.dbClient) throw new Error('DB client not initialized');
-        return this.dbClient.searchIssues(query);
-      },
-
-      searchKnowledge: async (query: string) => {
-        // TODO: Implement when Knowledge methods are added to DBClient
-        logger.debug('Searching knowledge', { query });
-        return [];
-      },
-
-      searchPond: async (query: string) => {
-        if (!this.dbClient) throw new Error('DB client not initialized');
-        const results = await this.dbClient.searchPond({ q: query, limit: 100 });
-        // DBClientのレスポンスをPondEntry型に変換
-        return results.data.map((r) => ({
-          id: r.id,
-          content: r.content,
-          source: r.source,
-          timestamp: new Date(r.timestamp),
-          vector: r.vector,
-        }));
-      },
-
-      addPondEntry: async (entry: Omit<PondEntry, 'id'>) => {
-        if (!this.dbClient) throw new Error('DB client not initialized');
-        const id = nanoid();
-        const success = await this.dbClient.addPondEntry({
-          id,
-          ...entry,
-        });
-
-        if (success) {
-          return { id, ...entry };
-        } else {
-          throw new Error('Failed to add pond entry');
-        }
-      },
-
-      emitEvent: (event: Omit<AgentEvent, 'id' | 'timestamp'>) => {
-        // AgentEventをEventに変換してキューに追加
-        this.enqueueEvent({
-          type: event.type as WorkflowType,
-          priority: event.priority,
-          payload: event.payload as EventPayload,
-        });
-      },
-
-      // getWorkflowContextは削除（handleEventで直接作成）
-    };
   }
 
   async start(): Promise<void> {
@@ -256,7 +197,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     // CoreAgentにイベントを渡す
     if (this.coreAgent) {
-      // AgentEventに変換
+      // AgentEventに変換してキューに追加
       const agentEvent: AgentEvent = {
         type: event.type,
         priority: event.priority,
@@ -264,31 +205,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         timestamp: event.timestamp,
       };
 
-      // ワークフロー実行コンテキストを作成
-      const executionId = nanoid();
-      const workflowLogger = new WorkflowLogger(event.type, { executionId });
-      const workflowContext = createWorkflowContext(
-        this,
-        this.stateManager,
-        this.dbClient!,
-        workflowLogger,
-        (async (criteria: DriverSelectionCriteria) => {
-          const result = this.driverRegistry.selectDriver(criteria);
-          if (!result) {
-            throw new Error('No suitable driver found for the given criteria');
-          }
-          return await this.driverRegistry.createDriver(result.driver);
-        }) as DriverFactory,
-        {} // config
-      );
-
-      // CoreAgent.processEventを呼び出してワークフローを実行
-      try {
-        await this.coreAgent.processEvent(agentEvent, workflowContext);
-        logger.debug('Event processed successfully', { eventType: event.type });
-      } catch (error) {
-        logger.error('Event processing failed', error);
-      }
+      // CoreAgentのキューにイベントを追加
+      this.coreAgent.queueEvent(agentEvent);
+      logger.debug('Event queued for processing', { eventType: event.type });
     } else {
       logger.warn('Core Agent not initialized, handling event locally');
 

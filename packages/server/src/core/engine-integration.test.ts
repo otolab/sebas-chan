@@ -61,15 +61,13 @@ describe('CoreEngine - CoreAgent Integration', () => {
       // CoreAgentが作成されることを確認
       expect(CoreAgent).toHaveBeenCalled();
 
-      // CoreAgent.setContextがcontextとともに呼ばれることを確認
+      // CoreAgent.setContextがWorkflowContextとともに呼ばれることを確認
       expect(mockCoreAgent.setContext).toHaveBeenCalledWith(
         expect.objectContaining({
-          getState: expect.any(Function),
-          searchIssues: expect.any(Function),
-          searchKnowledge: expect.any(Function),
-          searchPond: expect.any(Function),
-          addPondEntry: expect.any(Function),
-          emitEvent: expect.any(Function),
+          state: expect.any(String),
+          storage: expect.any(Object),
+          logger: expect.any(Object),
+          createDriver: expect.any(Function),
         })
       );
 
@@ -138,21 +136,20 @@ describe('CoreEngine - CoreAgent Integration', () => {
     });
   });
 
-  describe('AgentContext functionality', () => {
-    it('should provide working DB operations through context', async () => {
+  describe('WorkflowContext functionality', () => {
+    it('should provide working DB operations through storage', async () => {
       await engine.initialize();
 
       // contextを取得
       const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
 
-      // addPondEntry のテスト
+      // storage.addPondEntry のテスト
       const pondEntry = {
         content: 'Test pond content',
         source: 'test',
-        timestamp: new Date(),
       };
 
-      const result = await contextArg.addPondEntry(pondEntry);
+      const result = await contextArg.storage.addPondEntry(pondEntry);
 
       expect(mockDbClient.addPondEntry).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -179,36 +176,34 @@ describe('CoreEngine - CoreAgent Integration', () => {
         timestamp: new Date(),
       };
 
-      await expect(contextArg.addPondEntry(pondEntry)).rejects.toThrow('Failed to add pond entry');
+      await expect(contextArg.storage.addPondEntry(pondEntry)).rejects.toThrow('Failed to add pond entry');
     });
 
-    it('should provide state access through context', async () => {
+    it('should provide state as string property', async () => {
       await engine.initialize();
 
       const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
-      const state = contextArg.getState();
+      const state = contextArg.state;
 
       expect(state).toBeDefined();
       expect(typeof state).toBe('string');
     });
 
-    it('should allow event emission through context', async () => {
+    it('should provide logger and createDriver', async () => {
       await engine.initialize();
 
       const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
 
-      // contextのemitEventを呼び出し
-      contextArg.emitEvent({
-        type: 'CUSTOM_EVENT',
-        priority: 'low',
-        payload: { test: true },
-      });
+      // loggerが存在することを確認
+      expect(contextArg.logger).toBeDefined();
+      expect(contextArg.logger).toHaveProperty('info');
+      expect(contextArg.logger).toHaveProperty('error');
+      expect(contextArg.logger).toHaveProperty('warn');
+      expect(contextArg.logger).toHaveProperty('debug');
 
-      // イベントキューにイベントが追加されることを確認
-      const event = engine.dequeueEvent();
-      expect(event).not.toBeNull();
-      expect(event?.type).toBe('CUSTOM_EVENT');
-      expect(event?.payload).toEqual({ test: true });
+      // createDriverが存在することを確認
+      expect(contextArg.createDriver).toBeDefined();
+      expect(typeof contextArg.createDriver).toBe('function');
     });
   });
 
@@ -324,7 +319,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       mockDbClient.searchPond.mockResolvedValue(mockPondResults);
 
       const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
-      const results = await contextArg.searchPond('test query');
+      const results = await contextArg.storage.searchPond('test query');
 
       expect(mockDbClient.searchPond).toHaveBeenCalledWith({ q: 'test query', limit: 100 });
       expect(results).toHaveLength(2);
@@ -351,7 +346,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       mockDbClient.searchIssues.mockResolvedValue(mockIssueResults);
 
       const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
-      const results = await contextArg.searchIssues('test query');
+      const results = await contextArg.storage.searchIssues('test query');
 
       expect(mockDbClient.searchIssues).toHaveBeenCalledWith('test query');
       expect(results).toEqual(mockIssueResults);

@@ -43,4 +43,3 @@ export class WorkflowRegistry implements FunctionalWorkflowRegistry {
     return Array.from(this.workflows.keys());
   }
 }
-

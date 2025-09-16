@@ -57,12 +57,9 @@ describe('CoreEngine', () => {
   });
 
   describe('event processing', () => {
-    it('should process events from queue', async () => {
+    it('should forward events to CoreAgent', async () => {
       await engine.initialize();
       await engine.start();
-
-      const listener = vi.fn();
-      engine.on('event:processing', listener);
 
       engine.enqueueEvent({
         type: 'PROCESS_USER_REQUEST',
@@ -70,19 +67,14 @@ describe('CoreEngine', () => {
         payload: { test: true },
       });
 
-      // processInterval は 1000ms ごとに実行
-      vi.advanceTimersByTime(1000);
-
-      expect(listener).toHaveBeenCalledWith(
+      // CoreAgentにイベントが転送されることを確認
+      expect(mockCoreAgent.queueEvent).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'PROCESS_USER_REQUEST',
           priority: 'high',
           payload: { test: true },
         })
       );
-
-      // CoreAgentにイベントが転送されることを確認
-      expect(mockCoreAgent.queueEvent).toHaveBeenCalled();
     });
 
     it('should emit event:processed after processing', async () => {
