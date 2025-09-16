@@ -204,5 +204,6 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
  */
 export const analyzeIssueImpactWorkflow: WorkflowDefinition = {
   name: 'AnalyzeIssueImpact',
+  description: 'Issueの影響範囲を分析し、関連性と優先度を判定して必要に応じて知識抽出を起動する',
   executor: executeAnalyzeIssueImpact,
 };

@@ -191,5 +191,6 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
  */
 export const extractKnowledgeWorkflow: WorkflowDefinition = {
   name: 'ExtractKnowledge',
+  description: '情報から再利用可能な知識を抽出し、Knowledge DBに保存する',
   executor: executeExtractKnowledge,
 };

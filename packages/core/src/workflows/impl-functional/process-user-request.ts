@@ -177,5 +177,6 @@ async function executeProcessUserRequest(
  */
 export const processUserRequestWorkflow: WorkflowDefinition = {
   name: 'ProcessUserRequest',
+  description: 'ユーザーリクエストを分類し、適切な後続ワークフローへルーティングする',
   executor: executeProcessUserRequest,
 };

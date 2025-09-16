@@ -26,6 +26,7 @@ export type WorkflowExecutor = (
  */
 export interface WorkflowDefinition {
   name: string;
+  description: string; // 生成AIが判断できるようにワークフローの目的を明確に定義
   executor: WorkflowExecutor;
 }
 

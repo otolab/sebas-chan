@@ -101,5 +101,6 @@ async function executeIngestInput(
  */
 export const ingestInputWorkflow: WorkflowDefinition = {
   name: 'IngestInput',
+  description: '入力データをPondに取り込み、エラーキーワードを検出して必要に応じて分析を起動する',
   executor: executeIngestInput,
 };

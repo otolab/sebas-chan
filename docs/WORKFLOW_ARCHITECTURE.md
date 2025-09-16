@@ -52,13 +52,12 @@ interface WorkflowContext {
 }
 
 // ドライバーファクトリの型
-type DriverFactory = (capabilities: DriverCapabilities) => Driver;
-
-interface DriverCapabilities {
+// @moduler-prompt/utilsのDriverCapabilityを使用
+type DriverFactory = (capabilities: {
   model: 'fast' | 'standard' | 'large';  // モデルサイズ
   temperature?: number;                    // 生成温度
   maxTokens?: number;                     // 最大トークン数
-}
+}) => AIDriver | Promise<AIDriver>;
 ```
 
 ### WorkflowStorage
@@ -139,18 +138,26 @@ async function executeWorkflow(
 
   try {
     // 入力ログ
-    await logger.logInput({ event, state: context.state });
+    logger.log(LogType.INPUT, {
+      event,
+      state: context.state,
+      metadata: context.metadata,
+    });
 
     // ワークフロー実行
     const result = await workflow.executor(event, context, emitter);
 
     // 出力ログ
-    await logger.logOutput(result.output);
+    logger.log(LogType.OUTPUT, result.output);
 
     return result;
   } catch (error) {
     // エラーログ
-    await logger.logError(error as Error, { event, context });
+    logger.log(LogType.ERROR, {
+      message: (error as Error).message,
+      stack: (error as Error).stack,
+      context: { event, context },
+    });
 
     return {
       success: false,
@@ -181,14 +188,13 @@ class WorkflowRegistry {
 
 ```typescript
 import { getWorkflowRegistry } from '@sebas-chan/core';
-import { registerAllWorkflows } from '@sebas-chan/core/workflows';
+import { ingestInputWorkflow } from '@sebas-chan/core/workflows/impl-functional';
 
-// 全ワークフローを一括登録
-registerAllWorkflows();
-
-// または個別登録
+// 個別登録のみ使用
 const registry = getWorkflowRegistry();
 registry.register('INGEST_INPUT', ingestInputWorkflow);
+registry.register('PROCESS_USER_REQUEST', processUserRequestWorkflow);
+// 他のワークフローも同様に個別登録
 ```
 
 ## ディレクトリ構造
@@ -271,14 +277,17 @@ describe('IngestInput Workflow', () => {
 const myWorkflow: WorkflowDefinition = {
   name: 'MyWorkflow',
   executor: async (event, context, emitter) => {
-    // ドライバーの作成（必要なcapabilitiesを指定）
-    const driver = context.createDriver({
+    // ドライバーの作成
+    const driver = await context.createDriver({
       model: 'standard',
       temperature: 0.3
     });
 
+    // プロンプトのコンパイル
+    const compiledPrompt = compile({ instructions: [prompt] });
+
     // AI処理
-    const result = await driver.call(prompt);
+    const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
     // 次のワークフローをイベント発行で起動（サブワークフローは使用しない）
     emitter.emit({
@@ -288,7 +297,7 @@ const myWorkflow: WorkflowDefinition = {
     });
 
     // ログ記録
-    await context.logger.log(LogType.OUTPUT, { result });
+    context.logger.log(LogType.OUTPUT, { result });
 
     return { success: true, context, output: result };
   }

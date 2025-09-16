@@ -54,13 +54,8 @@ interface WorkflowLogger {
   // ワークフロー名
   readonly workflowName: string;
 
-  // 統一ログメソッド（特化メソッドは廃止）
-  log(type: LogType, data: unknown): Promise<void>;
-
-  // 便利メソッド（内部でlog()を呼ぶ）
-  logInput(input: unknown): Promise<void>;
-  logOutput(output: unknown): Promise<void>;
-  logError(error: Error, context?: unknown): Promise<void>;
+  // 統一ログメソッド
+  log(type: LogType, data: unknown): void;
 }
 ```
 
@@ -84,26 +79,20 @@ interface WorkflowContext {
   // AIドライバーファクトリ
   createDriver: DriverFactory;
 
-  // 実行時設定（modelは含まない）
-  config?: {
-    temperature?: number;
-    maxRetries?: number;
-    timeout?: number;
-    logLevel?: 'debug' | 'info' | 'warn' | 'error';
-  };
+  // 実行時設定（空オブジェクト）
+  config?: {};
 
   // 実行時メタデータ
   metadata?: Record<string, unknown>;
 }
 
 // ドライバーファクトリの型
-type DriverFactory = (capabilities: DriverCapabilities) => AIDriver;
-
-interface DriverCapabilities {
+// @moduler-prompt/utilsのDriverCapabilityを使用
+type DriverFactory = (capabilities: {
   model: 'fast' | 'standard' | 'large';
   temperature?: number;
   maxTokens?: number;
-}
+}) => AIDriver | Promise<AIDriver>;
 ```
 
 注意:
@@ -114,12 +103,7 @@ interface DriverCapabilities {
 
 ## ログストレージ
 
-### 1. ファイルベース（開発環境）
-- JSON Lines形式（.jsonl）
-- 日別ローテーション
-- logs/workflows/YYYY-MM-DD/executionId.jsonl
-
-### 2. データベース（本番環境）
+### データベース（LanceDB）
 ```sql
 CREATE TABLE workflow_logs (
   id SERIAL PRIMARY KEY,
@@ -144,31 +128,36 @@ const myWorkflow: WorkflowDefinition = {
     const { logger, storage, createDriver } = context;
 
     // 入力をログ
-    await logger.logInput({ event });
+    logger.log(LogType.INPUT, { event });
 
     // DB検索をログ
     const results = await storage.searchPond(query);
-    await logger.log(LogType.DB_QUERY, {
+    logger.log(LogType.DB_QUERY, {
       operation: 'searchPond',
       query,
       resultIds: results.map(r => r.id)
     });
 
     // ドライバーを作成してAI呼び出し
-    const driver = createDriver({
+    const driver = await createDriver({
       model: 'standard',
       temperature: 0.3
     });
-    const response = await callDriver(driver, prompt);
-    await logger.log(LogType.AI_CALL, {
+
+    // プロンプトのコンパイル
+    const compiledPrompt = compile({ instructions: [prompt] });
+
+    // AI呼び出し
+    const response = await driver.query(compiledPrompt, { temperature: 0.3 });
+    logger.log(LogType.AI_CALL, {
       prompt,
       response,
-      model: 'standard'
+      temperature: 0.3
     });
 
     // 出力をログ
     const output = { processedData: response };
-    await logger.logOutput(output);
+    logger.log(LogType.OUTPUT, output);
 
     return { success: true, context, output };
   }
@@ -194,47 +183,6 @@ const errors = await logStore.query({
 const stats = await logStore.getStatistics('IngestInput');
 // { totalRuns: 1000, successRate: 0.95, avgDuration: 1200 }
 ```
-
-## セキュリティとプライバシー
-
-### 1. センシティブデータの除外
-- パスワード、APIキー、トークンは記録しない
-- 個人情報はハッシュ化または除外
-- プロンプトは必要最小限の情報のみ記録
-
-### 2. アクセス制御
-- ログへのアクセスは認証が必要
-- ロールベースのアクセス制御（RBAC）
-- 監査ログの記録
-
-## パフォーマンス考慮
-
-### 1. 非同期ログ
-- ログ書き込みは非同期で実行
-- バッファリングによる効率化
-- ワークフロー実行をブロックしない
-
-### 2. ログサイズ管理
-- 古いログの自動アーカイブ
-- 圧縮による容量削減
-- 保持期間の設定（デフォルト: 30日）
-
-## 今後の拡張
-
-### 1. ログビューアー
-- Web UIでのログ閲覧
-- フィルタリングと検索
-- 実行フローの可視化
-
-### 2. アラート機能
-- エラー率の監視
-- パフォーマンス劣化の検知
-- 異常パターンの通知
-
-### 3. 再実行機能
-- ログからの入力データ復元
-- ワークフローの再実行
-- デバッグモード実行
 
 ---
 

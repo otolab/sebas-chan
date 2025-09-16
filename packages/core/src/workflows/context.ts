@@ -71,24 +71,9 @@ export interface WorkflowStorage {
 
 /**
  * ワークフロー実行設定
+ * 現時点では空オブジェクト（将来の拡張用）
  */
-export interface WorkflowConfig {
-  /**
-   * リトライ設定
-   */
-  maxRetries?: number;
-  retryDelay?: number;
-
-  /**
-   * タイムアウト設定
-   */
-  timeout?: number;
-
-  /**
-   * ログレベル
-   */
-  logLevel?: 'debug' | 'info' | 'warn' | 'error';
-}
+export interface WorkflowConfig {}
 
 /**
  * イベントエミッター（次のワークフロー起動用）
