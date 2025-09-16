@@ -71,7 +71,7 @@ describe('Knowledge Routes', () => {
         reputation: { upvotes: 10, downvotes: 0 },
         sources: [
           { type: 'issue', issueId: 'issue-2' },
-          { type: 'issue', issueId: 'issue-3' }
+          { type: 'issue', issueId: 'issue-3' },
         ],
       };
 
@@ -112,9 +112,7 @@ describe('Knowledge Routes', () => {
 
       vi.mocked(mockCoreEngine.createKnowledge).mockResolvedValue(createdKnowledge);
 
-      const response = await request(app)
-        .post('/api/knowledge')
-        .send(newKnowledge);
+      const response = await request(app).post('/api/knowledge').send(newKnowledge);
 
       expect(response.status).toBe(201);
       expect(response.body).toMatchObject({
@@ -130,16 +128,12 @@ describe('Knowledge Routes', () => {
     });
 
     it('should handle creation errors', async () => {
-      vi.mocked(mockCoreEngine.createKnowledge).mockRejectedValue(
-        new Error('Creation failed')
-      );
+      vi.mocked(mockCoreEngine.createKnowledge).mockRejectedValue(new Error('Creation failed'));
 
-      const response = await request(app)
-        .post('/api/knowledge')
-        .send({
-          type: 'factoid',
-          content: 'Test content',
-        });
+      const response = await request(app).post('/api/knowledge').send({
+        type: 'factoid',
+        content: 'Test content',
+      });
 
       expect(response.status).toBe(500);
     });

@@ -444,13 +444,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         };
 
         promises.push(
-          agent.executeWorkflow(
-            concurrentWorkflow,
-            event,
-            mockContext,
-            mockLogger,
-            mockEmitter
-          )
+          agent.executeWorkflow(concurrentWorkflow, event, mockContext, mockLogger, mockEmitter)
         );
       }
 

@@ -1,6 +1,5 @@
 import type { AgentEvent } from '../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from './context.js';
-import { LogType } from './logger.js';
 
 /**
  * ワークフローの実行結果

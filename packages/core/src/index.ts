@@ -8,7 +8,7 @@ import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
   analyzeIssueImpactWorkflow,
-  extractKnowledgeWorkflow
+  extractKnowledgeWorkflow,
 } from './workflows/impl-functional/index.js';
 
 export class CoreAgent {
@@ -60,7 +60,7 @@ export class CoreAgent {
       return {
         success: false,
         context,
-        error: error as Error
+        error: error as Error,
       };
     }
   }
@@ -78,7 +78,6 @@ export class CoreAgent {
   public getWorkflowRegistry(): WorkflowRegistry {
     return this.workflowRegistry;
   }
-
 }
 
 // AgentEventのペイロード型定義
@@ -106,7 +105,7 @@ export function generateWorkflowRegistry(): WorkflowRegistry {
     ingestInputWorkflow,
     processUserRequestWorkflow,
     analyzeIssueImpactWorkflow,
-    extractKnowledgeWorkflow
+    extractKnowledgeWorkflow,
   ];
 
   for (const workflow of workflows) {

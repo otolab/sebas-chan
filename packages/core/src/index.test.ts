@@ -43,7 +43,7 @@ describe('CoreAgent', () => {
     };
 
     const registry = agent.getWorkflowRegistry();
-    const workflow = registry.get('PROCESS_USER_REQUEST');
+    const workflow = registry.get('ProcessUserRequest');
 
     if (!workflow) {
       throw new Error('Workflow not found');
@@ -59,9 +59,7 @@ describe('CoreAgent', () => {
 
     expect(result).toBeDefined();
     expect(result.success).toBeDefined();
-    expect(consoleLogSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Executing workflow:')
-    );
+    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Executing workflow:'));
   });
 
   it('should handle workflow errors', async () => {
@@ -132,9 +130,9 @@ describe('CoreAgent', () => {
     const registry = generateWorkflowRegistry();
 
     // 標準ワークフローが登録されていることを確認
-    expect(registry.get('INGEST_INPUT')).toBeDefined();
-    expect(registry.get('PROCESS_USER_REQUEST')).toBeDefined();
-    expect(registry.get('ANALYZE_ISSUE_IMPACT')).toBeDefined();
-    expect(registry.get('EXTRACT_KNOWLEDGE')).toBeDefined();
+    expect(registry.get('IngestInput')).toBeDefined();
+    expect(registry.get('ProcessUserRequest')).toBeDefined();
+    expect(registry.get('AnalyzeIssueImpact')).toBeDefined();
+    expect(registry.get('ExtractKnowledge')).toBeDefined();
   });
 });

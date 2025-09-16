@@ -3,7 +3,6 @@ import type {
   WorkflowStorage,
   WorkflowEventEmitter,
   WorkflowConfig,
-  WorkflowLogger,
   DriverFactory,
 } from '@sebas-chan/core';
 import type {
@@ -49,6 +48,11 @@ export class EngineWorkflowStorage implements WorkflowStorage {
   }
 
   async updateIssue(id: string, update: Partial<Issue>): Promise<Issue> {
+    // DBClientが利用可能な場合はそれを使用
+    if (this.dbClient) {
+      return await this.dbClient.updateIssue(id, update);
+    }
+
     // 既存のIssueを取得
     const existing = await this.getIssue(id);
     if (!existing) {
@@ -62,8 +66,6 @@ export class EngineWorkflowStorage implements WorkflowStorage {
       updatedAt: new Date(),
     };
 
-    // TODO: DBClientにupdateメソッドを追加後、実装を完成させる
-    // 現時点では更新されたオブジェクトを返すのみ
     return updated;
   }
 
@@ -77,8 +79,12 @@ export class EngineWorkflowStorage implements WorkflowStorage {
   }
 
   async getKnowledge(id: string): Promise<Knowledge | null> {
-    // TODO: DBClientにgetKnowledgeメソッドを追加後、実装を完成させる
-    // 現時点では検索を使用
+    // DBClientが利用可能な場合はそれを使用
+    if (this.dbClient) {
+      return await this.dbClient.getKnowledge(id);
+    }
+
+    // フォールバックとして検索を使用
     const results = await this.searchKnowledge(`id:${id}`);
     return results.length > 0 ? results[0] : null;
   }
@@ -88,6 +94,11 @@ export class EngineWorkflowStorage implements WorkflowStorage {
   }
 
   async updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge> {
+    // DBClientが利用可能な場合はそれを使用
+    if (this.dbClient) {
+      return await this.dbClient.updateKnowledge(id, update);
+    }
+
     // 既存のKnowledgeを取得
     const results = await this.searchKnowledge(`id:${id}`);
     if (results.length === 0) {
@@ -101,8 +112,6 @@ export class EngineWorkflowStorage implements WorkflowStorage {
       updatedAt: new Date(),
     };
 
-    // TODO: DBClientにupdateメソッドを追加後、実装を完成させる
-    // 現時点では更新されたオブジェクトを返すのみ
     return updated;
   }
 }
@@ -141,7 +150,6 @@ export class EngineWorkflowContext implements WorkflowContext {
     this.storage = new EngineWorkflowStorage(db, engine);
     this.state = stateManager.getState();
   }
-
 }
 
 /**
@@ -155,14 +163,7 @@ export function createWorkflowContext(
   config?: WorkflowConfig,
   metadata?: Record<string, unknown>
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(
-    stateManager,
-    db,
-    engine,
-    createDriver,
-    config,
-    metadata
-  );
+  return new EngineWorkflowContext(stateManager, db, engine, createDriver, config, metadata);
 }
 
 /**

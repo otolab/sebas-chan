@@ -60,9 +60,7 @@ describe('State Routes', () => {
     it('should update state with valid content', async () => {
       const newState = '## Updated State\n- All tasks completed';
 
-      const response = await request(app)
-        .put('/api/state')
-        .send({ content: newState });
+      const response = await request(app).put('/api/state').send({ content: newState });
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
@@ -75,9 +73,7 @@ describe('State Routes', () => {
     });
 
     it('should return 400 for invalid content', async () => {
-      const response = await request(app)
-        .put('/api/state')
-        .send({ content: 123 }); // Invalid type
+      const response = await request(app).put('/api/state').send({ content: 123 }); // Invalid type
 
       expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
@@ -88,9 +84,7 @@ describe('State Routes', () => {
     });
 
     it('should return 400 for missing content', async () => {
-      const response = await request(app)
-        .put('/api/state')
-        .send({});
+      const response = await request(app).put('/api/state').send({});
 
       expect(response.status).toBe(400);
       expect(response.body).toMatchObject({
@@ -108,9 +102,7 @@ describe('State Routes', () => {
 
       vi.mocked(mockCoreEngine.getState).mockResolvedValue(updatedState);
 
-      const response = await request(app)
-        .post('/api/state/append')
-        .send({ section, content });
+      const response = await request(app).post('/api/state/append').send({ section, content });
 
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
@@ -137,9 +129,7 @@ describe('State Routes', () => {
     });
 
     it('should return 400 for missing content', async () => {
-      const response = await request(app)
-        .post('/api/state/append')
-        .send({ section: 'Tasks' });
+      const response = await request(app).post('/api/state/append').send({ section: 'Tasks' });
 
       expect(response.status).toBe(400);
       expect(response.body).toMatchObject({

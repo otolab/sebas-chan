@@ -14,7 +14,13 @@ export { Event };
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
-import { CoreAgent, AgentEvent, AgentEventPayload, WorkflowLogger, LogType, EventQueueImpl } from '@sebas-chan/core';
+import {
+  CoreAgent,
+  AgentEvent,
+  AgentEventPayload,
+  WorkflowLogger,
+  EventQueueImpl,
+} from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
 import {
@@ -236,7 +242,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     }
   }
 
-
   async getIssue(_id: string): Promise<Issue> {
     throw new Error('Not implemented');
   }
@@ -250,8 +255,24 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return issue;
   }
 
-  async updateIssue(_id: string, _data: Partial<Issue>): Promise<Issue> {
-    throw new Error('Not implemented');
+  async updateIssue(id: string, data: Partial<Issue>): Promise<Issue> {
+    // DBClientが利用可能な場合
+    if (this.dbClient) {
+      return await this.dbClient.updateIssue(id, data);
+    }
+
+    // フォールバック: インメモリで更新をシミュレート
+    const existing = await this.getIssue(id);
+    if (!existing) {
+      throw new Error(`Issue not found: ${id}`);
+    }
+
+    return {
+      ...existing,
+      ...data,
+      id, // IDは変更しない
+      updatedAt: new Date(),
+    };
   }
 
   async searchIssues(query: string): Promise<Issue[]> {
@@ -281,8 +302,18 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return [];
   }
 
-  async getKnowledge(_id: string): Promise<Knowledge> {
-    throw new Error('Not implemented');
+  async getKnowledge(id: string): Promise<Knowledge> {
+    // DBClientが利用可能な場合
+    if (this.dbClient) {
+      const knowledge = await this.dbClient.getKnowledge(id);
+      if (!knowledge) {
+        throw new Error(`Knowledge not found: ${id}`);
+      }
+      return knowledge;
+    }
+
+    // フォールバック
+    throw new Error(`Knowledge not found: ${id}`);
   }
 
   async createKnowledge(data: Omit<Knowledge, 'id'>): Promise<Knowledge> {
@@ -294,8 +325,20 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return knowledge;
   }
 
-  async updateKnowledge(_id: string, _data: Partial<Knowledge>): Promise<Knowledge> {
-    throw new Error('Not implemented');
+  async updateKnowledge(id: string, data: Partial<Knowledge>): Promise<Knowledge> {
+    // DBClientが利用可能な場合
+    if (this.dbClient) {
+      return await this.dbClient.updateKnowledge(id, data);
+    }
+
+    // フォールバック: インメモリで更新をシミュレート
+    const existing = await this.getKnowledge(id);
+    return {
+      ...existing,
+      ...data,
+      id, // IDは変更しない
+      updatedAt: new Date(),
+    };
   }
 
   async searchKnowledge(query: string): Promise<Knowledge[]> {

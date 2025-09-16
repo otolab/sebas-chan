@@ -1,7 +1,7 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
-import type { Issue, IssueUpdate, IssueRelation } from '@sebas-chan/shared-types';
+import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
 /**
@@ -32,7 +32,7 @@ function calculateImpactScore(content: string, relatedIssues: Issue[]): number {
 /**
  * 既存Issueを更新するか新規作成するかを判定
  */
-function shouldCreateNewIssue(existingIssues: Issue[], content: string): boolean {
+function shouldCreateNewIssue(existingIssues: Issue[], _content: string): boolean {
   // 既存のオープンIssueが多い場合は既存に統合
   const openIssues = existingIssues.filter((i) => i.status === 'open');
   if (openIssues.length > 5) {
@@ -65,14 +65,13 @@ async function executeAnalyzeIssueImpact(
     };
     aiResponse?: string;
   }
-  const { issue, aiResponse } = event.payload as unknown as AnalyzeIssueImpactPayload;
+  const { issue } = event.payload as unknown as AnalyzeIssueImpactPayload;
 
-  try {
-    // 1. 関連するIssueを検索
-    const relatedIssues = await storage.searchIssues(issue.content || issue.description || '');
+  // 1. 関連するIssueを検索
+  const relatedIssues = await storage.searchIssues(issue.content || issue.description || '');
 
-    // 2. AIで影響分析
-    const prompt = `
+  // 2. AIで影響分析
+  const prompt = `
 以下の問題の影響範囲を分析してください：
 ${issue.content || issue.description}
 
@@ -85,7 +84,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     // ドライバーを作成（分析タスク用）
     const driver = await createDriver({
       requiredCapabilities: ['reasoning'],
-      preferredCapabilities: ['japanese', 'structured']
+      preferredCapabilities: ['japanese', 'structured'],
     });
 
     const promptModule = { instructions: [prompt] };
@@ -94,7 +93,10 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     const impactAnalysis = result.content;
 
     // 3. 影響度スコアを計算
-    const impactScore = calculateImpactScore(issue.content || issue.description || '', relatedIssues);
+    const impactScore = calculateImpactScore(
+      issue.content || issue.description || '',
+      relatedIssues
+    );
 
     // 4. Issue作成または更新
     let issueId: string;
@@ -103,7 +105,8 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     if (shouldCreateNewIssue(relatedIssues, issue.content || issue.description || '')) {
       // 新規Issue作成
       const newIssue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'> = {
-        title: issue.title || `Issue: ${(issue.content || issue.description || '').substring(0, 50)}...`,
+        title:
+          issue.title || `Issue: ${(issue.content || issue.description || '').substring(0, 50)}...`,
         description: issue.content || issue.description || '',
         status: 'open',
         labels: impactScore > 0.7 ? ['high-priority'] : ['normal'],
@@ -134,8 +137,9 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
         author: 'ai' as const,
       };
 
-      // TODO: updateIssueメソッドの実装が必要
-      // await storage.updateIssue(issueId, { updates: [...targetIssue.updates, update] });
+      await storage.updateIssue(issueId, {
+        updates: [...targetIssue.updates, update],
+      });
     }
 
     // 5. 高影響度の場合は追加のワークフローを起動
@@ -152,7 +156,9 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     }
 
     // 6. State更新
-    const updatedState = context.state + `
+    const updatedState =
+      context.state +
+      `
 ## Issue影響分析 (${timestamp.toISOString()})
 - Issue ID: ${issueId}
 - Impact Score: ${impactScore.toFixed(2)}
@@ -173,9 +179,6 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
         analysis: impactAnalysis,
       },
     };
-  } catch (error) {
-    throw error;
-  }
 }
 
 /**

@@ -1,5 +1,4 @@
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
-import type { WorkflowLogger } from './logger.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 

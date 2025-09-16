@@ -17,7 +17,11 @@ function determineNextEvents(
   request: UserRequest,
   aiResponse: string
 ): Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: Record<string, unknown> }> {
-  const events: Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: Record<string, unknown> }> = [];
+  const events: Array<{
+    type: string;
+    priority: 'high' | 'normal' | 'low';
+    payload: Record<string, unknown>;
+  }> = [];
 
   switch (requestType) {
     case 'issue':
@@ -114,7 +118,7 @@ async function executeProcessUserRequest(
     // ドライバーを作成してプロンプトを実行
     const driver = await createDriver({
       requiredCapabilities: ['fast'],
-      preferredCapabilities: ['japanese']
+      preferredCapabilities: ['japanese'],
     });
 
     const promptModule = { instructions: [prompt] };
@@ -135,7 +139,9 @@ async function executeProcessUserRequest(
 
     // 5. State更新
     const timestamp = new Date().toISOString();
-    const updatedState = context.state + `
+    const updatedState =
+      context.state +
+      `
 ## ユーザーリクエスト処理 (${timestamp})
 - Request ID: ${request.id}
 - Type: ${requestType}

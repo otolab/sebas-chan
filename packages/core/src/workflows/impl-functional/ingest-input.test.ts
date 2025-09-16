@@ -12,7 +12,6 @@ describe('IngestInput Workflow (Functional)', () => {
   let mockEvent: AgentEvent;
 
   beforeEach(() => {
-
     // モックコンテキストの準備
     mockContext = {
       state: 'Initial state',
@@ -56,11 +55,7 @@ describe('IngestInput Workflow (Functional)', () => {
     const mockLogger = new WorkflowLogger('test-workflow');
     vi.spyOn(mockLogger, 'log');
 
-    const result = await ingestInputWorkflow.executor(
-      mockEvent,
-      mockContext,
-      mockEmitter
-    );
+    const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
     expect(result.output).toEqual({
@@ -76,12 +71,7 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should trigger analysis when error keywords are detected', async () => {
-    const result = await executeWorkflow(
-      ingestInputWorkflow,
-      mockEvent,
-      mockContext,
-      mockEmitter
-    );
+    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
 
@@ -99,12 +89,7 @@ describe('IngestInput Workflow (Functional)', () => {
   it('should not trigger analysis when no keywords are detected', async () => {
     (mockEvent.payload as any).input.content = '今日の天気はどうですか？';
 
-    const result = await executeWorkflow(
-      ingestInputWorkflow,
-      mockEvent,
-      mockContext,
-      mockEmitter
-    );
+    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
     expect((result.output as any).analyzed).toBe(false);
@@ -114,12 +99,7 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should update state with processing information', async () => {
-    const result = await executeWorkflow(
-      ingestInputWorkflow,
-      mockEvent,
-      mockContext,
-      mockEmitter
-    );
+    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
     // Stateが更新されたことを確認
@@ -133,12 +113,7 @@ describe('IngestInput Workflow (Functional)', () => {
     const error = new Error('Database connection failed');
     mockContext.storage.addPondEntry = vi.fn().mockRejectedValue(error);
 
-    const result = await executeWorkflow(
-      ingestInputWorkflow,
-      mockEvent,
-      mockContext,
-      mockEmitter
-    );
+    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(error);
@@ -146,16 +121,12 @@ describe('IngestInput Workflow (Functional)', () => {
 
   it('should work with different driver responses', async () => {
     // 複数の応答を設定
-    mockContext.createDriver = async () => new TestDriver({
-      responses: ['First response', 'Second response', 'Third response']
-    });
+    mockContext.createDriver = async () =>
+      new TestDriver({
+        responses: ['First response', 'Second response', 'Third response'],
+      });
 
-    const result = await executeWorkflow(
-      ingestInputWorkflow,
-      mockEvent,
-      mockContext,
-      mockEmitter
-    );
+    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
   });

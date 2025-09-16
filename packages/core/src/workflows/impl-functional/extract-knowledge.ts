@@ -10,11 +10,19 @@ import { compile } from '@moduler-prompt/core';
 function determineKnowledgeType(content: string, source?: string): Knowledge['type'] {
   const lowerContent = content.toLowerCase();
 
-  if (source === 'high_impact_issue' || lowerContent.includes('ルール') || lowerContent.includes('rule')) {
+  if (
+    source === 'high_impact_issue' ||
+    lowerContent.includes('ルール') ||
+    lowerContent.includes('rule')
+  ) {
     return 'system_rule';
   }
 
-  if (lowerContent.includes('手順') || lowerContent.includes('process') || lowerContent.includes('how to')) {
+  if (
+    lowerContent.includes('手順') ||
+    lowerContent.includes('process') ||
+    lowerContent.includes('how to')
+  ) {
     return 'process_manual';
   }
 
@@ -69,14 +77,15 @@ function createKnowledgeSources(payload: ExtractKnowledgePayload): KnowledgeSour
 async function executeExtractKnowledge(
   event: AgentEvent,
   context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  _emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
   const { storage, createDriver } = context;
   const payload = event.payload as unknown as ExtractKnowledgePayload;
 
-  try {
-    // 1. 抽出対象の内容を整理
-    const content = String(payload.question || payload.feedback || payload.impactAnalysis || payload.content || '');
+  // 1. 抽出対象の内容を整理
+    const content = String(
+      payload.question || payload.feedback || payload.impactAnalysis || payload.content || ''
+    );
 
     // 2. 既存の類似知識を検索
     const existingKnowledge = await storage.searchKnowledge(content);
@@ -94,7 +103,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
     // ドライバーを作成してプロンプトを実行
     const driver = await createDriver({
       requiredCapabilities: ['structured'],
-      preferredCapabilities: ['japanese', 'reasoning']
+      preferredCapabilities: ['japanese', 'reasoning'],
     });
 
     const promptModule = { instructions: [prompt] };
@@ -130,18 +139,19 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       // 6. 既存知識の評価を更新（簡易版）
       knowledgeId = existingKnowledge[0].id;
 
-      // TODO: updateKnowledgeメソッドの実装が必要
-      // await storage.updateKnowledge(knowledgeId, {
-      //   reputation: {
-      //     upvotes: existingKnowledge[0].reputation.upvotes + 1,
-      //     downvotes: existingKnowledge[0].reputation.downvotes,
-      //   },
-      // });
+      await storage.updateKnowledge(knowledgeId, {
+        reputation: {
+          upvotes: existingKnowledge[0].reputation.upvotes + 1,
+          downvotes: existingKnowledge[0].reputation.downvotes,
+        },
+      });
     }
 
     // 7. State更新
     const timestamp = new Date().toISOString();
-    const updatedState = context.state + `
+    const updatedState =
+      context.state +
+      `
 ## 知識抽出 (${timestamp})
 - Knowledge ID: ${knowledgeId || 'N/A'}
 - Type: ${determineKnowledgeType(extractedKnowledge, payload.source as string)}
@@ -162,9 +172,6 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
         existingKnowledgeCount: existingKnowledge.length,
       },
     };
-  } catch (error) {
-    throw error;
-  }
 }
 
 /**

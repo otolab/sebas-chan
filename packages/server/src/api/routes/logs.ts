@@ -55,13 +55,13 @@ export function createLogsRouter(coreEngine: CoreEngine): Router {
       // フィルタリング（簡易実装）
       let logs = mockLogs;
       if (query.executionId) {
-        logs = logs.filter(log => log.executionId === query.executionId);
+        logs = logs.filter((log) => log.executionId === query.executionId);
       }
       if (query.workflowType) {
-        logs = logs.filter(log => log.workflowType === query.workflowType);
+        logs = logs.filter((log) => log.workflowType === query.workflowType);
       }
       if (query.level) {
-        logs = logs.filter(log => log.level === query.level);
+        logs = logs.filter((log) => log.level === query.level);
       }
 
       // ページネーション

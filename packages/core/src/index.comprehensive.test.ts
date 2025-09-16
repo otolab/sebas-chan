@@ -73,18 +73,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       for (const event of events) {
         const workflow =
-          event.priority === 'high' ? highPriorityWorkflow :
-          event.priority === 'normal' ? normalPriorityWorkflow :
-          lowPriorityWorkflow;
+          event.priority === 'high'
+            ? highPriorityWorkflow
+            : event.priority === 'normal'
+              ? normalPriorityWorkflow
+              : lowPriorityWorkflow;
 
         const logger = new WorkflowLogger(workflow.name);
-        await agent.executeWorkflow(
-          workflow,
-          event,
-          mockContext,
-          logger,
-          mockEmitter
-        );
+        await agent.executeWorkflow(workflow, event, mockContext, logger, mockEmitter);
       }
 
       expect(executedWorkflows.length).toBe(3);
@@ -124,13 +120,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         };
 
         const logger = new WorkflowLogger('fifo-workflow');
-        await agent.executeWorkflow(
-          workflow,
-          event,
-          mockContext,
-          logger,
-          mockEmitter
-        );
+        await agent.executeWorkflow(workflow, event, mockContext, logger, mockEmitter);
       }
 
       expect(processedOrder).toEqual(['event-1', 'event-2', 'event-3', 'event-4', 'event-5']);
@@ -178,13 +168,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const logger1 = new WorkflowLogger('state-workflow');
-      await agent.executeWorkflow(
-        stateWorkflow,
-        event1,
-        mockContext,
-        logger1,
-        mockEmitter
-      );
+      await agent.executeWorkflow(stateWorkflow, event1, mockContext, logger1, mockEmitter);
 
       // 状態を変更
       const event2: AgentEvent = {
@@ -195,13 +179,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const logger2 = new WorkflowLogger('state-workflow');
-      await agent.executeWorkflow(
-        stateWorkflow,
-        event2,
-        mockContext,
-        logger2,
-        mockEmitter
-      );
+      await agent.executeWorkflow(stateWorkflow, event2, mockContext, logger2, mockEmitter);
 
       // 変更後の状態を確認
       const event3: AgentEvent = {
@@ -212,13 +190,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const logger3 = new WorkflowLogger('state-workflow');
-      await agent.executeWorkflow(
-        stateWorkflow,
-        event3,
-        mockContext,
-        logger3,
-        mockEmitter
-      );
+      await agent.executeWorkflow(stateWorkflow, event3, mockContext, logger3, mockEmitter);
 
       expect(stateTransitions.length).toBeGreaterThan(0);
       expect(stateTransitions).toContain('processing');
@@ -228,10 +200,10 @@ describe('CoreAgent - Comprehensive Tests', () => {
   describe('Complex Workflows', () => {
     it('should handle INGEST_INPUT workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('INGEST_INPUT');
+      const workflow = registry.get('IngestInput');
 
       expect(workflow).toBeDefined();
-      expect(workflow?.name).toBe('INGEST_INPUT');
+      expect(workflow?.name).toBe('IngestInput');
 
       const event: AgentEvent = {
         type: 'INGEST_INPUT',
@@ -267,10 +239,10 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
     it('should handle PROCESS_USER_REQUEST workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('PROCESS_USER_REQUEST');
+      const workflow = registry.get('ProcessUserRequest');
 
       expect(workflow).toBeDefined();
-      expect(workflow?.name).toBe('PROCESS_USER_REQUEST');
+      expect(workflow?.name).toBe('ProcessUserRequest');
 
       const event: AgentEvent = {
         type: 'PROCESS_USER_REQUEST',
@@ -302,10 +274,10 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
     it('should handle ANALYZE_ISSUE_IMPACT workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('ANALYZE_ISSUE_IMPACT');
+      const workflow = registry.get('AnalyzeIssueImpact');
 
       expect(workflow).toBeDefined();
-      expect(workflow?.name).toBe('ANALYZE_ISSUE_IMPACT');
+      expect(workflow?.name).toBe('AnalyzeIssueImpact');
 
       const event: AgentEvent = {
         type: 'ANALYZE_ISSUE_IMPACT',
@@ -337,10 +309,10 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
     it('should handle EXTRACT_KNOWLEDGE workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('EXTRACT_KNOWLEDGE');
+      const workflow = registry.get('ExtractKnowledge');
 
       expect(workflow).toBeDefined();
-      expect(workflow?.name).toBe('EXTRACT_KNOWLEDGE');
+      expect(workflow?.name).toBe('ExtractKnowledge');
 
       const event: AgentEvent = {
         type: 'EXTRACT_KNOWLEDGE',
@@ -565,13 +537,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         emit: vi.fn(),
       };
 
-      await agent.executeWorkflow(
-        loggingWorkflow,
-        event,
-        mockContext,
-        mockLogger,
-        mockEmitter
-      );
+      await agent.executeWorkflow(loggingWorkflow, event, mockContext, mockLogger, mockEmitter);
 
       expect(mockLogger.log).toHaveBeenCalled();
       expect(loggedEntries.length).toBeGreaterThan(0);
@@ -611,13 +577,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         };
 
         const logger = new WorkflowLogger('performance-workflow');
-        await agent.executeWorkflow(
-          performanceWorkflow,
-          event,
-          mockContext,
-          logger,
-          mockEmitter
-        );
+        await agent.executeWorkflow(performanceWorkflow, event, mockContext, logger, mockEmitter);
       }
 
       expect(executionTimes.length).toBe(10);
@@ -663,13 +623,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
         const logger = new WorkflowLogger('concurrent-perf-workflow');
         promises.push(
-          agent.executeWorkflow(
-            concurrentWorkflow,
-            event,
-            mockContext,
-            logger,
-            mockEmitter
-          )
+          agent.executeWorkflow(concurrentWorkflow, event, mockContext, logger, mockEmitter)
         );
       }
 
