@@ -37,7 +37,6 @@ describe('CoreAgent', () => {
     };
 
     const mockContext = createMockWorkflowContext();
-    const mockLogger = new WorkflowLogger('test-workflow');
     const mockEmitter: WorkflowEventEmitter = {
       emit: vi.fn(),
     };
@@ -53,7 +52,6 @@ describe('CoreAgent', () => {
       workflow,
       event,
       mockContext,
-      mockLogger,
       mockEmitter
     );
 
@@ -71,7 +69,6 @@ describe('CoreAgent', () => {
     };
 
     const mockContext = createMockWorkflowContext();
-    const mockLogger = new WorkflowLogger('error-workflow');
     const mockEmitter: WorkflowEventEmitter = {
       emit: vi.fn(),
     };
@@ -96,7 +93,6 @@ describe('CoreAgent', () => {
       errorWorkflow,
       event,
       mockContext,
-      mockLogger,
       mockEmitter
     );
 

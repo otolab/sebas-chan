@@ -11,7 +11,7 @@ import {
   extractKnowledgeWorkflow,
 } from './workflows/impl-functional/index.js';
 
-export class CoreAgent {
+class CoreAgent {
   private workflowRegistry: WorkflowRegistry;
 
   constructor(workflowRegistry?: WorkflowRegistry) {
@@ -23,40 +23,38 @@ export class CoreAgent {
    * ワークフローを実行
    * @param workflow 実行するワークフロー
    * @param event 処理するイベント
-   * @param context 実行コンテキスト
-   * @param logger ワークフローロガー
+   * @param context 実行コンテキスト（loggerを含む）
    * @param emitter イベントエミッター
    */
   public async executeWorkflow(
     workflow: WorkflowDefinition,
     event: AgentEvent,
     context: WorkflowContext,
-    logger: WorkflowLogger,
     emitter: WorkflowEventEmitter
   ): Promise<WorkflowResult> {
     console.log(`Executing workflow: ${workflow.name} for event: ${event.type}`);
 
     try {
-      // ログ記録
-      logger.log(LogType.INPUT, { event });
+      // ログ記録（contextからloggerを取得）
+      context.logger.log(LogType.INPUT, { event });
 
       // ワークフローを実行
       const result = await workflow.executor(event, context, emitter);
 
       // 出力をログ
       if (result.output) {
-        logger.log(LogType.OUTPUT, result.output);
+        context.logger.log(LogType.OUTPUT, result.output);
       }
 
       if (!result.success) {
         console.error(`Workflow ${workflow.name} failed:`, result.error);
-        logger.log(LogType.ERROR, { error: result.error });
+        context.logger.log(LogType.ERROR, { error: result.error });
       }
 
       return result;
     } catch (error) {
       console.error(`Error executing workflow ${workflow.name}:`, error);
-      logger.log(LogType.ERROR, { error });
+      context.logger.log(LogType.ERROR, { error });
       return {
         success: false,
         context,
@@ -115,4 +113,5 @@ export function generateWorkflowRegistry(): WorkflowRegistry {
   return registry;
 }
 
+export { CoreAgent };
 export default CoreAgent;

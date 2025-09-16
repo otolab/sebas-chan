@@ -80,7 +80,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
               : lowPriorityWorkflow;
 
         const logger = new WorkflowLogger(workflow.name);
-        await agent.executeWorkflow(workflow, event, mockContext, logger, mockEmitter);
+        await agent.executeWorkflow(workflow, event, mockContext, mockEmitter);
       }
 
       expect(executedWorkflows.length).toBe(3);
@@ -120,7 +120,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         };
 
         const logger = new WorkflowLogger('fifo-workflow');
-        await agent.executeWorkflow(workflow, event, mockContext, logger, mockEmitter);
+        await agent.executeWorkflow(workflow, event, mockContext, mockEmitter);
       }
 
       expect(processedOrder).toEqual(['event-1', 'event-2', 'event-3', 'event-4', 'event-5']);
@@ -168,7 +168,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const logger1 = new WorkflowLogger('state-workflow');
-      await agent.executeWorkflow(stateWorkflow, event1, mockContext, logger1, mockEmitter);
+      await agent.executeWorkflow(stateWorkflow, event1, mockContext, mockEmitter);
 
       // 状態を変更
       const event2: AgentEvent = {
@@ -179,7 +179,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const logger2 = new WorkflowLogger('state-workflow');
-      await agent.executeWorkflow(stateWorkflow, event2, mockContext, logger2, mockEmitter);
+      await agent.executeWorkflow(stateWorkflow, event2, mockContext, mockEmitter);
 
       // 変更後の状態を確認
       const event3: AgentEvent = {
@@ -190,7 +190,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const logger3 = new WorkflowLogger('state-workflow');
-      await agent.executeWorkflow(stateWorkflow, event3, mockContext, logger3, mockEmitter);
+      await agent.executeWorkflow(stateWorkflow, event3, mockContext, mockEmitter);
 
       expect(stateTransitions.length).toBeGreaterThan(0);
       expect(stateTransitions).toContain('processing');
@@ -219,7 +219,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockLogger = new WorkflowLogger('INGEST_INPUT');
+      // Logger is now part of context
       const mockEmitter: WorkflowEventEmitter = {
         emit: vi.fn(),
       };
@@ -228,7 +228,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        mockLogger,
+        
         mockEmitter
       );
 
@@ -255,7 +255,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockLogger = new WorkflowLogger('PROCESS_USER_REQUEST');
+      // Logger is now part of context
       const mockEmitter: WorkflowEventEmitter = {
         emit: vi.fn(),
       };
@@ -264,7 +264,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        mockLogger,
+        
         mockEmitter
       );
 
@@ -290,7 +290,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockLogger = new WorkflowLogger('ANALYZE_ISSUE_IMPACT');
+      // Logger is now part of context
       const mockEmitter: WorkflowEventEmitter = {
         emit: vi.fn(),
       };
@@ -299,7 +299,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        mockLogger,
+        
         mockEmitter
       );
 
@@ -325,7 +325,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockLogger = new WorkflowLogger('EXTRACT_KNOWLEDGE');
+      // Logger is now part of context
       const mockEmitter: WorkflowEventEmitter = {
         emit: vi.fn(),
       };
@@ -334,7 +334,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        mockLogger,
+        
         mockEmitter
       );
 
@@ -375,13 +375,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockLogger = new WorkflowLogger('cascading-workflow');
+      // Logger is now part of context
 
       const result = await agent.executeWorkflow(
         cascadingWorkflow,
         event,
         mockContext,
-        mockLogger,
+        
         mockEmitter
       );
 
@@ -429,13 +429,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockLogger = new WorkflowLogger('multi-emit-workflow');
+      // Logger is now part of context
 
       const result = await agent.executeWorkflow(
         multiEmitWorkflow,
         event,
         mockContext,
-        mockLogger,
+        
         mockEmitter
       );
 
@@ -508,11 +508,12 @@ describe('CoreAgent - Comprehensive Tests', () => {
     it('should log workflow execution', async () => {
       const loggedEntries: Array<{ type: string; data: unknown }> = [];
 
-      const mockLogger = new WorkflowLogger('test-workflow');
-      const originalLog = mockLogger.log;
-      mockLogger.log = vi.fn().mockImplementation((type, data) => {
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context - override the log method
+      const originalLog = mockContext.logger.log;
+      mockContext.logger.log = vi.fn().mockImplementation((type, data) => {
         loggedEntries.push({ type, data });
-        return originalLog.call(mockLogger, type, data);
+        return originalLog.call(mockContext.logger, type, data);
       });
 
       const loggingWorkflow: WorkflowDefinition = {
@@ -520,7 +521,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         description: 'Workflow with logging',
         executor: async () => ({
           success: true,
-          context: createMockWorkflowContext(),
+          context: mockContext,
           output: { logged: true },
         }),
       };
@@ -532,14 +533,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
         timestamp: new Date(),
       };
 
-      const mockContext = createMockWorkflowContext();
       const mockEmitter: WorkflowEventEmitter = {
         emit: vi.fn(),
       };
 
-      await agent.executeWorkflow(loggingWorkflow, event, mockContext, mockLogger, mockEmitter);
+      await agent.executeWorkflow(loggingWorkflow, event, mockContext, mockEmitter);
 
-      expect(mockLogger.log).toHaveBeenCalled();
+      expect(mockContext.logger.log).toHaveBeenCalled();
       expect(loggedEntries.length).toBeGreaterThan(0);
     });
   });
@@ -577,7 +577,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         };
 
         const logger = new WorkflowLogger('performance-workflow');
-        await agent.executeWorkflow(performanceWorkflow, event, mockContext, logger, mockEmitter);
+        await agent.executeWorkflow(performanceWorkflow, event, mockContext, mockEmitter);
       }
 
       expect(executionTimes.length).toBe(10);
@@ -623,7 +623,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
         const logger = new WorkflowLogger('concurrent-perf-workflow');
         promises.push(
-          agent.executeWorkflow(concurrentWorkflow, event, mockContext, logger, mockEmitter)
+          agent.executeWorkflow(concurrentWorkflow, event, mockContext, mockEmitter)
         );
       }
 

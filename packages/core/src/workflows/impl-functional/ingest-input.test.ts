@@ -28,6 +28,7 @@ describe('IngestInput Workflow (Functional)', () => {
         updateKnowledge: vi.fn(),
       },
       createDriver: async () => new TestDriver({ responses: ['AI response for testing'] }),
+      logger: new WorkflowLogger('test'),
       metadata: {},
     };
 

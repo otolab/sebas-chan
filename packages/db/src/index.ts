@@ -355,7 +355,6 @@ export class DBClient extends EventEmitter {
       ...existing,
       ...update,
       id, // IDは変更しない
-      updatedAt: new Date(),
     };
 
     // TODO: 実際のDB更新を実装
@@ -387,7 +386,6 @@ export class DBClient extends EventEmitter {
       ...existing,
       ...update,
       id, // IDは変更しない
-      updatedAt: new Date(),
     };
 
     // TODO: 実際のDB更新を実装

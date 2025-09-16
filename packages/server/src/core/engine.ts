@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import {
   Event,
+  EventPayload,
   CoreAPI,
   Issue,
   Flow,
@@ -196,7 +197,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       // 実行ごとに新しいloggerを作成
       const workflowLogger = new WorkflowLogger(workflow.name);
 
-      // contextを作成（loggerは含まない）
+      // contextを作成（loggerを含む）
       const context = createWorkflowContext(
         this,
         this.stateManager,
@@ -208,6 +209,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
           }
           return await this.driverRegistry.createDriver(result.driver);
         }) as DriverFactory,
+        workflowLogger,
         {}
       );
 
@@ -227,7 +229,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         workflow,
         agentEvent,
         context,
-        workflowLogger,
         emitter
       );
 
@@ -271,7 +272,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       ...existing,
       ...data,
       id, // IDは変更しない
-      updatedAt: new Date(),
     };
   }
 
@@ -337,7 +337,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       ...existing,
       ...data,
       id, // IDは変更しない
-      updatedAt: new Date(),
     };
   }
 
@@ -478,11 +477,27 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       id: nanoid(),
       timestamp: new Date(),
     };
-    this.eventQueue.enqueue(fullEvent);
+    // EventQueueImplはAgentEventを期待するので変換
+    const agentEvent: AgentEvent = {
+      type: fullEvent.type,
+      priority: fullEvent.priority,
+      payload: fullEvent.payload as AgentEventPayload,
+      timestamp: fullEvent.timestamp,
+    };
+    this.eventQueue.enqueue(agentEvent);
     this.emit('event:queued', fullEvent);
   }
 
   dequeueEvent(): Event | null {
-    return this.eventQueue.dequeue() as Event | null;
+    const agentEvent = this.eventQueue.dequeue();
+    if (!agentEvent) return null;
+    // AgentEventをEventに変換
+    return {
+      id: nanoid(),
+      type: agentEvent.type,
+      priority: agentEvent.priority,
+      payload: agentEvent.payload as EventPayload,
+      timestamp: agentEvent.timestamp,
+    } as Event;
   }
 }

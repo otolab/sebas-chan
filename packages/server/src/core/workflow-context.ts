@@ -3,6 +3,7 @@ import type {
   WorkflowStorage,
   WorkflowEventEmitter,
   WorkflowConfig,
+  WorkflowLogger,
   DriverFactory,
 } from '@sebas-chan/core';
 import type {
@@ -49,8 +50,8 @@ export class EngineWorkflowStorage implements WorkflowStorage {
 
   async updateIssue(id: string, update: Partial<Issue>): Promise<Issue> {
     // DBClientが利用可能な場合はそれを使用
-    if (this.dbClient) {
-      return await this.dbClient.updateIssue(id, update);
+    if (this.db) {
+      return await this.db.updateIssue(id, update);
     }
 
     // 既存のIssueを取得
@@ -63,7 +64,6 @@ export class EngineWorkflowStorage implements WorkflowStorage {
     const updated = {
       ...existing,
       ...update,
-      updatedAt: new Date(),
     };
 
     return updated;
@@ -80,8 +80,8 @@ export class EngineWorkflowStorage implements WorkflowStorage {
 
   async getKnowledge(id: string): Promise<Knowledge | null> {
     // DBClientが利用可能な場合はそれを使用
-    if (this.dbClient) {
-      return await this.dbClient.getKnowledge(id);
+    if (this.db) {
+      return await this.db.getKnowledge(id);
     }
 
     // フォールバックとして検索を使用
@@ -95,8 +95,8 @@ export class EngineWorkflowStorage implements WorkflowStorage {
 
   async updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge> {
     // DBClientが利用可能な場合はそれを使用
-    if (this.dbClient) {
-      return await this.dbClient.updateKnowledge(id, update);
+    if (this.db) {
+      return await this.db.updateKnowledge(id, update);
     }
 
     // 既存のKnowledgeを取得
@@ -109,7 +109,6 @@ export class EngineWorkflowStorage implements WorkflowStorage {
     const updated = {
       ...existing,
       ...update,
-      updatedAt: new Date(),
     };
 
     return updated;
@@ -144,6 +143,7 @@ export class EngineWorkflowContext implements WorkflowContext {
     private db: DBClient,
     private engine: CoreEngine,
     public readonly createDriver: DriverFactory,
+    public readonly logger: WorkflowLogger,
     public readonly config?: WorkflowConfig,
     public readonly metadata?: Record<string, unknown>
   ) {
@@ -160,10 +160,11 @@ export function createWorkflowContext(
   stateManager: StateManager,
   db: DBClient,
   createDriver: DriverFactory,
+  logger: WorkflowLogger,
   config?: WorkflowConfig,
   metadata?: Record<string, unknown>
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(stateManager, db, engine, createDriver, config, metadata);
+  return new EngineWorkflowContext(stateManager, db, engine, createDriver, logger, config, metadata);
 }
 
 /**
