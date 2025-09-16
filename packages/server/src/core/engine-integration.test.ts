@@ -26,7 +26,13 @@ describe('CoreEngine - CoreAgent Integration', () => {
       connect: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
       initModel: vi.fn().mockResolvedValue(true),
-      addPondEntry: vi.fn().mockResolvedValue(true),
+      addPondEntry: vi.fn().mockImplementation(async (entry) => {
+        return {
+          ...entry,
+          id: entry.id || `pond-${Date.now()}`,
+          timestamp: entry.timestamp || new Date(),
+        };
+      }),
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
     };
@@ -167,7 +173,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.initialize();
 
       // DBエラーをシミュレート
-      mockDbClient.addPondEntry.mockResolvedValue(false);
+      mockDbClient.addPondEntry = vi.fn().mockRejectedValue(new Error('Failed to add pond entry'));
 
       const contextArg = mockCoreAgent.setContext.mock.calls[0][0];
       const pondEntry = {
@@ -176,7 +182,9 @@ describe('CoreEngine - CoreAgent Integration', () => {
         timestamp: new Date(),
       };
 
-      await expect(contextArg.storage.addPondEntry(pondEntry)).rejects.toThrow('Failed to add pond entry');
+      await expect(contextArg.storage.addPondEntry(pondEntry)).rejects.toThrow(
+        'Failed to add pond entry'
+      );
     });
 
     it('should provide state as string property', async () => {
@@ -196,10 +204,9 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       // loggerが存在することを確認
       expect(contextArg.logger).toBeDefined();
-      expect(contextArg.logger).toHaveProperty('info');
-      expect(contextArg.logger).toHaveProperty('error');
-      expect(contextArg.logger).toHaveProperty('warn');
-      expect(contextArg.logger).toHaveProperty('debug');
+      expect(contextArg.logger).toHaveProperty('log');
+      expect(contextArg.logger).toHaveProperty('executionId');
+      expect(contextArg.logger).toHaveProperty('workflowName');
 
       // createDriverが存在することを確認
       expect(contextArg.createDriver).toBeDefined();
