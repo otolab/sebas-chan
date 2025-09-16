@@ -52,12 +52,9 @@ interface WorkflowContext {
 }
 
 // ドライバーファクトリの型
-// @moduler-prompt/utilsのDriverCapabilityを使用
-type DriverFactory = (capabilities: {
-  model: 'fast' | 'standard' | 'large';  // モデルサイズ
-  temperature?: number;                    // 生成温度
-  maxTokens?: number;                     // 最大トークン数
-}) => AIDriver | Promise<AIDriver>;
+// @moduler-prompt/utilsのDriverSelectionCriteriaを使用
+import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
+type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
 ```
 
 ### WorkflowStorage
@@ -279,8 +276,8 @@ const myWorkflow: WorkflowDefinition = {
   executor: async (event, context, emitter) => {
     // ドライバーの作成
     const driver = await context.createDriver({
-      model: 'standard',
-      temperature: 0.3
+      requiredCapabilities: ['reasoning'],
+      preferredCapabilities: ['japanese']
     });
 
     // プロンプトのコンパイル

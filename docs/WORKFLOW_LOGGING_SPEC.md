@@ -87,12 +87,9 @@ interface WorkflowContext {
 }
 
 // ドライバーファクトリの型
-// @moduler-prompt/utilsのDriverCapabilityを使用
-type DriverFactory = (capabilities: {
-  model: 'fast' | 'standard' | 'large';
-  temperature?: number;
-  maxTokens?: number;
-}) => AIDriver | Promise<AIDriver>;
+// @moduler-prompt/utilsのDriverSelectionCriteriaを使用
+import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
+type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
 ```
 
 注意:
