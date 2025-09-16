@@ -23,6 +23,7 @@ describe('IngestInput Workflow (Functional)', () => {
         searchKnowledge: vi.fn().mockResolvedValue([]),
         searchPond: vi.fn().mockResolvedValue([]),
         getIssue: vi.fn(),
+        getKnowledge: vi.fn(),
         createIssue: vi.fn(),
         updateIssue: vi.fn(),
         createKnowledge: vi.fn(),

@@ -30,9 +30,6 @@ export interface AgentContext {
   // ドライバーファクトリ（AI モデルアクセス）
   // @moduler-prompt/utilsのDriverSelectionCriteriaを使用
   createDriver?: DriverFactory;
-
-  // WorkflowContextを取得（Engineが提供）
-  getWorkflowContext?(): Promise<WorkflowContext> | WorkflowContext;
 }
 
 export class CoreAgent {
@@ -109,25 +106,9 @@ export class CoreAgent {
         return;
       }
 
-      // WorkflowContextをEngineから取得、EventEmitterをCoreから提供
-      const workflowContext = this.context.getWorkflowContext ?
-        await this.context.getWorkflowContext() : null;
-
-      if (!workflowContext) {
-        console.error('WorkflowContext not available from Engine');
-        return;
-      }
-
-      // EventEmitterをCoreから提供
-      const emitter: WorkflowEventEmitter = {
-        emit: (nextEvent) => {
-          this.context?.emitEvent(nextEvent);
-        }
-      };
-
-      // ワークフロー実行
-      const result = await workflow.executor(event, workflowContext, emitter);
-      console.log(`Workflow ${workflow.name} executed:`, result.success);
+      // WorkflowはEngine側で実行される
+      // CoreAgentはワークフローの登録のみを行う
+      console.log(`Workflow ${workflow.name} would be executed by Engine`);
     } else {
       // ワークフローが登録されていない場合はエラー
       console.error(`No workflow registered for event type: ${event.type}`);

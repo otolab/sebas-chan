@@ -7,10 +7,13 @@ describe('CoreAgent', () => {
   let consoleLogSpy: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleWarnSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let consoleErrorSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
@@ -79,7 +82,7 @@ describe('CoreAgent', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 100));
 
-    expect(consoleWarnSpy).toHaveBeenCalledWith('Unknown event type: UNKNOWN_EVENT');
+    expect(consoleErrorSpy).toHaveBeenCalledWith('No workflow registered for event type: UNKNOWN_EVENT');
 
     await agent.stop();
     await startPromise;

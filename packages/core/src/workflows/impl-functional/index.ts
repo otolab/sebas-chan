@@ -17,11 +17,11 @@ import { extractKnowledgeWorkflow } from './extract-knowledge.js';
 export function registerAllWorkflows(): void {
   const registry = getWorkflowRegistry();
 
-  // 各ワークフローを対応するイベントタイプに登録
-  registry.register('INGEST_INPUT', ingestInputWorkflow);
-  registry.register('PROCESS_USER_REQUEST', processUserRequestWorkflow);
-  registry.register('ANALYZE_ISSUE_IMPACT', analyzeIssueImpactWorkflow);
-  registry.register('EXTRACT_KNOWLEDGE', extractKnowledgeWorkflow);
+  // 各ワークフローを登録（workflow.nameを使用）
+  registry.register(ingestInputWorkflow);
+  registry.register(processUserRequestWorkflow);
+  registry.register(analyzeIssueImpactWorkflow);
+  registry.register(extractKnowledgeWorkflow);
 
   console.log('All workflows registered successfully');
 }

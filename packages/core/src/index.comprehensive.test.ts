@@ -7,11 +7,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
   let consoleLogSpy: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleWarnSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let consoleErrorSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
@@ -177,7 +179,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       await agent.stop();
       await startPromise;
 
-      expect(consoleWarnSpy).toHaveBeenCalledWith('Unknown event type: NULL_PAYLOAD');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('No workflow registered for event type: NULL_PAYLOAD');
     });
   });
 

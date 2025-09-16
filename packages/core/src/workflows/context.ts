@@ -91,5 +91,9 @@ export interface WorkflowEventEmitter {
   /**
    * 次のイベントを発行
    */
-  emit(event: { type: WorkflowEventType; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void;
+  emit(event: {
+    type: WorkflowEventType;
+    priority?: 'high' | 'normal' | 'low';
+    payload: unknown;
+  }): void;
 }

@@ -4,8 +4,8 @@ import type {
   WorkflowEventEmitter,
   WorkflowConfig,
   WorkflowLogger,
+  DriverFactory,
 } from '@sebas-chan/core';
-import type { DriverFactory } from './driver-factory.js';
 import type {
   Issue,
   Knowledge,
@@ -74,6 +74,13 @@ export class EngineWorkflowStorage implements WorkflowStorage {
       timestamp: new Date(),
     });
     return result;
+  }
+
+  async getKnowledge(id: string): Promise<Knowledge | null> {
+    // TODO: DBClientにgetKnowledgeメソッドを追加後、実装を完成させる
+    // 現時点では検索を使用
+    const results = await this.searchKnowledge(`id:${id}`);
+    return results.length > 0 ? results[0] : null;
   }
 
   async createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge> {

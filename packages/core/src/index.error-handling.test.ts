@@ -7,11 +7,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
   let consoleLogSpy: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleWarnSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let consoleErrorSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
@@ -256,7 +258,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       await startPromise;
 
       expect(processedEmptyType).toBe(true);
-      expect(consoleWarnSpy).toHaveBeenCalledWith('Unknown event type: ');
+      expect(consoleErrorSpy).toHaveBeenCalledWith('No workflow registered for event type: ');
     });
 
     it('should handle very long event types', async () => {
@@ -275,7 +277,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       await startPromise;
 
       expect(consoleLogSpy).toHaveBeenCalledWith(`Event queued: ${longEventType}`);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(`Unknown event type: ${longEventType}`);
+      expect(consoleErrorSpy).toHaveBeenCalledWith(`No workflow registered for event type: ${longEventType}`);
     });
 
     it('should handle undefined payload gracefully', async () => {

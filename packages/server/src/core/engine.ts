@@ -25,8 +25,14 @@ import {
   WorkflowLogger,
 } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
-import { createDriverFactory } from './driver-factory.js';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
+import {
+  DriverRegistry,
+  registerDriverFactories,
+  type DriverSelectionCriteria,
+} from '@moduler-prompt/utils';
+import type { DriverFactory } from '@sebas-chan/core';
+import * as Drivers from '@moduler-prompt/driver';
 
 export interface EngineStatus {
   isRunning: boolean;
@@ -45,17 +51,26 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private processInterval: NodeJS.Timeout | null = null;
   private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
   private lastError?: string;
+  private driverRegistry: DriverRegistry;
 
   constructor() {
     super();
     this.eventQueue = new EventQueue();
     this.stateManager = new StateManager();
+
+    // DriverRegistryを初期化
+    this.driverRegistry = new DriverRegistry();
+    registerDriverFactories(this.driverRegistry, Drivers);
   }
 
   async initialize(): Promise<void> {
     logger.info('Initializing Core Engine...');
 
     try {
+      // DriverRegistryの設定をロード（設定ファイルが存在する場合）
+      // TODO: 設定ファイルパスを環境変数または設定から取得
+      // 例: await this.driverRegistry.loadConfig('./drivers.yaml');
+
       // DBクライアントを初期化
       this.dbStatus = 'connecting';
       this.dbClient = new DBClient();
@@ -86,8 +101,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return {
       getState: () => this.stateManager.getState(),
 
-      // ドライバーファクトリを提供
-      createDriver: createDriverFactory(),
+      // ドライバーファクトリを提供（DriverFactory型）
+      createDriver: (async (criteria: DriverSelectionCriteria) => {
+        const result = this.driverRegistry.selectDriver(criteria);
+        if (!result) {
+          throw new Error('No suitable driver found for the given criteria');
+        }
+        return await this.driverRegistry.createDriver(result.driver);
+      }) as DriverFactory,
 
       searchIssues: async (query: string) => {
         if (!this.dbClient) throw new Error('DB client not initialized');
@@ -136,6 +157,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
           payload: event.payload as EventPayload,
         });
       },
+
+      // getWorkflowContextは削除（handleEventで直接作成）
     };
   }
 
@@ -275,7 +298,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
           this.stateManager,
           this.dbClient!,
           workflowLogger,
-          createDriverFactory()
+          (async (criteria: DriverSelectionCriteria) => {
+            const result = this.driverRegistry.selectDriver(criteria);
+            if (!result) {
+              throw new Error('No suitable driver found for the given criteria');
+            }
+            return await this.driverRegistry.createDriver(result.driver);
+          }) as DriverFactory,
+          {} // config
         );
         const workflowEmitter = createWorkflowEventEmitter(this);
 
