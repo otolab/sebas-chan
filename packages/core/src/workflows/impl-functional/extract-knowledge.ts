@@ -2,7 +2,6 @@ import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
 import type { Knowledge, KnowledgeSource } from '@sebas-chan/shared-types';
-import { LogType } from '../logger.js';
 import { compile } from '@moduler-prompt/core';
 
 /**
@@ -72,22 +71,15 @@ async function executeExtractKnowledge(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger, storage, createDriver } = context;
+  const { storage, createDriver } = context;
   const payload = event.payload as unknown as ExtractKnowledgePayload;
 
   try {
     // 1. 抽出対象の内容を整理
     const content = String(payload.question || payload.feedback || payload.impactAnalysis || payload.content || '');
 
-    logger.log(LogType.INFO, { message: 'Extracting knowledge', contentLength: content.length });
-
     // 2. 既存の類似知識を検索
     const existingKnowledge = await storage.searchKnowledge(content);
-    logger.log(LogType.DB_QUERY, {
-      operation: 'searchKnowledge',
-      query: content,
-      resultIds: existingKnowledge.map((k) => k.id)
-    });
 
     // 3. AIで知識を抽出・構造化
     const prompt = `
@@ -109,8 +101,6 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
     const compiledPrompt = compile(promptModule);
     const result = await driver.query(compiledPrompt, { temperature: 0.2 });
     const extractedKnowledge = result.content;
-
-    logger.log(LogType.AI_CALL, { prompt, response: extractedKnowledge, capabilities: ['structured', 'japanese'] });
 
     // 4. 重複チェック（簡易版）
     const isDuplicate = existingKnowledge.some(
@@ -136,8 +126,6 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 
       const createdKnowledge = await storage.createKnowledge(newKnowledge);
       knowledgeId = createdKnowledge.id;
-
-      logger.log(LogType.INFO, { message: 'Created new knowledge', knowledgeId, type: knowledgeType });
     } else if (existingKnowledge.length > 0) {
       // 6. 既存知識の評価を更新（簡易版）
       knowledgeId = existingKnowledge[0].id;
@@ -149,8 +137,6 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       //     downvotes: existingKnowledge[0].reputation.downvotes,
       //   },
       // });
-
-      logger.log(LogType.INFO, { message: 'Updated existing knowledge reputation', knowledgeId });
     }
 
     // 7. State更新
@@ -177,11 +163,6 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       },
     };
   } catch (error) {
-    logger.log(LogType.ERROR, {
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-      context: { payload },
-    });
     throw error;
   }
 }

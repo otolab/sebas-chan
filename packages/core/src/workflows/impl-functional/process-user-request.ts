@@ -1,7 +1,6 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
-import { LogType } from '../logger.js';
 import { compile } from '@moduler-prompt/core';
 
 // リクエストの型定義
@@ -97,17 +96,14 @@ async function executeProcessUserRequest(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger, storage, createDriver } = context;
+  const { storage, createDriver } = context;
   interface ProcessUserRequestPayload {
     request: UserRequest;
   }
   const { request } = event.payload as unknown as ProcessUserRequestPayload;
 
   try {
-    // 1. リクエストをログ
-    logger.log(LogType.INFO, { message: 'Processing user request', requestId: request.id });
-
-    // 2. AIを使ってリクエストを分類・理解
+    // 1. AIを使ってリクエストを分類・理解
     const prompt = `
 以下のユーザーリクエストを分析し、適切な対応を提案してください。
 リクエスト: ${request.content}
@@ -126,21 +122,18 @@ async function executeProcessUserRequest(
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
     const aiResponse = result.content;
 
-    logger.log(LogType.AI_CALL, { prompt, response: aiResponse, capabilities: ['fast', 'japanese'] });
-
-    // 3. リクエストタイプを判定（簡易版）
+    // 2. リクエストタイプを判定（簡易版）
     const requestType = classifyRequest(String(request.content));
 
-    // 4. 後続のイベントを生成
+    // 3. 後続のイベントを生成
     const nextEvents = determineNextEvents(requestType, request, aiResponse);
 
-    // 5. イベントを発行
+    // 4. イベントを発行
     for (const nextEvent of nextEvents) {
-      logger.log(LogType.INFO, { message: `Emitting ${nextEvent.type} event`, eventType: nextEvent.type });
       emitter.emit(nextEvent);
     }
 
-    // 6. State更新
+    // 5. State更新
     const timestamp = new Date().toISOString();
     const updatedState = context.state + `
 ## ユーザーリクエスト処理 (${timestamp})
@@ -163,11 +156,6 @@ async function executeProcessUserRequest(
       },
     };
   } catch (error) {
-    logger.log(LogType.ERROR, {
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-      context: { request },
-    });
     throw error;
   }
 }

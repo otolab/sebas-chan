@@ -32,7 +32,7 @@ export interface WorkflowDefinition {
 
 /**
  * 共通のワークフロー実行ラッパー
- * ログ記録などの共通処理を提供
+ * @deprecated この関数は削除予定です。ログ記録はCoreAgentで行います。
  */
 export async function executeWorkflow(
   workflow: WorkflowDefinition,
@@ -40,31 +40,11 @@ export async function executeWorkflow(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger } = context;
-
   try {
-    // 入力をログ
-    logger.log(LogType.INPUT, {
-      event,
-      state: context.state,
-      metadata: context.metadata,
-    });
-
     // ワークフロー実行
     const result = await workflow.executor(event, context, emitter);
-
-    // 出力をログ
-    logger.log(LogType.OUTPUT, result.output);
-
     return result;
   } catch (error) {
-    // エラーをログ
-    logger.log(LogType.ERROR, {
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-      context: { event, context },
-    });
-
     return {
       success: false,
       context,

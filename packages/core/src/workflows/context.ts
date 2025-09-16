@@ -25,8 +25,8 @@ export type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Pr
  */
 export interface WorkflowContext {
   /**
-   * 現在のState（StateMachineのState）
-   * ワークフローを跨いで引き継がれる状態
+   * 現在のState
+   * StateMachineのState
    */
   state: string;
 
@@ -34,11 +34,6 @@ export interface WorkflowContext {
    * データストレージへのアクセス
    */
   storage: WorkflowStorage;
-
-  /**
-   * ワークフロー専用ログ
-   */
-  logger: WorkflowLogger;
 
   /**
    * AIドライバーファクトリ

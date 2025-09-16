@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent } from './index.js';
+import { CoreAgent, AgentEvent, WorkflowLogger, generateWorkflowRegistry } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
+import { WorkflowEventEmitter } from './workflows/context.js';
+import { WorkflowDefinition } from './workflows/functional-types.js';
 
 describe('CoreAgent - Comprehensive Tests', () => {
   let agent: CoreAgent;
@@ -16,590 +18,671 @@ describe('CoreAgent - Comprehensive Tests', () => {
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
-    // テスト用のWorkflowContextを設定
-    agent.setContext(createMockWorkflowContext());
   });
 
   afterEach(async () => {
-    if (agent) {
-      await agent.stop();
-    }
     vi.restoreAllMocks();
   });
 
-  describe('Event Priority Handling', () => {
-    it('should process high priority events first', async () => {
-      const processedOrder: string[] = [];
+  describe('Workflow Execution', () => {
+    it('should execute workflows with different priorities', async () => {
+      const executedWorkflows: string[] = [];
 
-      // イベント処理を監視するためのスパイを作成
+      const createWorkflow = (name: string): WorkflowDefinition => ({
+        name,
+        description: `Test workflow ${name}`,
+        executor: async (event) => {
+          executedWorkflows.push(event.type);
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+          };
+        },
+      });
+
+      const highPriorityWorkflow = createWorkflow('high-priority');
+      const normalPriorityWorkflow = createWorkflow('normal-priority');
+      const lowPriorityWorkflow = createWorkflow('low-priority');
+
       const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedOrder.push(event.type);
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      // 異なる優先度のイベントを追加
-      agent.queueEvent({
-        type: 'LOW_PRIORITY',
-        priority: 'low',
-        payload: {},
-        timestamp: new Date(),
-      });
+      // 異なる優先度のイベントでワークフローを実行
+      const events: AgentEvent[] = [
+        {
+          type: 'LOW_PRIORITY',
+          priority: 'low',
+          payload: {},
+          timestamp: new Date(),
+        },
+        {
+          type: 'HIGH_PRIORITY',
+          priority: 'high',
+          payload: {},
+          timestamp: new Date(),
+        },
+        {
+          type: 'NORMAL_PRIORITY',
+          priority: 'normal',
+          payload: {},
+          timestamp: new Date(),
+        },
+      ];
 
-      agent.queueEvent({
-        type: 'HIGH_PRIORITY',
-        priority: 'high',
-        payload: {},
-        timestamp: new Date(),
-      });
+      for (const event of events) {
+        const workflow =
+          event.priority === 'high' ? highPriorityWorkflow :
+          event.priority === 'normal' ? normalPriorityWorkflow :
+          lowPriorityWorkflow;
 
-      agent.queueEvent({
-        type: 'NORMAL_PRIORITY',
-        priority: 'normal',
-        payload: {},
-        timestamp: new Date(),
-      });
+        const logger = new WorkflowLogger(workflow.name);
+        await agent.executeWorkflow(
+          workflow,
+          event,
+          mockContext,
+          logger,
+          mockEmitter
+        );
+      }
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 300));
-      await agent.stop();
-      await startPromise;
-
-      // 現在の実装はFIFOなので、順序は追加順になるはず
-      // 将来的に優先度処理を実装した場合はこのテストを更新
-      expect(processedOrder.length).toBe(3);
-      expect(processedOrder).toContain('LOW_PRIORITY');
-      expect(processedOrder).toContain('HIGH_PRIORITY');
-      expect(processedOrder).toContain('NORMAL_PRIORITY');
+      expect(executedWorkflows.length).toBe(3);
+      expect(executedWorkflows).toContain('LOW_PRIORITY');
+      expect(executedWorkflows).toContain('HIGH_PRIORITY');
+      expect(executedWorkflows).toContain('NORMAL_PRIORITY');
     });
 
-    it('should handle events with same priority in FIFO order', async () => {
+    it('should handle FIFO order for same priority', async () => {
       const processedOrder: string[] = [];
 
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedOrder.push((event.payload as { id: string }).id);
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      const workflow: WorkflowDefinition = {
+        name: 'fifo-workflow',
+        description: 'Test FIFO ordering',
+        executor: async (event) => {
+          const payload = event.payload as { id: string };
+          processedOrder.push(payload.id);
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+          };
+        },
+      };
 
-      // 同じ優先度のイベントを複数追加
+      const mockContext = createMockWorkflowContext();
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
+
+      // 同じ優先度のイベントを順番に実行
       for (let i = 1; i <= 5; i++) {
-        agent.queueEvent({
+        const event: AgentEvent = {
           type: 'SAME_PRIORITY',
           priority: 'normal',
           payload: { id: `event-${i}` },
           timestamp: new Date(),
-        });
+        };
+
+        const logger = new WorkflowLogger('fifo-workflow');
+        await agent.executeWorkflow(
+          workflow,
+          event,
+          mockContext,
+          logger,
+          mockEmitter
+        );
       }
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await agent.stop();
-      await startPromise;
-
-      // FIFO順序を確認
       expect(processedOrder).toEqual(['event-1', 'event-2', 'event-3', 'event-4', 'event-5']);
     });
   });
 
-  describe('Error Handling', () => {
-    it('should continue processing after event handler error', async () => {
-      let processedCount = 0;
-      let errorCount = 0;
+  describe('State Management', () => {
+    it('should handle state transitions in workflows', async () => {
+      const stateTransitions: string[] = [];
+
+      const stateWorkflow: WorkflowDefinition = {
+        name: 'state-workflow',
+        description: 'Test state management',
+        executor: async (event, context) => {
+          const currentState = context.state;
+          stateTransitions.push(currentState);
+
+          const payload = event.payload as { newState?: string };
+          const updatedState = payload.newState || context.state;
+          if (payload.newState) {
+            stateTransitions.push(payload.newState);
+          }
+
+          return {
+            success: true,
+            context: {
+              ...context,
+              state: updatedState,
+            },
+          };
+        },
+      };
 
       const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedCount++;
-        if ((event.payload as { shouldFail?: boolean }).shouldFail) {
-          errorCount++;
-          throw new Error('Intentional test error');
-        }
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      // 失敗するイベントと成功するイベントを混在
-      agent.queueEvent({
-        type: 'SUCCESS_EVENT',
-        priority: 'normal',
-        payload: { shouldFail: false },
-        timestamp: new Date(),
-      });
-
-      agent.queueEvent({
-        type: 'FAILURE_EVENT',
-        priority: 'normal',
-        payload: { shouldFail: true },
-        timestamp: new Date(),
-      });
-
-      agent.queueEvent({
-        type: 'SUCCESS_EVENT_2',
-        priority: 'normal',
-        payload: { shouldFail: false },
-        timestamp: new Date(),
-      });
-
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      await agent.stop();
-      await startPromise;
-
-      // エラーが発生してもすべてのイベントが処理される
-      expect(processedCount).toBe(3);
-      expect(errorCount).toBe(1);
-    });
-
-    it('should handle malformed events gracefully', async () => {
-      const malformedEvent = {
-        // typeが欠落
+      // 初期状態を確認
+      const event1: AgentEvent = {
+        type: 'CHECK_STATE',
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
-      // 型チェックを回避してmalformedイベントを追加
-      (agent as any).eventQueue.enqueue(malformedEvent as AgentEvent);
-
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
-
-      // エラーが発生してもクラッシュしないことを確認
-      expect(consoleLogSpy).toHaveBeenCalledWith('Processing event: undefined');
-    });
-
-    it('should handle null payload gracefully', async () => {
-      agent.queueEvent({
-        type: 'NULL_PAYLOAD',
-        priority: 'normal',
-        payload: null as unknown as Record<string, unknown>,
-        timestamp: new Date(),
-      });
-
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error processing event NULL_PAYLOAD:',
-        expect.any(Error)
+      const logger1 = new WorkflowLogger('state-workflow');
+      await agent.executeWorkflow(
+        stateWorkflow,
+        event1,
+        mockContext,
+        logger1,
+        mockEmitter
       );
-    });
-  });
 
-  describe('Concurrent Event Processing', () => {
-    // TODO: 負荷テストは別のワークフローで実施を検討
-    // CIでの過剰なログ出力を防ぐためスキップ
-    it.skip('should handle rapid event queueing', async () => {
-      const eventCount = 100;
-      let processedCount = 0;
+      // 状態を変更
+      const event2: AgentEvent = {
+        type: 'UPDATE_STATE',
+        priority: 'normal',
+        payload: { newState: 'processing' },
+        timestamp: new Date(),
+      };
 
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedCount++;
-        // 処理時間をシミュレート
-        await new Promise((resolve) => setTimeout(resolve, 5));
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      const logger2 = new WorkflowLogger('state-workflow');
+      await agent.executeWorkflow(
+        stateWorkflow,
+        event2,
+        mockContext,
+        logger2,
+        mockEmitter
+      );
 
-      // 大量のイベントを短時間で追加
-      for (let i = 0; i < eventCount; i++) {
-        agent.queueEvent({
-          type: `EVENT_${i}`,
-          priority: i % 3 === 0 ? 'high' : i % 2 === 0 ? 'normal' : 'low',
-          payload: { index: i },
-          timestamp: new Date(),
-        });
-      }
-
-      const startPromise = agent.start();
-
-      // すべてのイベントが処理されるまで待つ
-      const maxWaitTime = eventCount * 10 + 1000; // 余裕を持たせる
-      const checkInterval = 100;
-      let waitedTime = 0;
-
-      while (processedCount < eventCount && waitedTime < maxWaitTime) {
-        await new Promise((resolve) => setTimeout(resolve, checkInterval));
-        waitedTime += checkInterval;
-      }
-
-      await agent.stop();
-      await startPromise;
-
-      expect(processedCount).toBe(eventCount);
-    });
-
-    it('should handle events added while processing', async () => {
-      const processedEvents: string[] = [];
-
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedEvents.push(event.type);
-
-        // 最初のイベント処理中に新しいイベントを追加
-        if (event.type === 'INITIAL_EVENT' && processedEvents.length === 1) {
-          agent.queueEvent({
-            type: 'DYNAMIC_EVENT',
-            priority: 'high',
-            payload: {},
-            timestamp: new Date(),
-          });
-        }
-
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
-
-      agent.queueEvent({
-        type: 'INITIAL_EVENT',
+      // 変更後の状態を確認
+      const event3: AgentEvent = {
+        type: 'CHECK_STATE',
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
-      });
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 2500));
-      await agent.stop();
-      await startPromise;
+      const logger3 = new WorkflowLogger('state-workflow');
+      await agent.executeWorkflow(
+        stateWorkflow,
+        event3,
+        mockContext,
+        logger3,
+        mockEmitter
+      );
 
-      expect(processedEvents).toContain('INITIAL_EVENT');
-      expect(processedEvents).toContain('DYNAMIC_EVENT');
+      expect(stateTransitions.length).toBeGreaterThan(0);
+      expect(stateTransitions).toContain('processing');
     });
   });
 
-  describe('Memory and Resource Management', () => {
-    // TODO: メモリテストは別のワークフローで実施を検討
-    // 1000イベントは過剰なログを生成するためスキップ
-    it.skip('should not accumulate memory with processed events', async () => {
-      const eventCount = 1000;
-      let processedCount = 0;
+  describe('Complex Workflows', () => {
+    it('should handle INGEST_INPUT workflow', async () => {
+      const registry = agent.getWorkflowRegistry();
+      const workflow = registry.get('INGEST_INPUT');
 
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedCount++;
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      expect(workflow).toBeDefined();
+      expect(workflow?.name).toBe('INGEST_INPUT');
 
-      // 大量のイベントを追加
-      for (let i = 0; i < eventCount; i++) {
-        agent.queueEvent({
-          type: 'MEMORY_TEST',
-          priority: 'normal',
-          payload: {
-            largeData: new Array(100).fill(`data-${i}`),
-            index: i,
+      const event: AgentEvent = {
+        type: 'INGEST_INPUT',
+        priority: 'normal',
+        payload: {
+          input: {
+            content: 'Test input',
+            source: 'test',
+            timestamp: new Date(),
           },
-          timestamp: new Date(),
-        });
-      }
-
-      const startPromise = agent.start();
-
-      // すべて処理されるまで待つ
-      while (processedCount < eventCount) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      // キューが空になっていることを確認
-      expect(agent['eventQueue'].size()).toBe(0);
-
-      await agent.stop();
-      await startPromise;
-    });
-
-    it('should handle start/stop cycles correctly', async () => {
-      // 複数回の開始/停止サイクル
-      for (let cycle = 0; cycle < 3; cycle++) {
-        agent.queueEvent({
-          type: `CYCLE_${cycle}`,
-          priority: 'normal',
-          payload: { cycle },
-          timestamp: new Date(),
-        });
-
-        const startPromise = agent.start();
-        await new Promise((resolve) => setTimeout(resolve, 100));
-        await agent.stop();
-        await startPromise;
-      }
-
-      expect(consoleLogSpy).toHaveBeenCalledWith('Starting Core Agent...');
-      expect(consoleLogSpy).toHaveBeenCalledWith('Stopping Core Agent...');
-    });
-
-    it('should not process events after stop', async () => {
-      let processedAfterStop = false;
+        },
+        timestamp: new Date(),
+      };
 
       const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        if (!agent['isProcessing']) {
-          processedAfterStop = true;
-        }
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      const mockLogger = new WorkflowLogger('INGEST_INPUT');
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      // イベントを追加
-      for (let i = 0; i < 10; i++) {
-        agent.queueEvent({
-          type: `EVENT_${i}`,
-          priority: 'normal',
-          payload: { index: i },
-          timestamp: new Date(),
-        });
-      }
+      const result = await agent.executeWorkflow(
+        workflow!,
+        event,
+        mockContext,
+        mockLogger,
+        mockEmitter
+      );
 
-      const startPromise = agent.start();
-
-      // 少し処理させてから停止
-      await new Promise((resolve) => setTimeout(resolve, 50));
-      await agent.stop();
-      await startPromise;
-
-      expect(processedAfterStop).toBe(false);
+      expect(result).toBeDefined();
+      // ワークフローの実装によっては成功/失敗が変わる可能性がある
+      expect(result.context).toBeDefined();
     });
-  });
 
-  describe('Workflow Integration Scenarios', () => {
-    it('should handle complex workflow chains', async () => {
-      const workflowSteps: string[] = [];
+    it('should handle PROCESS_USER_REQUEST workflow', async () => {
+      const registry = agent.getWorkflowRegistry();
+      const workflow = registry.get('PROCESS_USER_REQUEST');
 
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        workflowSteps.push(event.type);
+      expect(workflow).toBeDefined();
+      expect(workflow?.name).toBe('PROCESS_USER_REQUEST');
 
-        // ワークフローチェーンをシミュレート
-        switch (event.type) {
-          case 'PROCESS_USER_REQUEST':
-            // ユーザーリクエストの後にINGEST_INPUTを生成
-            agent.queueEvent({
-              type: 'INGEST_INPUT',
-              priority: 'high',
-              payload: { triggeredBy: 'PROCESS_USER_REQUEST' },
-              timestamp: new Date(),
-            });
-            break;
-
-          case 'INGEST_INPUT':
-            // Input処理後にANALYZE_ISSUE_IMPACTを生成
-            agent.queueEvent({
-              type: 'ANALYZE_ISSUE_IMPACT',
-              priority: 'normal',
-              payload: { triggeredBy: 'INGEST_INPUT' },
-              timestamp: new Date(),
-            });
-            break;
-
-          case 'ANALYZE_ISSUE_IMPACT':
-            // 分析後に複数のイベントを生成
-            agent.queueEvent({
-              type: 'UPDATE_KNOWLEDGE',
-              priority: 'low',
-              payload: { triggeredBy: 'ANALYZE_ISSUE_IMPACT' },
-              timestamp: new Date(),
-            });
-            agent.queueEvent({
-              type: 'NOTIFY_STAKEHOLDERS',
-              priority: 'normal',
-              payload: { triggeredBy: 'ANALYZE_ISSUE_IMPACT' },
-              timestamp: new Date(),
-            });
-            break;
-        }
-
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
-
-      // ワークフローの開始
-      agent.queueEvent({
+      const event: AgentEvent = {
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
-        payload: { request: 'Start workflow' },
+        payload: {
+          request: 'Test user request',
+          userId: 'test-user',
+        },
         timestamp: new Date(),
-      });
-
-      const startPromise = agent.start();
-
-      // ワークフローが完了するまで待つ
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      await agent.stop();
-      await startPromise;
-
-      // ワークフローの順序を確認
-      expect(workflowSteps).toContain('PROCESS_USER_REQUEST');
-      expect(workflowSteps).toContain('INGEST_INPUT');
-      expect(workflowSteps).toContain('ANALYZE_ISSUE_IMPACT');
-      expect(workflowSteps).toContain('UPDATE_KNOWLEDGE');
-      expect(workflowSteps).toContain('NOTIFY_STAKEHOLDERS');
-
-      // 順序が正しいことを確認
-      const userReqIndex = workflowSteps.indexOf('PROCESS_USER_REQUEST');
-      const ingestIndex = workflowSteps.indexOf('INGEST_INPUT');
-      const analyzeIndex = workflowSteps.indexOf('ANALYZE_ISSUE_IMPACT');
-
-      expect(userReqIndex).toBeLessThan(ingestIndex);
-      expect(ingestIndex).toBeLessThan(analyzeIndex);
-    });
-
-    it('should handle circular workflow prevention', async () => {
-      const processedEvents: string[] = [];
-      const MAX_EVENTS = 20; // 無限ループ防止
+      };
 
       const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedEvents.push(event.type);
+      const mockLogger = new WorkflowLogger('PROCESS_USER_REQUEST');
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-        // 循環を防ぐための処理回数チェック
-        if (processedEvents.length < MAX_EVENTS && event.type === 'CIRCULAR_EVENT') {
-          // 同じイベントを再度生成（循環をシミュレート）
-          agent.queueEvent({
-            type: 'CIRCULAR_EVENT',
-            priority: 'normal',
-            payload: {
-              iteration: ((event.payload as { iteration?: number }).iteration || 0) + 1,
-            },
-            timestamp: new Date(),
-          });
-        }
+      const result = await agent.executeWorkflow(
+        workflow!,
+        event,
+        mockContext,
+        mockLogger,
+        mockEmitter
+      );
 
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      expect(result).toBeDefined();
+      expect(result.context).toBeDefined();
+    });
 
-      agent.queueEvent({
-        type: 'CIRCULAR_EVENT',
+    it('should handle ANALYZE_ISSUE_IMPACT workflow', async () => {
+      const registry = agent.getWorkflowRegistry();
+      const workflow = registry.get('ANALYZE_ISSUE_IMPACT');
+
+      expect(workflow).toBeDefined();
+      expect(workflow?.name).toBe('ANALYZE_ISSUE_IMPACT');
+
+      const event: AgentEvent = {
+        type: 'ANALYZE_ISSUE_IMPACT',
         priority: 'normal',
-        payload: { iteration: 0 },
+        payload: {
+          issueId: 'test-issue-123',
+          impact: 'high',
+        },
         timestamp: new Date(),
-      });
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      await agent.stop();
-      await startPromise;
+      const mockContext = createMockWorkflowContext();
+      const mockLogger = new WorkflowLogger('ANALYZE_ISSUE_IMPACT');
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      // 無限ループに陥らないことを確認
-      expect(processedEvents.length).toBeLessThanOrEqual(MAX_EVENTS);
-      expect(processedEvents.filter((e) => e === 'CIRCULAR_EVENT').length).toBeGreaterThan(1);
+      const result = await agent.executeWorkflow(
+        workflow!,
+        event,
+        mockContext,
+        mockLogger,
+        mockEmitter
+      );
+
+      expect(result).toBeDefined();
+      expect(result.context).toBeDefined();
+    });
+
+    it('should handle EXTRACT_KNOWLEDGE workflow', async () => {
+      const registry = agent.getWorkflowRegistry();
+      const workflow = registry.get('EXTRACT_KNOWLEDGE');
+
+      expect(workflow).toBeDefined();
+      expect(workflow?.name).toBe('EXTRACT_KNOWLEDGE');
+
+      const event: AgentEvent = {
+        type: 'EXTRACT_KNOWLEDGE',
+        priority: 'low',
+        payload: {
+          source: 'test-document',
+          content: 'Test knowledge content',
+        },
+        timestamp: new Date(),
+      };
+
+      const mockContext = createMockWorkflowContext();
+      const mockLogger = new WorkflowLogger('EXTRACT_KNOWLEDGE');
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
+
+      const result = await agent.executeWorkflow(
+        workflow!,
+        event,
+        mockContext,
+        mockLogger,
+        mockEmitter
+      );
+
+      expect(result).toBeDefined();
+      expect(result.context).toBeDefined();
     });
   });
 
-  describe('Event Timestamp and Ordering', () => {
-    it('should maintain event timestamp integrity', async () => {
-      const eventTimestamps: Date[] = [];
+  describe('Event Emitter Integration', () => {
+    it('should trigger new events from workflows', async () => {
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        eventTimestamps.push(event.timestamp);
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
+      const cascadingWorkflow: WorkflowDefinition = {
+        name: 'cascading-workflow',
+        description: 'Workflow that triggers other events',
+        executor: async (event, context, emitter) => {
+          // 新しいイベントを発行
+          emitter.emit({
+            type: 'TRIGGERED_EVENT',
+            priority: 'high',
+            payload: { triggered: true },
+          });
 
-      const baseTime = new Date();
+          return {
+            success: true,
+            context,
+          };
+        },
+      };
 
-      // 異なるタイムスタンプのイベントを追加
-      for (let i = 0; i < 5; i++) {
-        agent.queueEvent({
-          type: `TIMED_EVENT_${i}`,
-          priority: 'normal',
-          payload: { index: i },
-          timestamp: new Date(baseTime.getTime() + i * 1000),
-        });
-      }
-
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 600));
-      await agent.stop();
-      await startPromise;
-
-      // タイムスタンプが保持されていることを確認
-      expect(eventTimestamps.length).toBe(5);
-      eventTimestamps.forEach((timestamp, index) => {
-        expect(timestamp.getTime()).toBe(baseTime.getTime() + index * 1000);
-      });
-    });
-
-    it('should handle events with past timestamps', async () => {
-      const pastDate = new Date('2020-01-01');
-      let processedPastEvent = false;
-
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        if (event.timestamp.getTime() === pastDate.getTime()) {
-          processedPastEvent = true;
-        }
-        return originalProcessEvent.call(agent, event, context || mockContext);
-      });
-
-      agent.queueEvent({
-        type: 'PAST_EVENT',
+      const event: AgentEvent = {
+        type: 'TRIGGER_CASCADE',
         priority: 'normal',
         payload: {},
-        timestamp: pastDate,
+        timestamp: new Date(),
+      };
+
+      const mockContext = createMockWorkflowContext();
+      const mockLogger = new WorkflowLogger('cascading-workflow');
+
+      const result = await agent.executeWorkflow(
+        cascadingWorkflow,
+        event,
+        mockContext,
+        mockLogger,
+        mockEmitter
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockEmitter.emit).toHaveBeenCalledWith({
+        type: 'TRIGGERED_EVENT',
+        priority: 'high',
+        payload: { triggered: true },
       });
+    });
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
+    it('should handle multiple event emissions', async () => {
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      expect(processedPastEvent).toBe(true);
+      const multiEmitWorkflow: WorkflowDefinition = {
+        name: 'multi-emit-workflow',
+        description: 'Workflow that emits multiple events',
+        executor: async (event, context, emitter) => {
+          const payload = event.payload as { count?: number };
+          const count = payload.count || 3;
+
+          for (let i = 0; i < count; i++) {
+            emitter.emit({
+              type: `EVENT_${i}`,
+              priority: 'normal',
+              payload: { index: i },
+            });
+          }
+
+          return {
+            success: true,
+            context,
+            output: { emittedCount: count },
+          };
+        },
+      };
+
+      const event: AgentEvent = {
+        type: 'MULTI_EMIT',
+        priority: 'normal',
+        payload: { count: 5 },
+        timestamp: new Date(),
+      };
+
+      const mockContext = createMockWorkflowContext();
+      const mockLogger = new WorkflowLogger('multi-emit-workflow');
+
+      const result = await agent.executeWorkflow(
+        multiEmitWorkflow,
+        event,
+        mockContext,
+        mockLogger,
+        mockEmitter
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.output).toEqual({ emittedCount: 5 });
+      expect(mockEmitter.emit).toHaveBeenCalledTimes(5);
     });
   });
 
-  describe('Performance Under Load', () => {
-    // TODO: パフォーマンステストは別のワークフロー（例: performance.yml）に移行を検討
-    // CI実行時間を短縮し、パフォーマンステストは定期実行や手動トリガーで実施する方が適切
-    it.skip('should maintain performance with high event throughput', async () => {
-      const startTime = Date.now();
-      const eventCount = 500;
-      let processedCount = 0;
+  describe('Workflow Registry', () => {
+    it('should register and retrieve custom workflows', () => {
+      const customWorkflow: WorkflowDefinition = {
+        name: 'CUSTOM_WORKFLOW',
+        description: 'Custom test workflow',
+        executor: async (event, context) => ({
+          success: true,
+          context,
+          output: { custom: true },
+        }),
+      };
 
-      const mockContext = createMockWorkflowContext();
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context?: any) => {
-        processedCount++;
-        // 最小限の処理時間
-        await new Promise((resolve) => setImmediate(resolve));
-        return originalProcessEvent.call(agent, event, context || mockContext);
+      agent.registerWorkflow(customWorkflow);
+      const registry = agent.getWorkflowRegistry();
+      const retrieved = registry.get('CUSTOM_WORKFLOW');
+
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.name).toBe('CUSTOM_WORKFLOW');
+      expect(retrieved?.description).toBe('Custom test workflow');
+    });
+
+    it('should override existing workflows', () => {
+      const originalWorkflow: WorkflowDefinition = {
+        name: 'OVERRIDE_TEST',
+        description: 'Original workflow',
+        executor: async (event, context) => ({
+          success: true,
+          context,
+          output: { version: 1 },
+        }),
+      };
+
+      const overrideWorkflow: WorkflowDefinition = {
+        name: 'OVERRIDE_TEST',
+        description: 'Override workflow',
+        executor: async (event, context) => ({
+          success: true,
+          context,
+          output: { version: 2 },
+        }),
+      };
+
+      agent.registerWorkflow(originalWorkflow);
+      agent.registerWorkflow(overrideWorkflow);
+
+      const registry = agent.getWorkflowRegistry();
+      const retrieved = registry.get('OVERRIDE_TEST');
+
+      expect(retrieved?.description).toBe('Override workflow');
+    });
+
+    it('should return undefined for non-existent workflows', () => {
+      const registry = agent.getWorkflowRegistry();
+      const retrieved = registry.get('NON_EXISTENT_WORKFLOW');
+
+      expect(retrieved).toBeUndefined();
+    });
+  });
+
+  describe('Logging Integration', () => {
+    it('should log workflow execution', async () => {
+      const loggedEntries: Array<{ type: string; data: unknown }> = [];
+
+      const mockLogger = new WorkflowLogger('test-workflow');
+      const originalLog = mockLogger.log;
+      mockLogger.log = vi.fn().mockImplementation((type, data) => {
+        loggedEntries.push({ type, data });
+        return originalLog.call(mockLogger, type, data);
       });
 
-      // バースト的にイベントを追加
-      for (let i = 0; i < eventCount; i++) {
-        agent.queueEvent({
+      const loggingWorkflow: WorkflowDefinition = {
+        name: 'logging-workflow',
+        description: 'Workflow with logging',
+        executor: async () => ({
+          success: true,
+          context: createMockWorkflowContext(),
+          output: { logged: true },
+        }),
+      };
+
+      const event: AgentEvent = {
+        type: 'LOG_TEST',
+        priority: 'normal',
+        payload: { test: true },
+        timestamp: new Date(),
+      };
+
+      const mockContext = createMockWorkflowContext();
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
+
+      await agent.executeWorkflow(
+        loggingWorkflow,
+        event,
+        mockContext,
+        mockLogger,
+        mockEmitter
+      );
+
+      expect(mockLogger.log).toHaveBeenCalled();
+      expect(loggedEntries.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Performance', () => {
+    it('should handle rapid workflow executions', async () => {
+      const executionTimes: number[] = [];
+
+      const performanceWorkflow: WorkflowDefinition = {
+        name: 'performance-workflow',
+        description: 'Performance test workflow',
+        executor: async () => {
+          const start = Date.now();
+          await new Promise((resolve) => setTimeout(resolve, 10));
+          executionTimes.push(Date.now() - start);
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+          };
+        },
+      };
+
+      const mockContext = createMockWorkflowContext();
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
+
+      // 連続して10回実行
+      for (let i = 0; i < 10; i++) {
+        const event: AgentEvent = {
           type: 'PERFORMANCE_TEST',
           priority: 'normal',
           payload: { index: i },
           timestamp: new Date(),
-        });
+        };
+
+        const logger = new WorkflowLogger('performance-workflow');
+        await agent.executeWorkflow(
+          performanceWorkflow,
+          event,
+          mockContext,
+          logger,
+          mockEmitter
+        );
       }
 
-      const startPromise = agent.start();
+      expect(executionTimes.length).toBe(10);
+      executionTimes.forEach((time) => {
+        expect(time).toBeGreaterThanOrEqual(10);
+        expect(time).toBeLessThan(100); // 妥当な範囲内
+      });
+    });
 
-      // すべて処理されるまで待つ
-      while (processedCount < eventCount) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
+    it('should handle concurrent workflow executions efficiently', async () => {
+      const concurrentWorkflow: WorkflowDefinition = {
+        name: 'concurrent-perf-workflow',
+        description: 'Concurrent performance test',
+        executor: async (event) => {
+          const payload = event.payload as { delay?: number };
+          if (payload.delay) {
+            await new Promise((resolve) => setTimeout(resolve, payload.delay));
+          }
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+            output: { completed: true },
+          };
+        },
+      };
+
+      const mockContext = createMockWorkflowContext();
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
+
+      const startTime = Date.now();
+
+      // 並行実行
+      const promises = [];
+      for (let i = 0; i < 5; i++) {
+        const event: AgentEvent = {
+          type: 'CONCURRENT_PERF',
+          priority: 'normal',
+          payload: { delay: 50 },
+          timestamp: new Date(),
+        };
+
+        const logger = new WorkflowLogger('concurrent-perf-workflow');
+        promises.push(
+          agent.executeWorkflow(
+            concurrentWorkflow,
+            event,
+            mockContext,
+            logger,
+            mockEmitter
+          )
+        );
       }
 
-      const processingTime = Date.now() - startTime;
+      const results = await Promise.all(promises);
+      const totalTime = Date.now() - startTime;
 
-      await agent.stop();
-      await startPromise;
+      expect(results.length).toBe(5);
+      results.forEach((result) => {
+        expect(result.success).toBe(true);
+      });
 
-      expect(processedCount).toBe(eventCount);
-      // 処理時間が妥当な範囲内であることを確認（環境依存）
-      expect(processingTime).toBeLessThan(eventCount * 100); // 1イベントあたり最大100ms
+      // 並行実行なので、総時間は個々の実行時間の合計よりも短いはず
+      expect(totalTime).toBeLessThan(250); // 50ms × 5 = 250ms
     });
   });
 });

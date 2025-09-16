@@ -1,7 +1,6 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
-import { LogType } from '../logger.js';
 
 /**
  * 入力内容から影響分析が必要かを判定
@@ -37,22 +36,14 @@ async function executeIngestInput(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger, storage } = context;
+  const { storage } = context;
   const { input } = event.payload as { input: any };
 
   try {
     // 1. InputをPondに保存
-    logger.log(LogType.INFO, { message: 'Ingesting input to pond', inputId: input.id });
-
     const pondEntry = await storage.addPondEntry({
       content: input.content,
       source: input.source,
-    });
-
-    logger.log(LogType.DB_QUERY, {
-      operation: 'addPondEntry',
-      query: { input },
-      resultIds: [pondEntry.id]
     });
 
     // 2. 内容を簡単に分析して次のアクションを決定
@@ -60,8 +51,6 @@ async function executeIngestInput(
 
     if (shouldAnalyze) {
       // 3. 必要に応じて後続のイベントを発行
-      logger.log(LogType.INFO, { message: 'Triggering issue impact analysis' });
-
       emitter.emit({
         type: 'ANALYZE_ISSUE_IMPACT',
         priority: 'normal',
@@ -87,11 +76,6 @@ async function executeIngestInput(
       },
     };
   } catch (error) {
-    logger.log(LogType.ERROR, {
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-      context: { input },
-    });
     throw error;
   }
 }

@@ -2,7 +2,6 @@ import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
 import type { Issue, IssueUpdate, IssueRelation } from '@sebas-chan/shared-types';
-import { LogType } from '../logger.js';
 import { compile } from '@moduler-prompt/core';
 
 /**
@@ -54,7 +53,7 @@ async function executeAnalyzeIssueImpact(
   context: WorkflowContext,
   emitter: WorkflowEventEmitter
 ): Promise<WorkflowResult> {
-  const { logger, storage, createDriver } = context;
+  const { storage, createDriver } = context;
   // event.payloadの型を明示的に定義
   interface AnalyzeIssueImpactPayload {
     issue: {
@@ -70,14 +69,7 @@ async function executeAnalyzeIssueImpact(
 
   try {
     // 1. 関連するIssueを検索
-    logger.log(LogType.INFO, { message: 'Analyzing issue impact', issueContent: issue.content });
-
     const relatedIssues = await storage.searchIssues(issue.content || issue.description || '');
-    logger.log(LogType.DB_QUERY, {
-      operation: 'searchIssues',
-      query: issue.content || issue.description || '',
-      resultIds: relatedIssues.map((i) => i.id)
-    });
 
     // 2. AIで影響分析
     const prompt = `
@@ -100,8 +92,6 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     const compiledPrompt = compile(promptModule);
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
     const impactAnalysis = result.content;
-
-    logger.log(LogType.AI_CALL, { prompt, response: impactAnalysis, capabilities: ['reasoning', 'japanese'] });
 
     // 3. 影響度スコアを計算
     const impactScore = calculateImpactScore(issue.content || issue.description || '', relatedIssues);
@@ -133,8 +123,6 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 
       const createdIssue = await storage.createIssue(newIssue);
       issueId = createdIssue.id;
-
-      logger.log(LogType.INFO, { message: 'Created new issue', issueId });
     } else {
       // 既存Issue更新
       const targetIssue = relatedIssues[0];
@@ -148,14 +136,10 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 
       // TODO: updateIssueメソッドの実装が必要
       // await storage.updateIssue(issueId, { updates: [...targetIssue.updates, update] });
-
-      logger.log(LogType.INFO, { message: 'Updated existing issue', issueId });
     }
 
     // 5. 高影響度の場合は追加のワークフローを起動
     if (impactScore > 0.8) {
-      logger.log(LogType.WARN, { message: 'High impact issue detected', issueId, impactScore });
-
       emitter.emit({
         type: 'EXTRACT_KNOWLEDGE',
         priority: 'high',
@@ -190,11 +174,6 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
       },
     };
   } catch (error) {
-    logger.log(LogType.ERROR, {
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-      context: { issue },
-    });
     throw error;
   }
 }

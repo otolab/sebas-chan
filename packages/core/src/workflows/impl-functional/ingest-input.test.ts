@@ -3,9 +3,8 @@ import { ingestInputWorkflow } from './ingest-input.js';
 import { executeWorkflow } from '../functional-types.js';
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
-import { createMockWorkflowLogger } from '../test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';
-import { LogType } from '../logger.js';
+import { LogType, WorkflowLogger } from '../logger.js';
 
 describe('IngestInput Workflow (Functional)', () => {
   let mockContext: WorkflowContext;
@@ -29,7 +28,6 @@ describe('IngestInput Workflow (Functional)', () => {
         createKnowledge: vi.fn(),
         updateKnowledge: vi.fn(),
       },
-      logger: createMockWorkflowLogger(),
       createDriver: async () => new TestDriver({ responses: ['AI response for testing'] }),
       metadata: {},
     };
@@ -55,8 +53,10 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should successfully ingest input to pond', async () => {
-    const result = await executeWorkflow(
-      ingestInputWorkflow,
+    const mockLogger = new WorkflowLogger('test-workflow');
+    vi.spyOn(mockLogger, 'log');
+
+    const result = await ingestInputWorkflow.executor(
       mockEvent,
       mockContext,
       mockEmitter
@@ -73,10 +73,6 @@ describe('IngestInput Workflow (Functional)', () => {
       content: 'システムでエラーが発生しました',
       source: 'slack',
     });
-
-    // ログが記録されたことを確認
-    expect(mockContext.logger.log).toHaveBeenCalledWith(LogType.INPUT, expect.any(Object));
-    expect(mockContext.logger.log).toHaveBeenCalledWith(LogType.OUTPUT, expect.any(Object));
   });
 
   it('should trigger analysis when error keywords are detected', async () => {
@@ -126,6 +122,7 @@ describe('IngestInput Workflow (Functional)', () => {
     );
 
     expect(result.success).toBe(true);
+    // Stateが更新されたことを確認
     expect(result.context.state).toContain('最新の入力処理');
     expect(result.context.state).toContain('Input ID: input-123');
     expect(result.context.state).toContain('Source: slack');
@@ -145,16 +142,6 @@ describe('IngestInput Workflow (Functional)', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(error);
-
-    // エラーログが記録されたことを確認
-    expect(mockContext.logger.log).toHaveBeenCalledWith(
-      LogType.ERROR,
-      expect.objectContaining({
-        message: error.message,
-        stack: error.stack,
-        context: expect.any(Object),
-      })
-    );
   });
 
   it('should work with different driver responses', async () => {

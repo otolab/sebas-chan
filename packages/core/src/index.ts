@@ -1,10 +1,9 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
-import { WorkflowLogger } from './workflows/logger.js';
+import { WorkflowLogger, LogType } from './workflows/logger.js';
 import { WorkflowRegistry } from './workflows/functional-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/functional-types.js';
 import type { WorkflowContext, WorkflowEventEmitter, DriverFactory } from './workflows/context.js';
-import { EventQueueImpl } from './event-queue.js';
 import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
@@ -13,111 +12,57 @@ import {
 } from './workflows/impl-functional/index.js';
 
 export class CoreAgent {
-  private eventQueue: EventQueueImpl;
-  private isProcessing = false;
-  private context: WorkflowContext | null = null;
   private workflowRegistry: WorkflowRegistry;
 
   constructor(workflowRegistry?: WorkflowRegistry) {
-    this.eventQueue = new EventQueueImpl();
     this.workflowRegistry = workflowRegistry || generateWorkflowRegistry();
     console.log('Core Agent initialized with workflow support');
   }
 
-  async start() {
-    console.log('Starting Core Agent...');
-
-    this.isProcessing = true;
-    // イベントループを非同期で開始（awaitしない）
-    this.processEventLoop().catch((error) => {
-      console.error('Event loop error:', error);
-    });
-
-    console.log('Core Agent started');
-    // start()メソッドを完了させる
-    return Promise.resolve();
-  }
-
-  async stop() {
-    console.log('Stopping Core Agent...');
-    this.isProcessing = false;
-  }
-
-  // コンテキストを設定するメソッド
-  setContext(context: WorkflowContext) {
-    this.context = context;
-  }
-
-  private async processEventLoop() {
-    while (this.isProcessing) {
-      const event = this.eventQueue.dequeue();
-
-      if (!event) {
-        // キューが空の場合は少し待機
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        continue;
-      }
-
-      // contextがない場合は処理をスキップ
-      if (!this.context) {
-        console.warn(`No context available for event ${event.type}, skipping`);
-        continue;
-      }
-
-      console.log(`Processing event: ${event.type}`);
-
-      try {
-        // processEventを呼び出し（setContextで設定されたcontextを使用）
-        await this.processEvent(event, this.context);
-      } catch (error) {
-        console.error(`Error processing event ${event.type}:`, error);
-        // エラーが発生しても処理を継続
-      }
-    }
-  }
-
   /**
-   * イベントを処理してワークフローを実行
+   * ワークフローを実行
+   * @param workflow 実行するワークフロー
    * @param event 処理するイベント
-   * @param workflowContext Engineから提供されるコンテキスト
+   * @param context 実行コンテキスト
+   * @param logger ワークフローロガー
+   * @param emitter イベントエミッター
    */
-  public async processEvent(event: AgentEvent, workflowContext: WorkflowContext): Promise<void> {
-    console.log(`Processing event: ${event.type}`);
+  public async executeWorkflow(
+    workflow: WorkflowDefinition,
+    event: AgentEvent,
+    context: WorkflowContext,
+    logger: WorkflowLogger,
+    emitter: WorkflowEventEmitter
+  ): Promise<WorkflowResult> {
+    console.log(`Executing workflow: ${workflow.name} for event: ${event.type}`);
 
-    // ワークフローレジストリから対応するワークフローを取得
-    const workflow = this.workflowRegistry.get(event.type);
-
-    if (!workflow) {
-      throw new Error(`No workflow registered for event type: ${event.type}`);
-    }
-
-    // イベントエミッターを作成（CoreAgentが管理）
-    const emitter: WorkflowEventEmitter = {
-      emit: (nextEvent) => {
-        this.queueEvent({
-          type: nextEvent.type,
-          priority: nextEvent.priority || 'normal',
-          payload: nextEvent.payload as AgentEventPayload,
-          timestamp: new Date()
-        });
-      }
-    };
-
-    // ワークフローを実行
     try {
-      const result = await workflow.executor(event, workflowContext, emitter);
+      // ログ記録
+      logger.log(LogType.INPUT, { event });
+
+      // ワークフローを実行
+      const result = await workflow.executor(event, context, emitter);
+
+      // 出力をログ
+      if (result.output) {
+        logger.log(LogType.OUTPUT, result.output);
+      }
+
       if (!result.success) {
         console.error(`Workflow ${workflow.name} failed:`, result.error);
+        logger.log(LogType.ERROR, { error: result.error });
       }
+
+      return result;
     } catch (error) {
       console.error(`Error executing workflow ${workflow.name}:`, error);
-      throw error;
+      logger.log(LogType.ERROR, { error });
+      return {
+        success: false,
+        context,
+        error: error as Error
+      };
     }
-  }
-
-  public queueEvent(event: AgentEvent) {
-    this.eventQueue.enqueue(event);
-    console.log(`Event queued: ${event.type}`);
   }
 
   /**
@@ -148,6 +93,9 @@ export interface AgentEvent {
 
 // ワークフロー関連のエクスポート
 export * from './workflows/index.js';
+
+// イベントキューのエクスポート
+export { EventQueueImpl } from './event-queue.js';
 
 // 標準ワークフローをすべて登録したRegistryを生成
 export function generateWorkflowRegistry(): WorkflowRegistry {

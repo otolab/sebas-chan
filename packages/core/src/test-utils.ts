@@ -68,7 +68,6 @@ export function createMockWorkflowContext(): WorkflowContext {
   return {
     state: 'test-state',
     storage: mockStorage,
-    logger: new WorkflowLogger('test-workflow'),
     createDriver: mockDriverFactory,
     config: {},
     metadata: {},

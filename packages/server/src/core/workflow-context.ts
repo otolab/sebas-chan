@@ -134,7 +134,6 @@ export class EngineWorkflowContext implements WorkflowContext {
     private stateManager: StateManager,
     private db: DBClient,
     private engine: CoreEngine,
-    public readonly logger: WorkflowLogger,
     public readonly createDriver: DriverFactory,
     public readonly config?: WorkflowConfig,
     public readonly metadata?: Record<string, unknown>
@@ -143,28 +142,6 @@ export class EngineWorkflowContext implements WorkflowContext {
     this.state = stateManager.getState();
   }
 
-  /**
-   * 更新されたStateをStateManagerに反映
-   */
-  updateState(newState: string): void {
-    this.state = newState;
-    this.stateManager.updateState(newState);
-  }
-
-  /**
-   * 現在のコンテキストをコピー（ワークフロー間での引き継ぎ用）
-   */
-  clone(): EngineWorkflowContext {
-    return new EngineWorkflowContext(
-      this.stateManager,
-      this.db,
-      this.engine,
-      this.logger,
-      this.createDriver,
-      this.config,
-      this.metadata
-    );
-  }
 }
 
 /**
@@ -174,7 +151,6 @@ export function createWorkflowContext(
   engine: CoreEngine,
   stateManager: StateManager,
   db: DBClient,
-  logger: WorkflowLogger,
   createDriver: DriverFactory,
   config?: WorkflowConfig,
   metadata?: Record<string, unknown>
@@ -183,7 +159,6 @@ export function createWorkflowContext(
     stateManager,
     db,
     engine,
-    logger,
     createDriver,
     config,
     metadata

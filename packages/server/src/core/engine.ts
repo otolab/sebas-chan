@@ -14,9 +14,9 @@ export { Event };
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
-import { CoreAgent, AgentEvent, AgentEventPayload, WorkflowLogger } from '@sebas-chan/core';
+import { CoreAgent, AgentEvent, AgentEventPayload, WorkflowLogger, LogType, EventQueueImpl } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
-import { createWorkflowContext } from './workflow-context.js';
+import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
 import {
   DriverRegistry,
   registerDriverFactories,
@@ -42,10 +42,12 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
   private lastError?: string;
   private driverRegistry: DriverRegistry;
+  private eventQueue: EventQueueImpl;
 
   constructor() {
     super();
     this.stateManager = new StateManager();
+    this.eventQueue = new EventQueueImpl();
 
     // DriverRegistryを初期化
     this.driverRegistry = new DriverRegistry();
@@ -68,27 +70,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       this.dbStatus = 'ready';
       logger.info('DB client connected and initialized');
 
-      // CoreAgentを初期化し、WorkflowContextを設定（startは呼ばない）
+      // CoreAgentを初期化（ステートレス）
       this.coreAgent = new CoreAgent();
-
-      // WorkflowContextを作成して設定
-      const workflowLogger = new WorkflowLogger('system');
-      const workflowContext = createWorkflowContext(
-        this,
-        this.stateManager,
-        this.dbClient!,
-        workflowLogger,
-        (async (criteria: DriverSelectionCriteria) => {
-          const result = this.driverRegistry.selectDriver(criteria);
-          if (!result) {
-            throw new Error('No suitable driver found for the given criteria');
-          }
-          return await this.driverRegistry.createDriver(result.driver);
-        }) as DriverFactory,
-        {} // config
-      );
-      this.coreAgent.setContext(workflowContext);
-      logger.info('Core Agent initialized with workflow context');
+      logger.info('Core Agent initialized');
 
       await this.stateManager.initialize();
       // startは別途呼び出す必要がある
@@ -103,10 +87,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   async start(): Promise<void> {
     if (this.isRunning) return;
 
-    // CoreAgentを開始
-    if (this.coreAgent) {
-      await this.coreAgent.start();
-    }
+    // CoreAgentはステートレスなので、startは不要
 
     this.isRunning = true;
     this.processInterval = setInterval(() => {
@@ -162,7 +143,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       isRunning: this.isRunning,
       dbStatus: this.dbStatus,
       modelLoaded,
-      queueSize: 0, // TODO: CoreAgentからキューサイズを取得
+      queueSize: this.eventQueue.size(),
       lastError: this.lastError,
     };
   }
@@ -187,17 +168,47 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   }
 
   private async processNextEvent(): Promise<void> {
-    // CoreAgentがイベントループを管理するため、
-    // Engine側では特に処理は不要
-    // TODO: このメソッドとprocessIntervalを削除
-  }
+    if (!this.coreAgent || !this.dbClient) {
+      return;
+    }
 
-  private async handleEvent(event: Event): Promise<void> {
-    this.emit('event:processing', event);
+    const event = this.dequeueEvent();
+    if (!event) {
+      return;
+    }
 
-    // CoreAgentにイベントを渡す
-    if (this.coreAgent) {
-      // AgentEventに変換してキューに追加
+    try {
+      // ワークフローを取得
+      const registry = this.coreAgent.getWorkflowRegistry();
+      const workflow = registry.get(event.type);
+
+      if (!workflow) {
+        logger.warn(`No workflow found for event type: ${event.type}`);
+        return;
+      }
+
+      // 実行ごとに新しいloggerを作成
+      const workflowLogger = new WorkflowLogger(workflow.name);
+
+      // contextを作成（loggerは含まない）
+      const context = createWorkflowContext(
+        this,
+        this.stateManager,
+        this.dbClient,
+        (async (criteria: DriverSelectionCriteria) => {
+          const result = this.driverRegistry.selectDriver(criteria);
+          if (!result) {
+            throw new Error('No suitable driver found for the given criteria');
+          }
+          return await this.driverRegistry.createDriver(result.driver);
+        }) as DriverFactory,
+        {}
+      );
+
+      // emitterを作成
+      const emitter = createWorkflowEventEmitter(this);
+
+      // AgentEventに変換
       const agentEvent: AgentEvent = {
         type: event.type,
         priority: event.priority,
@@ -205,29 +216,26 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         timestamp: event.timestamp,
       };
 
-      // CoreAgentのキューにイベントを追加
-      this.coreAgent.queueEvent(agentEvent);
-      logger.debug('Event queued for processing', { eventType: event.type });
-    } else {
-      logger.warn('Core Agent not initialized, handling event locally');
+      // CoreAgentに実行を委譲
+      const result = await this.coreAgent.executeWorkflow(
+        workflow,
+        agentEvent,
+        context,
+        workflowLogger,
+        emitter
+      );
 
-      // フォールバック処理
-      switch (event.type) {
-        case 'PROCESS_USER_REQUEST':
-          logger.info('Processing user request', { payload: event.payload });
-          break;
-
-        case 'INGEST_INPUT':
-          logger.info('Ingesting input', { payload: event.payload });
-          break;
-
-        default:
-          logger.warn(`Unhandled event type: ${event.type}`);
+      // ワークフローで更新されたstateをStateManagerに反映
+      if (result.success && result.context.state !== context.state) {
+        this.stateManager.updateState(result.context.state);
       }
-    }
 
-    this.emit('event:processed', event);
+      logger.debug(`Workflow ${workflow.name} executed for event ${event.type}`);
+    } catch (error) {
+      logger.error(`Error processing event ${event.type}:`, error);
+    }
   }
+
 
   async getIssue(_id: string): Promise<Issue> {
     throw new Error('Not implemented');
@@ -421,21 +429,17 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   }
 
   enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void {
-    // CoreAgentにイベントをキュー
-    if (this.coreAgent) {
-      const agentEvent: AgentEvent = {
-        type: event.type,
-        priority: event.priority,
-        payload: event.payload as AgentEventPayload,
-        timestamp: new Date(),
-      };
-      this.coreAgent.queueEvent(agentEvent);
-      this.emit('event:queued', agentEvent);
-    }
+    // イベントキューに追加（Engine内で管理）
+    const fullEvent: Event = {
+      ...event,
+      id: nanoid(),
+      timestamp: new Date(),
+    };
+    this.eventQueue.enqueue(fullEvent);
+    this.emit('event:queued', fullEvent);
   }
 
   dequeueEvent(): Event | null {
-    // CoreAgentがイベントキューを管理するため、このメソッドは削除予定
-    return null;
+    return this.eventQueue.dequeue() as Event | null;
   }
 }
