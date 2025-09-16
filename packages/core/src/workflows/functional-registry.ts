@@ -44,15 +44,3 @@ export class WorkflowRegistry implements FunctionalWorkflowRegistry {
   }
 }
 
-// シングルトンインスタンス
-let registryInstance: WorkflowRegistry | null = null;
-
-/**
- * ワークフローレジストリのシングルトンインスタンスを取得
- */
-export function getWorkflowRegistry(): WorkflowRegistry {
-  if (!registryInstance) {
-    registryInstance = new WorkflowRegistry();
-  }
-  return registryInstance;
-}

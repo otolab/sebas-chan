@@ -1,18 +1,26 @@
-import { Event, EventQueue as IEventQueue } from '@sebas-chan/shared-types';
+import type { AgentEvent } from './index.js';
 
-export class EventQueue implements IEventQueue {
-  private queue: Event[] = [];
+export interface EventQueue {
+  enqueue(event: AgentEvent): void;
+  dequeue(): AgentEvent | null;
+  peek(): AgentEvent | null;
+  size(): number;
+  clear(): void;
+}
 
-  enqueue(event: Event): void {
+export class EventQueueImpl implements EventQueue {
+  private queue: AgentEvent[] = [];
+
+  enqueue(event: AgentEvent): void {
     this.queue.push(event);
     this.sortQueue();
   }
 
-  dequeue(): Event | null {
+  dequeue(): AgentEvent | null {
     return this.queue.shift() || null;
   }
 
-  peek(): Event | null {
+  peek(): AgentEvent | null {
     return this.queue[0] || null;
   }
 

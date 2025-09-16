@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent } from './index.js';
+import { createMockWorkflowContext } from './test-utils.js';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
@@ -15,6 +16,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
+    // テスト用のWorkflowContextを設定
+    agent.setTestWorkflowContext(createMockWorkflowContext());
   });
 
   afterEach(async () => {
@@ -28,6 +31,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should recover from synchronous errors in event processing', async () => {
       const processedEvents: string[] = [];
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation((event: AgentEvent) => {
         processedEvents.push(event.type);
@@ -36,7 +40,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           throw new Error('Synchronous error in event processing');
         }
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // エラーを起こすイベントと正常なイベントを混在
@@ -75,6 +79,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should recover from asynchronous errors in event processing', async () => {
       const processedEvents: string[] = [];
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedEvents.push(event.type);
@@ -84,7 +89,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           throw new Error('Asynchronous error in event processing');
         }
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -121,6 +126,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should handle timeout scenarios', async () => {
       let slowEventStarted = false;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'SLOW_EVENT') {
@@ -128,7 +134,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           // 長時間の処理をシミュレート
           await new Promise((resolve) => setTimeout(resolve, 5000));
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -162,12 +168,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should handle memory pressure with large payloads', async () => {
       let processedLargeEvents = 0;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'LARGE_PAYLOAD_EVENT') {
           processedLargeEvents++;
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // 大きなペイロードを持つイベントを作成
@@ -203,6 +210,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       let errorCount = 0;
       let successCount = 0;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if ((event.payload as { shouldError?: boolean }).shouldError) {
@@ -210,7 +218,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           throw new Error(`Error ${errorCount}`);
         }
         successCount++;
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // エラーを連続で発生させる
@@ -237,12 +245,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should handle empty event type', async () => {
       let processedEmptyType = false;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (!event.type || event.type === '') {
           processedEmptyType = true;
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -283,12 +292,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should handle undefined payload gracefully', async () => {
       let processedUndefinedPayload = false;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.payload === undefined) {
           processedUndefinedPayload = true;
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -330,6 +340,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       let processedCount = 0;
       let errorCount = 0;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedCount++;
@@ -343,7 +354,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         // 処理時間をランダムに
         await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // 多数のイベントを短時間で追加
@@ -372,16 +383,17 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     it('should maintain queue integrity under error conditions', async () => {
       const queueStates: number[] = [];
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         // キューの状態を記録
-        queueStates.push(agent['eventQueue'].length);
+        queueStates.push(agent['eventQueue'].size());
 
         if (event.type === 'QUEUE_ERROR') {
           throw new Error('Queue processing error');
         }
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // エラーイベントと正常イベントを交互に
@@ -394,7 +406,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         });
       }
 
-      const initialQueueSize = agent['eventQueue'].length;
+      const initialQueueSize = agent['eventQueue'].size();
       expect(initialQueueSize).toBe(10);
 
       const startPromise = agent.start();
@@ -403,7 +415,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       await startPromise;
 
       // 最終的にキューが空になっていることを確認
-      expect(agent['eventQueue'].length).toBe(0);
+      expect(agent['eventQueue'].size()).toBe(0);
 
       // キューサイズが単調減少していることを確認
       for (let i = 1; i < queueStates.length; i++) {
@@ -417,6 +429,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       let recursionDepth = 0;
       const MAX_DEPTH = 100;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'RECURSIVE_EVENT') {
@@ -433,7 +446,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           }
         }
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -460,12 +473,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
     });
 
     it('should handle promise rejection in event processing', async () => {
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.type === 'REJECTION_EVENT') {
           return Promise.reject(new Error('Promise rejection in event'));
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // Promiseの拒否をキャッチするハンドラを設定

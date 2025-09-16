@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent } from './index.js';
+import { createMockWorkflowContext } from './test-utils.js';
 
 describe('CoreAgent - Comprehensive Tests', () => {
   let agent: CoreAgent;
@@ -15,6 +16,8 @@ describe('CoreAgent - Comprehensive Tests', () => {
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
+    // テスト用のWorkflowContextを設定
+    agent.setTestWorkflowContext(createMockWorkflowContext());
   });
 
   afterEach(async () => {
@@ -29,10 +32,11 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const processedOrder: string[] = [];
 
       // イベント処理を監視するためのスパイを作成
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
+      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent, context) => {
         processedOrder.push(event.type);
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // 異なる優先度のイベントを追加
@@ -73,10 +77,11 @@ describe('CoreAgent - Comprehensive Tests', () => {
     it('should handle events with same priority in FIFO order', async () => {
       const processedOrder: string[] = [];
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedOrder.push((event.payload as { id: string }).id);
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // 同じ優先度のイベントを複数追加
@@ -104,6 +109,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       let processedCount = 0;
       let errorCount = 0;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedCount++;
@@ -111,7 +117,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           errorCount++;
           throw new Error('Intentional test error');
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // 失敗するイベントと成功するイベントを混在
@@ -190,12 +196,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const eventCount = 100;
       let processedCount = 0;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedCount++;
         // 処理時間をシミュレート
         await new Promise((resolve) => setTimeout(resolve, 5));
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // 大量のイベントを短時間で追加
@@ -229,6 +236,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
     it('should handle events added while processing', async () => {
       const processedEvents: string[] = [];
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedEvents.push(event.type);
@@ -243,7 +251,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           });
         }
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -270,10 +278,11 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const eventCount = 1000;
       let processedCount = 0;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedCount++;
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // 大量のイベントを追加
@@ -297,7 +306,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       }
 
       // キューが空になっていることを確認
-      expect(agent['eventQueue'].length).toBe(0);
+      expect(agent['eventQueue'].size()).toBe(0);
 
       await agent.stop();
       await startPromise;
@@ -326,12 +335,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
     it('should not process events after stop', async () => {
       let processedAfterStop = false;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (!agent['isProcessing']) {
           processedAfterStop = true;
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // イベントを追加
@@ -359,6 +369,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
     it('should handle complex workflow chains', async () => {
       const workflowSteps: string[] = [];
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         workflowSteps.push(event.type);
@@ -402,7 +413,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
             break;
         }
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // ワークフローの開始
@@ -441,6 +452,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const processedEvents: string[] = [];
       const MAX_EVENTS = 20; // 無限ループ防止
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedEvents.push(event.type);
@@ -458,7 +470,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           });
         }
 
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -483,10 +495,11 @@ describe('CoreAgent - Comprehensive Tests', () => {
     it('should maintain event timestamp integrity', async () => {
       const eventTimestamps: Date[] = [];
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         eventTimestamps.push(event.timestamp);
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       const baseTime = new Date();
@@ -517,12 +530,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const pastDate = new Date('2020-01-01');
       let processedPastEvent = false;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         if (event.timestamp.getTime() === pastDate.getTime()) {
           processedPastEvent = true;
         }
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       agent.queueEvent({
@@ -549,12 +563,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const eventCount = 500;
       let processedCount = 0;
 
+      const mockContext = createMockWorkflowContext();
       const originalProcessEvent = agent['processEvent'];
       agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
         processedCount++;
         // 最小限の処理時間
         await new Promise((resolve) => setImmediate(resolve));
-        return originalProcessEvent.call(agent, event);
+        return originalProcessEvent.call(agent, event, mockContext);
       });
 
       // バースト的にイベントを追加

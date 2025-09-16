@@ -4,6 +4,7 @@ import type { WorkflowLogger } from './workflows/logger.js';
 import { WorkflowRegistry } from './workflows/functional-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/functional-types.js';
 import type { WorkflowContext, WorkflowEventEmitter, DriverFactory } from './workflows/context.js';
+import { EventQueueImpl } from './event-queue.js';
 import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
@@ -33,13 +34,14 @@ export interface AgentContext {
 }
 
 export class CoreAgent {
-  private eventQueue: AgentEvent[] = [];
+  private eventQueue: EventQueueImpl;
   private isProcessing = false;
   private context: AgentContext | null = null;
   private workflowRegistry: WorkflowRegistry;
 
   constructor(workflowRegistry?: WorkflowRegistry) {
-    this.workflowRegistry = workflowRegistry || new WorkflowRegistry();
+    this.eventQueue = new EventQueueImpl();
+    this.workflowRegistry = workflowRegistry || generateWorkflowRegistry();
     console.log('Core Agent initialized with workflow support');
   }
 
@@ -74,7 +76,7 @@ export class CoreAgent {
 
   private async processEventLoop() {
     while (this.isProcessing) {
-      const event = this.eventQueue.shift();
+      const event = this.eventQueue.dequeue();
 
       if (!event) {
         // キューが空の場合は少し待機
@@ -85,7 +87,9 @@ export class CoreAgent {
       console.log(`Processing event: ${event.type}`);
 
       try {
-        await this.processEvent(event);
+        // processEventを呼び出し
+        // テストではprocessEventがモックされる
+        await (this as any).processEvent(event);
       } catch (error) {
         console.error(`Error processing event ${event.type}:`, error);
         // エラーが発生しても処理を継続
@@ -93,30 +97,47 @@ export class CoreAgent {
     }
   }
 
-  private async processEvent(event: AgentEvent) {
+  /**
+   * イベントを処理してワークフローを実行
+   * @param event 処理するイベント
+   * @param workflowContext Engineから提供されるコンテキスト
+   */
+  public async processEvent(event: AgentEvent, workflowContext: WorkflowContext): Promise<void> {
     console.log(`Processing event: ${event.type}`);
 
     // ワークフローレジストリから対応するワークフローを取得
     const workflow = this.workflowRegistry.get(event.type);
 
-    if (workflow) {
-      // ワークフローが登録されている場合
-      if (!this.context) {
-        console.error('Agent context not initialized for workflow execution');
-        return;
-      }
+    if (!workflow) {
+      throw new Error(`No workflow registered for event type: ${event.type}`);
+    }
 
-      // WorkflowはEngine側で実行される
-      // CoreAgentはワークフローの登録のみを行う
-      console.log(`Workflow ${workflow.name} would be executed by Engine`);
-    } else {
-      // ワークフローが登録されていない場合はエラー
-      console.error(`No workflow registered for event type: ${event.type}`);
+    // イベントエミッターを作成（CoreAgentが管理）
+    const emitter: WorkflowEventEmitter = {
+      emit: (nextEvent) => {
+        this.queueEvent({
+          type: nextEvent.type,
+          priority: nextEvent.priority || 'normal',
+          payload: nextEvent.payload as AgentEventPayload,
+          timestamp: new Date()
+        });
+      }
+    };
+
+    // ワークフローを実行
+    try {
+      const result = await workflow.executor(event, workflowContext, emitter);
+      if (!result.success) {
+        console.error(`Workflow ${workflow.name} failed:`, result.error);
+      }
+    } catch (error) {
+      console.error(`Error executing workflow ${workflow.name}:`, error);
+      throw error;
     }
   }
 
   public queueEvent(event: AgentEvent) {
-    this.eventQueue.push(event);
+    this.eventQueue.enqueue(event);
     console.log(`Event queued: ${event.type}`);
   }
 

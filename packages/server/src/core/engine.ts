@@ -13,7 +13,6 @@ import {
   EventPayload,
 } from '@sebas-chan/shared-types';
 export { Event };
-import { EventQueue } from './event-queue.js';
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
@@ -43,7 +42,6 @@ export interface EngineStatus {
 }
 
 export class CoreEngine extends EventEmitter implements CoreAPI {
-  private eventQueue: EventQueue;
   private stateManager: StateManager;
   private dbClient: DBClient | null = null;
   private coreAgent: CoreAgent | null = null;
@@ -55,7 +53,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   constructor() {
     super();
-    this.eventQueue = new EventQueue();
     this.stateManager = new StateManager();
 
     // DriverRegistryを初期化
@@ -224,7 +221,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       isRunning: this.isRunning,
       dbStatus: this.dbStatus,
       modelLoaded,
-      queueSize: this.eventQueue.size(),
+      queueSize: 0, // TODO: CoreAgentからキューサイズを取得
       lastError: this.lastError,
     };
   }
@@ -249,32 +246,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   }
 
   private async processNextEvent(): Promise<void> {
-    const event = this.eventQueue.dequeue();
-    if (!event) return;
-
-    logger.debug(`Processing event: ${event.type}`, { eventId: event.id });
-
-    try {
-      await this.handleEvent(event);
-    } catch (error) {
-      logger.error(`Failed to process event ${event.id}:`, error);
-
-      if (event.retryCount !== undefined && event.maxRetries !== undefined) {
-        if (event.retryCount < event.maxRetries) {
-          // 直接キューに追加（enqueueEventだと新しいIDとタイムスタンプが付与される）
-          const retryEvent = {
-            ...event,
-            retryCount: event.retryCount + 1,
-          };
-          this.eventQueue.enqueue(retryEvent);
-          logger.debug(`Event re-enqueued for retry`, {
-            eventId: event.id,
-            retryCount: retryEvent.retryCount,
-            maxRetries: event.maxRetries,
-          });
-        }
-      }
-    }
+    // CoreAgentがイベントループを管理するため、
+    // Engine側では特に処理は不要
+    // TODO: このメソッドとprocessIntervalを削除
   }
 
   private async handleEvent(event: Event): Promise<void> {
@@ -282,57 +256,38 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     // CoreAgentにイベントを渡す
     if (this.coreAgent) {
-      // ワークフローが登録されているか確認
-      // getWorkflowRegistryが存在する場合のみワークフローを確認
-      const workflowRegistry = this.coreAgent.getWorkflowRegistry
-        ? this.coreAgent.getWorkflowRegistry()
-        : null;
-      const workflow = workflowRegistry ? workflowRegistry.get(event.type) : null;
+      // AgentEventに変換
+      const agentEvent: AgentEvent = {
+        type: event.type,
+        priority: event.priority,
+        payload: event.payload as AgentEventPayload,
+        timestamp: event.timestamp,
+      };
 
-      if (workflow) {
-        // ワークフロー実行コンテキストを作成
-        const executionId = nanoid();
-        const workflowLogger = new WorkflowLogger(event.type, { executionId });
-        const workflowContext = createWorkflowContext(
-          this,
-          this.stateManager,
-          this.dbClient!,
-          workflowLogger,
-          (async (criteria: DriverSelectionCriteria) => {
-            const result = this.driverRegistry.selectDriver(criteria);
-            if (!result) {
-              throw new Error('No suitable driver found for the given criteria');
-            }
-            return await this.driverRegistry.createDriver(result.driver);
-          }) as DriverFactory,
-          {} // config
-        );
-        const workflowEmitter = createWorkflowEventEmitter(this);
+      // ワークフロー実行コンテキストを作成
+      const executionId = nanoid();
+      const workflowLogger = new WorkflowLogger(event.type, { executionId });
+      const workflowContext = createWorkflowContext(
+        this,
+        this.stateManager,
+        this.dbClient!,
+        workflowLogger,
+        (async (criteria: DriverSelectionCriteria) => {
+          const result = this.driverRegistry.selectDriver(criteria);
+          if (!result) {
+            throw new Error('No suitable driver found for the given criteria');
+          }
+          return await this.driverRegistry.createDriver(result.driver);
+        }) as DriverFactory,
+        {} // config
+      );
 
-        // ワークフローを実行
-        try {
-          const agentEvent: AgentEvent = {
-            type: event.type,
-            priority: event.priority,
-            payload: event.payload as AgentEventPayload,
-            timestamp: event.timestamp,
-          };
-          await workflow.executor(agentEvent, workflowContext, workflowEmitter);
-          logger.debug('Workflow executed successfully', { eventType: event.type });
-        } catch (error) {
-          logger.error('Workflow execution failed', error);
-        }
-      } else {
-        // ワークフローが登録されていない場合は従来通りCoreAgentに渡す
-        const agentEvent: AgentEvent = {
-          type: event.type,
-          priority: event.priority,
-          payload: event.payload as AgentEventPayload,
-          timestamp: event.timestamp,
-        };
-
-        this.coreAgent.queueEvent(agentEvent);
-        logger.debug('Event forwarded to Core Agent', { eventType: event.type });
+      // CoreAgent.processEventを呼び出してワークフローを実行
+      try {
+        await this.coreAgent.processEvent(agentEvent, workflowContext);
+        logger.debug('Event processed successfully', { eventType: event.type });
+      } catch (error) {
+        logger.error('Event processing failed', error);
       }
     } else {
       logger.warn('Core Agent not initialized, handling event locally');
@@ -547,16 +502,21 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   }
 
   enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void {
-    const fullEvent: Event = {
-      id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date(),
-      ...event,
-    };
-    this.eventQueue.enqueue(fullEvent);
-    logger.debug('Event enqueued', { event: fullEvent });
+    // CoreAgentにイベントをキュー
+    if (this.coreAgent) {
+      const agentEvent: AgentEvent = {
+        type: event.type,
+        priority: event.priority,
+        payload: event.payload as AgentEventPayload,
+        timestamp: new Date(),
+      };
+      this.coreAgent.queueEvent(agentEvent);
+      this.emit('event:queued', agentEvent);
+    }
   }
 
   dequeueEvent(): Event | null {
-    return this.eventQueue.dequeue();
+    // CoreAgentがイベントキューを管理するため、このメソッドは削除予定
+    return null;
   }
 }
