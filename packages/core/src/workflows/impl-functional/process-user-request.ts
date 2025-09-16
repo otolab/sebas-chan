@@ -117,8 +117,8 @@ async function executeProcessUserRequest(
 
     // ドライバーを作成してプロンプトを実行
     const driver = await createDriver({
-      model: 'fast',
-      temperature: 0.3,
+      requiredCapabilities: ['fast'],
+      preferredCapabilities: ['japanese']
     });
 
     const promptModule = { instructions: [prompt] };
@@ -126,7 +126,7 @@ async function executeProcessUserRequest(
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
     const aiResponse = result.content;
 
-    logger.log(LogType.AI_CALL, { prompt, response: aiResponse, model: 'fast', temperature: 0.3 });
+    logger.log(LogType.AI_CALL, { prompt, response: aiResponse, capabilities: ['fast', 'japanese'] });
 
     // 3. リクエストタイプを判定（簡易版）
     const requestType = classifyRequest(String(request.content));

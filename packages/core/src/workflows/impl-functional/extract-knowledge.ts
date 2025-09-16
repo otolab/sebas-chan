@@ -101,8 +101,8 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 
     // ドライバーを作成してプロンプトを実行
     const driver = await createDriver({
-      model: 'standard',
-      temperature: 0.2,
+      requiredCapabilities: ['structured'],
+      preferredCapabilities: ['japanese', 'reasoning']
     });
 
     const promptModule = { instructions: [prompt] };
@@ -110,7 +110,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
     const result = await driver.query(compiledPrompt, { temperature: 0.2 });
     const extractedKnowledge = result.content;
 
-    logger.log(LogType.AI_CALL, { prompt, response: extractedKnowledge, model: 'standard', temperature: 0.2 });
+    logger.log(LogType.AI_CALL, { prompt, response: extractedKnowledge, capabilities: ['structured', 'japanese'] });
 
     // 4. 重複チェック（簡易版）
     const isDuplicate = existingKnowledge.some(

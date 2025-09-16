@@ -90,10 +90,10 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 影響範囲と優先度を日本語で説明してください。
 `;
 
-    // ドライバーを作成（standard モデルを使用）
+    // ドライバーを作成（分析タスク用）
     const driver = await createDriver({
-      model: 'standard',
-      temperature: 0.3,
+      requiredCapabilities: ['reasoning'],
+      preferredCapabilities: ['japanese', 'structured']
     });
 
     const promptModule = { instructions: [prompt] };
@@ -101,7 +101,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
     const impactAnalysis = result.content;
 
-    logger.log(LogType.AI_CALL, { prompt, response: impactAnalysis, model: 'standard', temperature: 0.3 });
+    logger.log(LogType.AI_CALL, { prompt, response: impactAnalysis, capabilities: ['reasoning', 'japanese'] });
 
     // 3. 影響度スコアを計算
     const impactScore = calculateImpactScore(issue.content || issue.description || '', relatedIssues);

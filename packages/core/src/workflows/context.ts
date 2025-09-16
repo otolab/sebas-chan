@@ -1,13 +1,11 @@
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 import type { WorkflowLogger } from './logger.js';
 import type { AIDriver } from '@moduler-prompt/driver';
+import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 
 // ドライバーファクトリの型定義
-export type DriverFactory = (capabilities: {
-  model: 'fast' | 'standard' | 'large';
-  temperature?: number;
-  maxTokens?: number;
-}) => AIDriver | Promise<AIDriver>;
+// @moduler-prompt/utilsのDriverSelectionCriteriaを使用
+export type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
 
 /**
  * ワークフローが動作する環境のインターフェース
