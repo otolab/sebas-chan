@@ -164,7 +164,15 @@ export function createWorkflowContext(
   config?: WorkflowConfig,
   metadata?: Record<string, unknown>
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(stateManager, db, engine, createDriver, logger, config, metadata);
+  return new EngineWorkflowContext(
+    stateManager,
+    db,
+    engine,
+    createDriver,
+    logger,
+    config,
+    metadata
+  );
 }
 
 /**

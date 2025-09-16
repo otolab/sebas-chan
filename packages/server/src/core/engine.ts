@@ -225,12 +225,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       };
 
       // CoreAgentに実行を委譲
-      const result = await this.coreAgent.executeWorkflow(
-        workflow,
-        agentEvent,
-        context,
-        emitter
-      );
+      const result = await this.coreAgent.executeWorkflow(workflow, agentEvent, context, emitter);
 
       // ワークフローで更新されたstateをStateManagerに反映
       if (result.success && result.context.state !== context.state) {
