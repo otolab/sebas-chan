@@ -8,10 +8,11 @@ export class WorkflowRegistry implements FunctionalWorkflowRegistry {
 
   /**
    * ワークフローを登録
+   * ワークフロー名をそのままイベントタイプとして使用
    */
-  register(eventType: string, workflow: WorkflowDefinition): void {
-    this.workflows.set(eventType, workflow);
-    console.log(`Registered workflow: ${workflow.name} for event type: ${eventType}`);
+  register(workflow: WorkflowDefinition): void {
+    this.workflows.set(workflow.name, workflow);
+    console.log(`Registered workflow: ${workflow.name}`);
   }
 
   /**

@@ -3,6 +3,18 @@ import type { WorkflowLogger } from './logger.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 
+// イベントタイプの定義
+export type WorkflowEventType =
+  | 'INGEST_INPUT'
+  | 'PROCESS_USER_REQUEST'
+  | 'ANALYZE_ISSUE_IMPACT'
+  | 'EXTRACT_KNOWLEDGE'
+  | 'UPDATE_FLOW_PRIORITIES'
+  | 'UPDATE_FLOW_RELATIONS'
+  | 'SALVAGE_FROM_POND'
+  | 'COLLECT_SYSTEM_STATS'
+  | string; // 拡張可能
+
 // ドライバーファクトリの型定義
 // @moduler-prompt/utilsのDriverSelectionCriteriaを使用
 export type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
@@ -49,20 +61,19 @@ export interface WorkflowContext {
  * データストレージインターフェース
  */
 export interface WorkflowStorage {
-  // 検索系
-  searchIssues(query: string): Promise<Issue[]>;
-  searchKnowledge(query: string): Promise<Knowledge[]>;
-  searchPond(query: string): Promise<PondEntry[]>;
-
   // Issue操作
   getIssue(id: string): Promise<Issue | null>;
+  searchIssues(query: string): Promise<Issue[]>;
   createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
   updateIssue(id: string, update: Partial<Issue>): Promise<Issue>;
 
   // Pond操作
+  searchPond(query: string): Promise<PondEntry[]>;
   addPondEntry(entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry>;
 
   // Knowledge操作
+  getKnowledge(id: string): Promise<Knowledge | null>;
+  searchKnowledge(query: string): Promise<Knowledge[]>;
   createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge>;
   updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
 }
@@ -80,5 +91,5 @@ export interface WorkflowEventEmitter {
   /**
    * 次のイベントを発行
    */
-  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void;
+  emit(event: { type: WorkflowEventType; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void;
 }

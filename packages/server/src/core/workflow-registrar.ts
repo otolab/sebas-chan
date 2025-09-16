@@ -1,33 +1,13 @@
-import {
-  CoreAgent,
-  ingestInputWorkflow,
-  processUserRequestWorkflow,
-  analyzeIssueImpactWorkflow,
-  extractKnowledgeWorkflow,
-} from '@sebas-chan/core';
+import { CoreAgent } from '@sebas-chan/core';
 
 /**
- * ワークフローをCoreAgentに登録
+ * 追加のワークフローをCoreAgentに登録
+ * 注：標準ワークフローはgenerateWorkflowRegistry()で登録済み
+ * ここではserver固有の追加ワークフローのみを登録
  */
-export function registerWorkflows(agent: CoreAgent): void {
-  // A-1: INGEST_INPUT
-  agent.registerWorkflow('INGEST_INPUT', ingestInputWorkflow);
+export function registerAdditionalWorkflows(agent: CoreAgent): void {
+  // 現時点ではserver固有のワークフローは存在しない
+  // 将来的に追加される場合はここに登録
 
-  // A-0: PROCESS_USER_REQUEST
-  agent.registerWorkflow('PROCESS_USER_REQUEST', processUserRequestWorkflow);
-
-  // A-2: ANALYZE_ISSUE_IMPACT
-  agent.registerWorkflow('ANALYZE_ISSUE_IMPACT', analyzeIssueImpactWorkflow);
-
-  // A-3: EXTRACT_KNOWLEDGE
-  agent.registerWorkflow('EXTRACT_KNOWLEDGE', extractKnowledgeWorkflow);
-
-  console.log('Workflows registered:', {
-    workflows: [
-      'INGEST_INPUT',
-      'PROCESS_USER_REQUEST',
-      'ANALYZE_ISSUE_IMPACT',
-      'EXTRACT_KNOWLEDGE',
-    ],
-  });
+  console.log('Additional workflows registered: none');
 }

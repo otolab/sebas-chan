@@ -106,19 +106,9 @@ interface WorkflowEventEmitter {
 ### 5. 設定管理
 
 ```typescript
-interface WorkflowConfig {
-  logLevel: 'debug' | 'info' | 'warn' | 'error';
-  storage: {
-    type: 'memory' | 'lancedb';
-    // storage固有の設定
-  };
-  // modelオプションは削除（driverインスタンス = 1モデル）
-}
+// WorkflowConfigは現在空オブジェクト（将来の拡張用）
+export interface WorkflowConfig {}
 ```
-
-**変更点**:
-- `model`オプションを削除
-- モデル選択はcreateDriver使用時に指定
 
 ## 実装計画
 
@@ -126,12 +116,8 @@ interface WorkflowConfig {
 
 1. **ドライバーファクトリ実装**
    ```typescript
-   // packages/core/src/workflows/driver-factory.ts
-   export function createDriverByCapabilities(
-     config: DriverConfig,
-     capabilities: DriverCapabilities
-   ): Driver {
-     // @moduler-prompt/driverを使用した実装
+   // DriverFactoryは@moduler-prompt/utilsのDriverSelectionCriteriaを使用
+   export type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
      // 1インスタンス = 1モデル
    }
    ```

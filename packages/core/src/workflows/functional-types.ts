@@ -77,7 +77,7 @@ export async function executeWorkflow(
  * ワークフローレジストリの型定義
  */
 export interface FunctionalWorkflowRegistry {
-  register(eventType: string, workflow: WorkflowDefinition): void;
+  register(workflow: WorkflowDefinition): void;
   get(eventType: string): WorkflowDefinition | undefined;
   getAll(): Map<string, WorkflowDefinition>;
 }
