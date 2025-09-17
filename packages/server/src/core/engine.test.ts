@@ -292,7 +292,9 @@ describe('CoreEngine', () => {
       });
 
       // eventQueueを直接アクセスして確認
-      const eventQueue = (engine as any).eventQueue;
+      const eventQueue = (
+        engine as unknown as { eventQueue: { size: () => number; dequeue: () => Event | null } }
+      ).eventQueue;
       expect(eventQueue.size()).toBe(1);
 
       const event = eventQueue.dequeue();
@@ -343,7 +345,11 @@ describe('CoreEngine', () => {
   describe('event priority handling', () => {
     it('should process high priority events first', () => {
       // EventQueueの優先度処理を直接テスト
-      const eventQueue = (engine as any).eventQueue;
+      const eventQueue = (
+        engine as unknown as {
+          eventQueue: { enqueue: (event: Event) => void; dequeue: () => Event | null };
+        }
+      ).eventQueue;
 
       // 異なる優先度のイベントを追加
       eventQueue.enqueue({
@@ -380,7 +386,11 @@ describe('CoreEngine', () => {
 
     it('should handle mixed priority events with timestamps', () => {
       // start()しないで、キューの優先度ソートのみをテスト
-      const eventQueue = (engine as any).eventQueue;
+      const eventQueue = (
+        engine as unknown as {
+          eventQueue: { enqueue: (event: Event) => void; dequeue: () => Event | null };
+        }
+      ).eventQueue;
       const now = new Date();
 
       // 異なる優先度と異なるタイプのイベント
