@@ -213,7 +213,7 @@ describe('Input処理フローのE2Eテスト', () => {
       const input = await engine.createInput(inputData);
 
       // イベント処理を実行
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       // Assert
       // 1. Inputが作成される
@@ -274,7 +274,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
       // すべてのイベントを処理
       for (let i = 0; i < 5; i++) {
-        vi.advanceTimersByTime(1000);
+        await vi.advanceTimersByTimeAsync(1000);
       }
 
       // Assert
@@ -327,7 +327,7 @@ describe('Input処理フローのE2Eテスト', () => {
       });
 
       // イベント処理を実行（INGEST_INPUT）
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       // Assert - INGEST_INPUTワークフローが実行される
       await vi.waitFor(() => {
@@ -347,7 +347,7 @@ describe('Input処理フローのE2Eテスト', () => {
       expect(analysisEvent.payload.originalInput.id).toBe(errorInput.id);
 
       // 分析ワークフローを実行
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       // ANALYZE_ISSUE_IMPACTワークフローが実行される
       await vi.waitFor(() => {
@@ -385,7 +385,7 @@ describe('Input処理フローのE2Eテスト', () => {
       });
 
       // イベント処理を実行
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       // Assert
       await vi.waitFor(() => {
@@ -454,7 +454,7 @@ describe('Input処理フローのE2Eテスト', () => {
           timestamp: new Date(),
         });
         inputs.push(input);
-        vi.advanceTimersByTime(1000);
+        await vi.advanceTimersByTimeAsync(1000);
       }
 
       // Assert
@@ -528,7 +528,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
       // リトライを含む処理を実行
       for (let i = 0; i < 5; i++) {
-        vi.advanceTimersByTime(2000);
+        await vi.advanceTimersByTimeAsync(2000);
       }
 
       // Assert
@@ -596,7 +596,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
       // 各イベントを処理
       for (let i = 0; i < 4; i++) {
-        vi.advanceTimersByTime(1000);
+        await vi.advanceTimersByTimeAsync(1000);
       }
 
       // Assert

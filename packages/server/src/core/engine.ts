@@ -97,8 +97,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     // CoreAgentはステートレスなので、startは不要
 
     this.isRunning = true;
-    this.processInterval = setInterval(() => {
-      this.processNextEvent();
+    this.processInterval = setInterval(async () => {
+      await this.processNextEvent();
     }, 1000);
 
     logger.info('Core Engine started');

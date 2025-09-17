@@ -66,7 +66,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       registerWorkflow: vi.fn(),
     };
 
-    vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
+    vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent as CoreAgent);
 
     engine = new CoreEngine();
     vi.useFakeTimers();
@@ -105,10 +105,11 @@ describe('CoreEngine - CoreAgent Integration', () => {
       });
 
       // イベント処理を実行
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1100);
 
       // CoreAgentのexecuteWorkflowが呼ばれることを確認
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledWith(
+      await vi.waitFor(() => {
+        expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledWith(
         expect.any(Object), // workflow
         expect.objectContaining({
           type: 'INGEST_INPUT',
@@ -124,6 +125,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         expect.any(Object), // context
         expect.any(Object)  // emitter
       );
+      });
     });
 
     it('should process multiple event types through CoreAgent', async () => {
@@ -144,10 +146,12 @@ describe('CoreEngine - CoreAgent Integration', () => {
       });
 
       // イベント処理を実行
-      vi.advanceTimersByTime(2000);
+      await vi.advanceTimersByTimeAsync(2000);
 
       // 両方のイベントがCoreAgentで処理されることを確認
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledTimes(2);
+      await vi.waitFor(() => {
+        expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledTimes(2);
+      });
 
       const calls = mockCoreAgent.executeWorkflow.mock.calls;
       expect(calls[0][1].type).toBe('PROCESS_USER_REQUEST');
@@ -166,10 +170,12 @@ describe('CoreEngine - CoreAgent Integration', () => {
         content: 'test',
         timestamp: new Date(),
       });
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       // executeWorkflowが呼ばれたことを確認
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+      await vi.waitFor(() => {
+        expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+      });
       const contextArg = mockCoreAgent.executeWorkflow.mock.calls[0]?.[2];
 
       // contextが存在しない場合はスキップ
@@ -203,7 +209,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         content: 'test',
         timestamp: new Date(),
       });
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       const contextArg = mockCoreAgent.executeWorkflow.mock.calls[0]?.[2];
       if (!contextArg) {
@@ -232,7 +238,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         content: 'test',
         timestamp: new Date(),
       });
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       const contextArg = mockCoreAgent.executeWorkflow.mock.calls[0]?.[2];
       if (!contextArg) {
@@ -258,7 +264,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         content: 'test',
         timestamp: new Date(),
       });
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       const contextArg = mockCoreAgent.executeWorkflow.mock.calls[0]?.[2];
       if (!contextArg) {
@@ -323,10 +329,11 @@ describe('CoreEngine - CoreAgent Integration', () => {
       expect(input.content).toBe('Complete flow test');
 
       // 2. イベント処理
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       // 3. CoreAgentでイベントが処理される
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledWith(
+      await vi.waitFor(() => {
+        expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledWith(
         expect.any(Object), // workflow
         expect.objectContaining({
           type: 'INGEST_INPUT',
@@ -340,6 +347,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         expect.any(Object), // context
         expect.any(Object)  // emitter
       );
+      });
     });
 
     it('should handle multiple inputs in sequence', async () => {
@@ -359,11 +367,13 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       // すべてのイベントを処理
       for (let i = 0; i < 3; i++) {
-        vi.advanceTimersByTime(1000);
+        await vi.advanceTimersByTimeAsync(1000);
       }
 
       // すべてのイベントがCoreAgentで処理される
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledTimes(3);
+      await vi.waitFor(() => {
+        expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledTimes(3);
+      });
 
       // 各イベントの内容を確認
       for (let i = 0; i < 3; i++) {
@@ -400,7 +410,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         content: 'test',
         timestamp: new Date(),
       });
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       const contextArg = mockCoreAgent.executeWorkflow.mock.calls[0]?.[2];
       if (!contextArg) {
@@ -441,7 +451,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         content: 'test',
         timestamp: new Date(),
       });
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       const contextArg = mockCoreAgent.executeWorkflow.mock.calls[0]?.[2];
       if (!contextArg) {
@@ -473,10 +483,10 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       // イベントがキューに追加される
       let status = await testEngine.getStatus();
-      expect(status.queueSize).toBeGreaterThan(0);
+      expect(status.queueSize || 0).toBeGreaterThan(0);
 
       // タイマーを進めてイベント処理を待つ
-      vi.advanceTimersByTime(1000);
+      await vi.advanceTimersByTimeAsync(1000);
 
       // ワークフローがないため、イベントが処理されずにキューから削除される
       status = await testEngine.getStatus();
