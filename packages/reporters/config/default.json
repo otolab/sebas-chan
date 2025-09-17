@@ -1,0 +1,41 @@
+{
+  "server": {
+    "url": "http://localhost:8080",
+    "apiPath": "/api/v1",
+    "timeout": 30000,
+    "retryAttempts": 5,
+    "retryDelay": 1000,
+    "maxRetryDelay": 60000,
+    "healthCheckInterval": 60000
+  },
+  "buffer": {
+    "path": "./data/buffer",
+    "maxSize": 10485760,
+    "maxEvents": 1000,
+    "flushInterval": 10000,
+    "rotationInterval": 86400000,
+    "retentionDays": 7
+  },
+  "api": {
+    "port": 3000,
+    "host": "localhost",
+    "maxBodySize": 1048576,
+    "requestTimeout": 10000
+  },
+  "logging": {
+    "level": "info",
+    "file": "./logs/reporters.log",
+    "maxSize": "10m",
+    "maxFiles": 5,
+    "format": "json"
+  },
+  "batching": {
+    "maxBatchSize": 100,
+    "batchInterval": 10000
+  },
+  "sources": {
+    "configPath": "./config/sources.json",
+    "maxSources": 10,
+    "defaultPollingInterval": 30000
+  }
+}
