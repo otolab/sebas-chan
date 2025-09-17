@@ -1,0 +1,407 @@
+openapi: 3.0.3
+info:
+  title: Reporters Package API
+  description: イベント収集・送信システムのローカルAPI
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:3000
+    description: ローカル開発サーバー
+
+paths:
+  /events:
+    post:
+      summary: イベントをキューに追加
+      operationId: queueEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventInput'
+      responses:
+        '201':
+          description: イベントが正常にキューに追加された
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: バッファがフル
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: キュー内のイベント一覧を取得
+      operationId: listEvents
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [queued, buffered, sending, failed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+      responses:
+        '200':
+          description: イベント一覧
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  total:
+                    type: integer
+
+  /events/send:
+    post:
+      summary: バッファ内のイベントをサーバーに送信
+      operationId: sendEvents
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                force:
+                  type: boolean
+                  description: 強制送信フラグ
+      responses:
+        '200':
+          description: 送信結果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sent:
+                    type: integer
+                    description: 送信成功数
+                  failed:
+                    type: integer
+                    description: 送信失敗数
+                  buffered:
+                    type: integer
+                    description: バッファ保存数
+        '503':
+          description: サーバー接続不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sources:
+    get:
+      summary: イベントソース一覧を取得
+      operationId: listSources
+      responses:
+        '200':
+          description: イベントソース一覧
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EventSource'
+
+    post:
+      summary: イベントソースを追加
+      operationId: addSource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSourceInput'
+      responses:
+        '201':
+          description: イベントソースが追加された
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSource'
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 既存のソースIDと重複
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /sources/{sourceId}:
+    put:
+      summary: イベントソースを更新
+      operationId: updateSource
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventSourceInput'
+      responses:
+        '200':
+          description: イベントソースが更新された
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventSource'
+        '404':
+          description: ソースが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    delete:
+      summary: イベントソースを削除
+      operationId: deleteSource
+      parameters:
+        - name: sourceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: ソースが見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /status:
+    get:
+      summary: システムステータスを取得
+      operationId: getStatus
+      responses:
+        '200':
+          description: システムステータス
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  server:
+                    $ref: '#/components/schemas/ConnectionStatus'
+                  sources:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ConnectionStatus'
+                  buffer:
+                    type: object
+                    properties:
+                      size:
+                        type: integer
+                      maxSize:
+                        type: integer
+                      eventCount:
+                        type: integer
+
+  /health:
+    get:
+      summary: ヘルスチェック
+      operationId: healthCheck
+      responses:
+        '200':
+          description: システム正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  checks:
+                    type: object
+                    properties:
+                      server:
+                        type: boolean
+                      buffer:
+                        type: boolean
+                      sources:
+                        type: boolean
+
+components:
+  schemas:
+    Event:
+      type: object
+      required:
+        - id
+        - type
+        - sourceId
+        - timestamp
+        - payload
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [notification, message, calendar, todo, other]
+        sourceId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          type: object
+        metadata:
+          type: object
+          properties:
+            collectedAt:
+              type: string
+              format: date-time
+            attempts:
+              type: integer
+            lastAttemptAt:
+              type: string
+              format: date-time
+
+    EventInput:
+      type: object
+      required:
+        - type
+        - sourceId
+        - payload
+      properties:
+        type:
+          type: string
+          enum: [notification, message, calendar, todo, other]
+        sourceId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+          description: 省略時は現在時刻
+        payload:
+          type: object
+
+    EventSource:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [webhook, polling, stream]
+        config:
+          type: object
+          properties:
+            endpoint:
+              type: string
+            interval:
+              type: integer
+            filters:
+              type: array
+              items:
+                type: string
+        status:
+          type: string
+          enum: [active, inactive, error]
+        lastConnectedAt:
+          type: string
+          format: date-time
+
+    EventSourceInput:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          enum: [webhook, polling, stream]
+        config:
+          type: object
+          properties:
+            endpoint:
+              type: string
+              format: uri
+            interval:
+              type: integer
+              minimum: 1000
+            filters:
+              type: array
+              items:
+                type: string
+
+    ConnectionStatus:
+      type: object
+      required:
+        - targetId
+        - targetType
+        - isConnected
+        - errorCount
+      properties:
+        targetId:
+          type: string
+        targetType:
+          type: string
+          enum: [server, source]
+        isConnected:
+          type: boolean
+        lastSuccessAt:
+          type: string
+          format: date-time
+        lastErrorAt:
+          type: string
+          format: date-time
+        errorCount:
+          type: integer
+        errorMessage:
+          type: string
+          maxLength: 500
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object

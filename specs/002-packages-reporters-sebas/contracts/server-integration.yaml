@@ -1,0 +1,195 @@
+openapi: 3.0.3
+info:
+  title: Sebas-chan Server Integration API
+  description: ReporterからServerへのイベント送信API仕様
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Sebas-chan Server (ローカル)
+
+paths:
+  /api/v1/events:
+    post:
+      summary: イベントをサーバーに送信
+      operationId: submitEvents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ServerEvent'
+                  minItems: 1
+                  maxItems: 100
+      responses:
+        '200':
+          description: イベント受信成功
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accepted:
+                    type: integer
+                    description: 受理されたイベント数
+                  rejected:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        eventId:
+                          type: string
+                        reason:
+                          type: string
+        '400':
+          description: 不正なリクエスト
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+        '429':
+          description: レート制限超過
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+              description: 再試行までの秒数
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+        '503':
+          description: サーバー利用不可
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ServerError'
+
+  /api/v1/health:
+    get:
+      summary: サーバーヘルスチェック
+      operationId: checkServerHealth
+      responses:
+        '200':
+          description: サーバー正常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [ok, degraded]
+                  version:
+                    type: string
+                  acceptingEvents:
+                    type: boolean
+        '503':
+          description: サーバー異常
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [error, maintenance]
+                  message:
+                    type: string
+
+components:
+  schemas:
+    ServerEvent:
+      type: object
+      required:
+        - id
+        - type
+        - sourceId
+        - timestamp
+        - data
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: クライアント側で生成した一意ID
+        type:
+          type: string
+          enum: [notification, message, calendar, todo, other]
+          description: イベントタイプ
+        sourceId:
+          type: string
+          description: イベントソース識別子
+        timestamp:
+          type: string
+          format: date-time
+          description: イベント発生時刻
+        data:
+          type: object
+          description: イベント固有のペイロード
+          additionalProperties: true
+        metadata:
+          type: object
+          properties:
+            reporterId:
+              type: string
+              description: レポーター識別子
+            collectedAt:
+              type: string
+              format: date-time
+              description: 収集時刻
+            retryCount:
+              type: integer
+              description: 再送信回数
+          additionalProperties: true
+
+    ServerError:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: エラーコード
+        message:
+          type: string
+          description: エラーメッセージ
+        details:
+          type: object
+          description: 追加のエラー詳細
+          additionalProperties: true
+
+# Reporter側で実装すべきクライアントの振る舞い
+x-client-behavior:
+  retry:
+    description: |
+      - 429 (Rate Limit): Retry-Afterヘッダーの値だけ待機してリトライ
+      - 503 (Service Unavailable): Exponential Backoff with Jitter
+      - ネットワークエラー: Exponential Backoff
+      - 400 (Bad Request): リトライしない
+    maxRetries: 5
+    initialDelay: 1000
+    maxDelay: 60000
+
+  batching:
+    description: |
+      - 最大100イベント/リクエスト
+      - 10秒またはバッファフルでフラッシュ
+      - 失敗したバッチは個別に再送信を試行
+
+  buffering:
+    description: |
+      - 送信失敗時はファイルバッファに保存
+      - サーバー復旧後に自動再送信
+      - バッファサイズ上限: 10MB
+
+  health-check:
+    description: |
+      - 60秒ごとにヘルスチェック実行
+      - 3回連続失敗でサーバーダウンと判定
+      - ダウン中は送信を停止してバッファリング
