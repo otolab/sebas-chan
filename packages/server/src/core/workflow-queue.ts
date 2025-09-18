@@ -54,9 +54,7 @@ export class WorkflowQueue implements IWorkflowQueue {
     item.status = 'running';
     this.running.set(item.id, item);
 
-    console.log(
-      `Dequeued workflow: ${item.workflow.name} (remaining: ${this.queue.length})`
-    );
+    console.log(`Dequeued workflow: ${item.workflow.name} (remaining: ${this.queue.length})`);
 
     return item;
   }
@@ -74,9 +72,7 @@ export class WorkflowQueue implements IWorkflowQueue {
     item.status = success ? 'completed' : 'failed';
     this.running.delete(id);
 
-    console.log(
-      `Workflow ${item.workflow.name} ${item.status} (running: ${this.running.size})`
-    );
+    console.log(`Workflow ${item.workflow.name} ${item.status} (running: ${this.running.size})`);
   }
 
   /**
@@ -90,9 +86,7 @@ export class WorkflowQueue implements IWorkflowQueue {
 
     const maxRetries = 3;
     if ((item.retryCount ?? 0) >= maxRetries) {
-      console.error(
-        `Workflow ${item.workflow.name} exceeded max retries (${maxRetries})`
-      );
+      console.error(`Workflow ${item.workflow.name} exceeded max retries (${maxRetries})`);
       this.markCompleted(id, false);
       return false;
     }
@@ -105,9 +99,7 @@ export class WorkflowQueue implements IWorkflowQueue {
     item.priority = Math.max(0, item.priority - 1);
     this.queue.push(item);
 
-    console.log(
-      `Retrying workflow ${item.workflow.name} (attempt ${item.retryCount})`
-    );
+    console.log(`Retrying workflow ${item.workflow.name} (attempt ${item.retryCount})`);
     return true;
   }
 

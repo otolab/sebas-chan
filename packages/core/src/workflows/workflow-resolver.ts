@@ -50,10 +50,7 @@ export class WorkflowResolver implements IWorkflowResolver {
         }
         return matches;
       } catch (error) {
-        console.error(
-          `Error evaluating condition for workflow ${workflow.name}:`,
-          error
-        );
+        console.error(`Error evaluating condition for workflow ${workflow.name}:`, error);
         debug.filteredByCondition++;
         return false;
       }

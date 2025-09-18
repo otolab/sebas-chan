@@ -1,7 +1,6 @@
 import { EventEmitter } from 'events';
 import {
   Event,
-  EventPayload,
   CoreAPI,
   Issue,
   Flow,
@@ -23,7 +22,7 @@ import {
   WorkflowResolver,
 } from '@sebas-chan/core';
 import { WorkflowQueue } from './workflow-queue.js';
-import type { ExtendedWorkflowDefinition, IWorkflowRegistry } from '@sebas-chan/core';
+import type { IWorkflowRegistry } from '@sebas-chan/core';
 import { registerDefaultWorkflows, ExtendedWorkflowRegistry } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
@@ -520,10 +519,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     // 優先度を数値に変換するヘルパー
     const priorityToNumber = (priority: 'high' | 'normal' | 'low'): number => {
       switch (priority) {
-        case 'high': return 100;
-        case 'normal': return 50;
-        case 'low': return 10;
-        default: return 50;
+        case 'high':
+          return 100;
+        case 'normal':
+          return 50;
+        case 'low':
+          return 10;
+        default:
+          return 50;
       }
     };
 
@@ -539,5 +542,4 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     this.emit('event:queued', fullEvent);
   }
-
 }

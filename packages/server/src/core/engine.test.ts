@@ -18,11 +18,13 @@ vi.mock('@sebas-chan/core', () => ({
   })),
   WorkflowResolver: vi.fn().mockImplementation(() => ({
     resolve: vi.fn().mockResolvedValue({
-      workflows: [{
-        name: 'MockWorkflow',
-        triggers: { eventTypes: ['INGEST_INPUT'], priority: 10 },
-        executor: vi.fn(),
-      }],
+      workflows: [
+        {
+          name: 'MockWorkflow',
+          triggers: { eventTypes: ['INGEST_INPUT'], priority: 10 },
+          executor: vi.fn(),
+        },
+      ],
       resolutionTime: 1,
     }),
   })),
@@ -348,10 +350,9 @@ describe('CoreEngine', () => {
       });
 
       // workflowQueueを直接アクセスして確認
-      const workflowQueue = (
-        engine as unknown as { workflowQueue: { size: () => number } }
-      ).workflowQueue;
-      
+      const workflowQueue = (engine as unknown as { workflowQueue: { size: () => number } })
+        .workflowQueue;
+
       // INGEST_INPUTイベントは複数のワークフローに解決される可能性がある
       expect(workflowQueue.size()).toBeGreaterThan(0);
     });

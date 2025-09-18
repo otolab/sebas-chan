@@ -142,7 +142,10 @@ export async function runExtendedWorkflowDemo(): Promise<void> {
 
   let resolution = await resolver.resolve(normalEvent);
   console.log(`解決されたワークフロー数: ${resolution.workflows.length}`);
-  console.log(`ワークフロー名:`, resolution.workflows.map((w) => w.name));
+  console.log(
+    `ワークフロー名:`,
+    resolution.workflows.map((w) => w.name)
+  );
   console.log(`解決時間: ${resolution.resolutionTime}ms`);
   console.log();
 
@@ -163,8 +166,14 @@ export async function runExtendedWorkflowDemo(): Promise<void> {
 
   resolution = await resolver.resolve(errorEvent);
   console.log(`解決されたワークフロー数: ${resolution.workflows.length}`);
-  console.log(`ワークフロー名:`, resolution.workflows.map((w) => w.name));
-  console.log(`実行優先度:`, resolution.workflows.map((w) => w.triggers.priority));
+  console.log(
+    `ワークフロー名:`,
+    resolution.workflows.map((w) => w.name)
+  );
+  console.log(
+    `実行優先度:`,
+    resolution.workflows.map((w) => w.triggers.priority)
+  );
   console.log();
 
   // テストケース3: 空の入力
@@ -184,7 +193,10 @@ export async function runExtendedWorkflowDemo(): Promise<void> {
 
   resolution = await resolver.resolve(emptyEvent);
   console.log(`解決されたワークフロー数: ${resolution.workflows.length}`);
-  console.log(`ワークフロー名:`, resolution.workflows.map((w) => w.name));
+  console.log(
+    `ワークフロー名:`,
+    resolution.workflows.map((w) => w.name)
+  );
   console.log(`デバッグ情報:`, resolution.debug);
   console.log();
 
@@ -202,7 +214,10 @@ export async function runExtendedWorkflowDemo(): Promise<void> {
 
   resolution = await resolver.resolve(analyzeEvent);
   console.log(`解決されたワークフロー数: ${resolution.workflows.length}`);
-  console.log(`ワークフロー名:`, resolution.workflows.map((w) => w.name));
+  console.log(
+    `ワークフロー名:`,
+    resolution.workflows.map((w) => w.name)
+  );
   console.log();
 
   // 検証
