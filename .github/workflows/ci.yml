@@ -149,8 +149,8 @@ jobs:
       - name: Setup Python dependencies for DB package
         run: |
           cd packages/db
-          uv --project . venv
-          uv --project . sync
+          uv venv .venv
+          uv sync
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
@@ -200,8 +200,8 @@ jobs:
       - name: Setup Python dependencies for DB package
         run: |
           cd packages/db
-          uv --project . venv
-          uv --project . sync
+          uv venv .venv
+          uv sync
 
       - name: Download build artifacts
         uses: actions/download-artifact@v4
