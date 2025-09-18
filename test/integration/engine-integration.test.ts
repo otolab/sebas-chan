@@ -42,8 +42,8 @@ describe('CoreEngine - CoreAgent Integration', () => {
       }),
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
-      updateState: vi.fn().mockResolvedValue(undefined),
-      getState: vi.fn().mockResolvedValue({ content: '# Initial State', lastUpdated: new Date() }),
+      updateStateDocument: vi.fn().mockResolvedValue(undefined),
+      getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnull（新規状態）
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);

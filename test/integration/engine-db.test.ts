@@ -50,11 +50,8 @@ describe('CoreEngine と DBClient の統合テスト', () => {
         meta: { total: 0, limit: 20, offset: 0, hasMore: false },
       }),
       searchIssues: vi.fn().mockResolvedValue([]),
-      updateState: vi.fn().mockResolvedValue(undefined),
-      getState: vi.fn().mockResolvedValue({
-        content: '# Initial State',
-        lastUpdated: new Date(),
-      }),
+      updateStateDocument: vi.fn().mockResolvedValue(undefined),
+      getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnull（新規状態）
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient as DBClient);
@@ -353,9 +350,9 @@ describe('CoreEngine と DBClient の統合テスト', () => {
       // 状態の更新
       engine.updateState(updatedState);
 
-      // updateStateはasyncで実行されるため、待機が必要
+      // updateStateDocumentはasyncで実行されるため、待機が必要
       await vi.waitFor(() => {
-        expect(mockDbClient.updateState).toHaveBeenCalledWith(updatedState);
+        expect(mockDbClient.updateStateDocument).toHaveBeenCalledWith(updatedState);
       }, { timeout: 3000 });
 
       // 更新後の状態確認
@@ -365,7 +362,7 @@ describe('CoreEngine と DBClient の統合テスト', () => {
 
     it('TEST-STATE-002: 状態更新エラー時の処理', async () => {
       // Arrange
-      mockDbClient.updateState = vi.fn().mockRejectedValue(new Error('Update failed'));
+      mockDbClient.updateStateDocument = vi.fn().mockRejectedValue(new Error('Update failed'));
       const { logger } = await import('../../packages/server/src/utils/logger.js');
       const errorSpy = vi.mocked(logger.error);
 
@@ -378,7 +375,7 @@ describe('CoreEngine と DBClient の統合テスト', () => {
 
       // DBへの更新は試行される
       await vi.waitFor(() => {
-        expect(mockDbClient.updateState).toHaveBeenCalledWith(newState);
+        expect(mockDbClient.updateStateDocument).toHaveBeenCalledWith(newState);
       }, { timeout: 3000 });
 
       // エラーがログに記録される

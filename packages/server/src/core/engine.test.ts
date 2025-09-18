@@ -32,8 +32,8 @@ describe('CoreEngine', () => {
       addPondEntry: vi.fn().mockResolvedValue(true),
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
-      updateState: vi.fn().mockResolvedValue(undefined),
-      getState: vi.fn().mockResolvedValue({ content: '# Initial State', lastUpdated: new Date() }),
+      updateStateDocument: vi.fn().mockResolvedValue(undefined),
+      getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnullを返す（新規状態）
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);
@@ -290,6 +290,40 @@ describe('CoreEngine', () => {
       engine.updateState(newState);
 
       expect(engine.getState()).toBe(newState);
+    });
+
+    it('should persist state to DB when updating', async () => {
+      await engine.initialize();
+      await engine.start();
+
+      const newState = '# Persisted State\n\nThis should be saved to DB';
+      engine.updateState(newState);
+
+      // DBClientのupdateStateDocumentが呼ばれることを確認
+      expect(mockDbClient.updateStateDocument).toHaveBeenCalledWith(newState);
+    });
+
+    it('should load state from DB on initialization', async () => {
+      const dbState = '# State from Database\n\nPreviously saved state';
+      mockDbClient.getStateDocument = vi.fn().mockResolvedValue(dbState);
+
+      await engine.initialize();
+
+      // DBから状態が読み込まれたことを確認
+      expect(mockDbClient.getStateDocument).toHaveBeenCalled();
+      const currentState = engine.getState();
+      expect(currentState).toBe(dbState);
+    });
+
+    it('should handle DB state load failure gracefully', async () => {
+      mockDbClient.getStateDocument = vi.fn().mockRejectedValue(new Error('DB read failed'));
+
+      // エラーが発生してもinitializeは成功する
+      await expect(engine.initialize()).resolves.not.toThrow();
+
+      // デフォルトの状態が使用される
+      const currentState = engine.getState();
+      expect(currentState).toContain('sebas-chan State Document');
     });
   });
 

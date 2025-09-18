@@ -87,7 +87,17 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         logger.info('Core Agent already provided');
       }
 
+      // StateManagerを初期化（DBから既存の状態を読み込む）
       await this.stateManager.initialize();
+      try {
+        const existingState = await this.dbClient.getStateDocument();
+        if (existingState && existingState !== this.stateManager.getState()) {
+          this.stateManager.updateState(existingState);
+          logger.info('Loaded existing state from DB');
+        }
+      } catch (error) {
+        logger.warn('Could not load state from DB, using default state:', error);
+      }
       // startは別途呼び出す必要がある
     } catch (error) {
       this.dbStatus = 'error';
@@ -466,8 +476,12 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   updateState(content: string): void {
     this.stateManager.updateState(content);
-    // 現時点ではDBへの永続化は実装されていない
-    // TODO: DBClientにupdateStateメソッドを追加後に実装
+    // DBにも非同期で保存
+    if (this.dbClient) {
+      this.dbClient.updateStateDocument(content).catch((error: Error) => {
+        logger.error('Failed to persist state to DB', error);
+      });
+    }
   }
 
   appendToState(section: string, content: string): void {

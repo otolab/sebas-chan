@@ -108,6 +108,8 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
         data: [],
         meta: { total: 0, limit: 20, offset: 0, hasMore: false },
       }),
+      updateStateDocument: vi.fn().mockResolvedValue(undefined),
+      getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnull（新規状態）
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient as DBClient);
