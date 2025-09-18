@@ -20,8 +20,11 @@ import {
   AgentEvent,
   AgentEventPayload,
   WorkflowLogger,
-  EventQueueImpl,
+  WorkflowResolver,
 } from '@sebas-chan/core';
+import { WorkflowQueue } from './workflow-queue.js';
+import type { ExtendedWorkflowDefinition, IWorkflowRegistry } from '@sebas-chan/core';
+import { registerDefaultWorkflows, ExtendedWorkflowRegistry } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
 import {
@@ -48,12 +51,19 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
   private lastError?: string;
   private driverRegistry: DriverRegistry;
-  private eventQueue: EventQueueImpl;
+  private workflowQueue: WorkflowQueue;
+  private workflowRegistry: IWorkflowRegistry;
+  private workflowResolver: WorkflowResolver;
 
   constructor(coreAgent?: CoreAgent) {
     super();
     this.stateManager = new StateManager();
-    this.eventQueue = new EventQueueImpl();
+    this.workflowQueue = new WorkflowQueue();
+    this.workflowRegistry = new ExtendedWorkflowRegistry();
+    this.workflowResolver = new WorkflowResolver(this.workflowRegistry);
+
+    // デフォルトワークフローを登録
+    registerDefaultWorkflows(this.workflowRegistry);
 
     // CoreAgentが提供された場合はそれを使用
     this.coreAgent = coreAgent || null;
@@ -120,9 +130,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   private async startEventLoop(): Promise<void> {
     while (this.isRunning) {
-      await this.processNextEvent();
-      // 次のイベント処理まで待機
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await this.processNextWorkflow();
+      // 次のワークフロー処理まで待機
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 
@@ -168,7 +178,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       isRunning: this.isRunning,
       dbStatus: this.dbStatus,
       modelLoaded,
-      queueSize: this.eventQueue.size(),
+      queueSize: this.workflowQueue.size(),
       lastError: this.lastError,
     };
   }
@@ -192,25 +202,20 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     };
   }
 
-  private async processNextEvent(): Promise<void> {
+  private async processNextWorkflow(): Promise<void> {
     if (!this.coreAgent || !this.dbClient) {
       return;
     }
 
-    const event = this.dequeueEvent();
-    if (!event) {
+    const queueItem = this.workflowQueue.dequeue();
+    if (!queueItem) {
       return;
     }
 
-    try {
-      // ワークフローを取得
-      const registry = this.coreAgent.getWorkflowRegistry();
-      const workflow = registry.get(event.type);
+    const { workflow, event } = queueItem;
 
-      if (!workflow) {
-        logger.warn(`No workflow found for event type: ${event.type}`);
-        return;
-      }
+    try {
+      logger.debug(`Processing workflow ${workflow.name} for event ${event.type}`);
 
       // 実行ごとに新しいloggerを作成
       const workflowLogger = new WorkflowLogger(workflow.name);
@@ -234,28 +239,20 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       // emitterを作成
       const emitter = createWorkflowEventEmitter(this);
 
-      // AgentEventに変換
-      const agentEvent: AgentEvent = {
-        type: event.type,
-        priority: event.priority,
-        payload: event.payload as AgentEventPayload,
-        timestamp: event.timestamp,
-      };
-
       // 実行前の状態を保存
       const originalState = context.state;
 
       // CoreAgentに実行を委譲
-      const result = await this.coreAgent.executeWorkflow(workflow, agentEvent, context, emitter);
+      const result = await this.coreAgent.executeWorkflow(workflow, event, context, emitter);
 
       // ワークフローで更新されたstateをStateManagerに反映
       if (result.success && result.context.state !== originalState) {
         this.stateManager.updateState(result.context.state);
       }
 
-      logger.debug(`Workflow ${workflow.name} executed for event ${event.type}`);
+      logger.info(`Workflow ${workflow.name} executed successfully for event ${event.type}`);
     } catch (error) {
-      logger.error(`Error processing event ${event.type}:`, error);
+      logger.error(`Error processing workflow ${workflow.name} for event ${event.type}:`, error);
     }
   }
 
@@ -492,34 +489,45 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return this.stateManager.getLastUpdate();
   }
 
-  enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void {
-    // イベントキューに追加（Engine内で管理）
+  async enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): Promise<void> {
+    // イベントを完全な形にする
     const fullEvent: Event = {
       ...event,
       id: nanoid(),
       timestamp: new Date(),
     };
-    // EventQueueImplはAgentEventを期待するので変換
+
+    // AgentEventに変換
     const agentEvent: AgentEvent = {
       type: fullEvent.type,
       priority: fullEvent.priority,
       payload: fullEvent.payload as AgentEventPayload,
       timestamp: fullEvent.timestamp,
     };
-    this.eventQueue.enqueue(agentEvent);
+
+    // イベントから実行すべきワークフローを解決
+    const resolution = await this.workflowResolver.resolve(agentEvent);
+
+    if (resolution.workflows.length === 0) {
+      logger.warn(`No workflows found for event type: ${event.type}`);
+      return;
+    }
+
+    logger.debug(
+      `Resolved ${resolution.workflows.length} workflows for event ${event.type} in ${resolution.resolutionTime}ms`
+    );
+
+    // 各ワークフローをキューに追加
+    for (const workflow of resolution.workflows) {
+      this.workflowQueue.enqueue({
+        workflow,
+        event: agentEvent,
+        priority: workflow.triggers.priority ?? agentEvent.priority,
+        timestamp: new Date(),
+      });
+    }
+
     this.emit('event:queued', fullEvent);
   }
 
-  dequeueEvent(): Event | null {
-    const agentEvent = this.eventQueue.dequeue();
-    if (!agentEvent) return null;
-    // AgentEventをEventに変換
-    return {
-      id: nanoid(),
-      type: agentEvent.type,
-      priority: agentEvent.priority,
-      payload: agentEvent.payload as EventPayload,
-      timestamp: agentEvent.timestamp,
-    } as Event;
-  }
 }

@@ -98,6 +98,7 @@ export { EventQueueImpl } from './event-queue.js';
 export * from './workflows/workflow-types.js';
 export { WorkflowRegistry as ExtendedWorkflowRegistry } from './workflows/workflow-registry.js';
 export { WorkflowResolver } from './workflows/workflow-resolver.js';
+export { registerDefaultWorkflows } from './workflows/impl-functional/extended-workflows.js';
 
 // 標準ワークフローをすべて登録したRegistryを生成
 export function generateWorkflowRegistry(): WorkflowRegistry {

@@ -5,6 +5,36 @@ import { createIssuesRouter } from './issues.js';
 import { CoreEngine } from '../../core/engine.js';
 import { errorHandler } from '../middleware/error-handler.js';
 
+// CoreEngineの依存関係をモック
+vi.mock('@sebas-chan/core', () => ({
+  CoreAgent: vi.fn(),
+  WorkflowLogger: vi.fn().mockImplementation(() => ({
+    log: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  })),
+  ExtendedWorkflowRegistry: vi.fn().mockImplementation(() => ({
+    register: vi.fn(),
+    get: vi.fn(),
+    list: vi.fn().mockReturnValue([]),
+    getByEventType: vi.fn().mockReturnValue([]),
+  })),
+  WorkflowResolver: vi.fn().mockImplementation(() => ({
+    resolve: vi.fn().mockResolvedValue({
+      workflows: [],
+      resolutionTime: 1,
+    }),
+  })),
+  registerDefaultWorkflows: vi.fn(),
+}));
+
+vi.mock('@sebas-chan/db', () => ({
+  DBClient: vi.fn().mockImplementation(() => ({
+    connect: vi.fn(),
+    disconnect: vi.fn(),
+    initModel: vi.fn(),
+  })),
+}));
+
 describe('Issues API Routes', () => {
   let app: express.Application;
   let coreEngine: CoreEngine;
