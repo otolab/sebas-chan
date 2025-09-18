@@ -35,18 +35,16 @@ jobs:
       - name: Build packages
         run: npm run build
 
-      - name: Create dependency archive with permissions
+      - name: Create build archive
         run: |
-          tar -czf dependencies.tar.gz \
-            node_modules \
-            packages/*/node_modules \
+          tar -czf build-artifacts.tar.gz \
             packages/*/dist
 
-      - name: Upload dependency archive
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dependencies
-          path: dependencies.tar.gz
+          name: build-artifacts
+          path: build-artifacts.tar.gz
           retention-days: 1
 
   lint-and-typecheck:
@@ -62,14 +60,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Download dependencies
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
+
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Check TypeScript
         run: npm run typecheck
@@ -90,14 +94,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Download dependencies
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
+
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Run unit tests
         run: npm run test:unit
@@ -150,6 +160,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -159,13 +175,13 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Download dependencies
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Download Python environment
         uses: actions/download-artifact@v4
@@ -194,6 +210,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -203,13 +225,13 @@ jobs:
       - name: Install uv
         run: pip install uv
 
-      - name: Download dependencies
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Download Python environment
         uses: actions/download-artifact@v4
