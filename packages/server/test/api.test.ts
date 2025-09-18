@@ -360,9 +360,7 @@ describe('API Unit Tests', () => {
       expect(response.body).toHaveProperty('error');
     });
   });
-  
-  describe('Rate Limiting', () => {
-    // レート制限のテストはE2Eテストで実施
-    // TODO: test/e2e/rate-limiting.test.tsに実装
-  });
+
+  // レート制限のテストはE2Eテストで実施
+  // TODO: test/e2e/rate-limiting.test.tsに実装
 });
