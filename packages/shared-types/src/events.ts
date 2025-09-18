@@ -2,6 +2,8 @@
  * イベントキュー関連の型定義
  */
 
+import type { Input } from './index.js';
+
 export type WorkflowType =
   | 'PROCESS_USER_REQUEST'
   | 'INGEST_INPUT'
@@ -18,11 +20,53 @@ export type WorkflowType =
   | 'TUNE_SYSTEM_PARAMETERS'
   | 'COLLECT_SYSTEM_STATS';
 
+// 各ワークフローのペイロード型
+export interface ProcessUserRequestPayload {
+  request: {
+    id?: string;
+    content?: string;
+  };
+}
+
+export interface IngestInputPayload {
+  input: Input;
+}
+
+export interface AnalyzeIssueImpactPayload {
+  issue: {
+    id?: string;
+    title?: string;
+    content?: string;
+    description?: string;
+    inputId?: string;
+  };
+  aiResponse?: string;
+}
+
+export interface ExtractKnowledgePayload {
+  issueId?: string;
+  pondEntryId?: string;
+  source?: string;
+  question?: string;
+  feedback?: string;
+  impactAnalysis?: string;
+  content?: string;
+  context?: string;
+}
+
+// 他のワークフローのペイロード型は実装時に追加
+export type EventPayload =
+  | ProcessUserRequestPayload
+  | IngestInputPayload
+  | AnalyzeIssueImpactPayload
+  | ExtractKnowledgePayload
+  | Record<string, unknown>; // 未定義のワークフロー用のフォールバック
+
 export interface Event {
   id: string;
   type: WorkflowType;
   priority: 'high' | 'normal' | 'low';
-  payload: unknown;
+  payload: EventPayload;
   timestamp: Date;
   retryCount?: number;
   maxRetries?: number;

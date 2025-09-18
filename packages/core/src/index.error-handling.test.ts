@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent } from './index.js';
+import { CoreAgent, AgentEvent, WorkflowLogger } from './index.js';
+import { createMockWorkflowContext } from './test-utils.js';
+import { WorkflowEventEmitter } from './workflows/context.js';
+import { WorkflowDefinition } from './workflows/functional-types.js';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
@@ -7,489 +10,543 @@ describe('CoreAgent - Error Handling and Recovery', () => {
   let consoleLogSpy: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleWarnSpy: any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let consoleErrorSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
   afterEach(async () => {
-    if (agent) {
-      await agent.stop();
-    }
     vi.restoreAllMocks();
   });
 
-  describe('Event Processing Errors', () => {
-    it('should recover from synchronous errors in event processing', async () => {
-      const processedEvents: string[] = [];
+  describe('Workflow Execution Errors', () => {
+    it('should recover from synchronous errors in workflow execution', async () => {
+      const errorWorkflow: WorkflowDefinition = {
+        name: 'error-workflow',
+        description: 'Workflow that throws synchronous error',
+        executor: () => {
+          throw new Error('Synchronous error in workflow');
+        },
+      };
 
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation((event: AgentEvent) => {
-        processedEvents.push(event.type);
-
-        if (event.type === 'ERROR_EVENT') {
-          throw new Error('Synchronous error in event processing');
-        }
-
-        return originalProcessEvent.call(agent, event);
-      });
-
-      // エラーを起こすイベントと正常なイベントを混在
-      agent.queueEvent({
-        type: 'BEFORE_ERROR',
-        priority: 'normal',
-        payload: {},
-        timestamp: new Date(),
-      });
-
-      agent.queueEvent({
+      const event: AgentEvent = {
         type: 'ERROR_EVENT',
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
-      });
+      };
 
-      agent.queueEvent({
-        type: 'AFTER_ERROR',
-        priority: 'normal',
-        payload: {},
-        timestamp: new Date(),
-      });
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      await agent.stop();
-      await startPromise;
+      const result = await agent.executeWorkflow(
+        errorWorkflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
 
-      // エラー後もイベント処理が継続することを確認
-      expect(processedEvents).toContain('BEFORE_ERROR');
-      expect(processedEvents).toContain('ERROR_EVENT');
-      expect(processedEvents).toContain('AFTER_ERROR');
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBe('Synchronous error in workflow');
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        'Error executing workflow error-workflow:',
+        expect.any(Error)
+      );
     });
 
-    it('should recover from asynchronous errors in event processing', async () => {
-      const processedEvents: string[] = [];
-
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        processedEvents.push(event.type);
-
-        if (event.type === 'ASYNC_ERROR_EVENT') {
+    it('should recover from asynchronous errors in workflow execution', async () => {
+      const asyncErrorWorkflow: WorkflowDefinition = {
+        name: 'async-error-workflow',
+        description: 'Workflow that throws asynchronous error',
+        executor: async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
-          throw new Error('Asynchronous error in event processing');
-        }
+          throw new Error('Asynchronous error in workflow');
+        },
+      };
 
-        return originalProcessEvent.call(agent, event);
-      });
-
-      agent.queueEvent({
-        type: 'BEFORE_ASYNC_ERROR',
-        priority: 'normal',
-        payload: {},
-        timestamp: new Date(),
-      });
-
-      agent.queueEvent({
+      const event: AgentEvent = {
         type: 'ASYNC_ERROR_EVENT',
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
-      });
+      };
 
-      agent.queueEvent({
-        type: 'AFTER_ASYNC_ERROR',
-        priority: 'normal',
-        payload: {},
-        timestamp: new Date(),
-      });
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await agent.stop();
-      await startPromise;
+      const result = await agent.executeWorkflow(
+        asyncErrorWorkflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
 
-      expect(processedEvents).toContain('BEFORE_ASYNC_ERROR');
-      expect(processedEvents).toContain('ASYNC_ERROR_EVENT');
-      expect(processedEvents).toContain('AFTER_ASYNC_ERROR');
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBe('Asynchronous error in workflow');
     });
 
-    it('should handle timeout scenarios', async () => {
-      let slowEventStarted = false;
-
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if (event.type === 'SLOW_EVENT') {
-          slowEventStarted = true;
+    it('should handle timeout scenarios in workflows', async () => {
+      const slowWorkflow: WorkflowDefinition = {
+        name: 'slow-workflow',
+        description: 'Workflow with long-running operation',
+        executor: async () => {
           // 長時間の処理をシミュレート
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-        }
-        return originalProcessEvent.call(agent, event);
-      });
+          await new Promise((resolve) => setTimeout(resolve, 100));
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+            output: { completed: true },
+          };
+        },
+      };
 
-      agent.queueEvent({
+      const event: AgentEvent = {
         type: 'SLOW_EVENT',
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
-      });
+      };
 
-      agent.queueEvent({
-        type: 'FAST_EVENT',
-        priority: 'normal',
-        payload: {},
-        timestamp: new Date(),
-      });
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      const startPromise = agent.start();
+      const startTime = Date.now();
+      const result = await agent.executeWorkflow(
+        slowWorkflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
+      const duration = Date.now() - startTime;
 
-      // 少し待ってから停止
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
-
-      expect(slowEventStarted).toBe(true);
-      // 停止時にスローイベントが完了していない可能性がある
-      // これは期待される動作
+      expect(result.success).toBe(true);
+      expect(duration).toBeGreaterThanOrEqual(100);
+      expect(result.output).toEqual({ completed: true });
     });
   });
 
   describe('Resource Exhaustion Scenarios', () => {
-    it('should handle memory pressure with large payloads', async () => {
-      let processedLargeEvents = 0;
+    it('should handle large payloads in workflows', async () => {
+      const largePayloadWorkflow: WorkflowDefinition = {
+        name: 'large-payload-workflow',
+        description: 'Workflow handling large payloads',
+        executor: async (event) => {
+          const payload = event.payload as { largeArray?: unknown[] };
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+            output: {
+              processedItems: payload.largeArray?.length || 0,
+            },
+          };
+        },
+      };
 
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if (event.type === 'LARGE_PAYLOAD_EVENT') {
-          processedLargeEvents++;
-        }
-        return originalProcessEvent.call(agent, event);
-      });
-
-      // 大きなペイロードを持つイベントを作成
-      for (let i = 0; i < 10; i++) {
-        agent.queueEvent({
-          type: 'LARGE_PAYLOAD_EVENT',
-          priority: 'normal',
-          payload: {
-            largeArray: new Array(10000).fill(`data-${i}`),
-            nestedObject: {
-              level1: {
-                level2: {
-                  level3: {
-                    data: new Array(1000).fill(`nested-${i}`),
-                  },
+      const event: AgentEvent = {
+        type: 'LARGE_PAYLOAD_EVENT',
+        priority: 'normal',
+        payload: {
+          largeArray: new Array(10000).fill('data'),
+          nestedObject: {
+            level1: {
+              level2: {
+                level3: {
+                  data: new Array(1000).fill('nested'),
                 },
               },
             },
           },
-          timestamp: new Date(),
-        });
-      }
+        },
+        timestamp: new Date(),
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      await agent.stop();
-      await startPromise;
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      expect(processedLargeEvents).toBe(10);
+      const result = await agent.executeWorkflow(
+        largePayloadWorkflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.output).toEqual({ processedItems: 10000 });
     });
 
-    it('should handle rapid repeated errors', async () => {
+    it('should handle rapid repeated errors in workflows', async () => {
       let errorCount = 0;
-      let successCount = 0;
 
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if ((event.payload as { shouldError?: boolean }).shouldError) {
-          errorCount++;
-          throw new Error(`Error ${errorCount}`);
-        }
-        successCount++;
-        return originalProcessEvent.call(agent, event);
-      });
+      const errorProneWorkflow: WorkflowDefinition = {
+        name: 'error-prone-workflow',
+        description: 'Workflow that may throw errors',
+        executor: async (event) => {
+          const payload = event.payload as { shouldError?: boolean };
+          if (payload.shouldError) {
+            errorCount++;
+            throw new Error(`Error ${errorCount}`);
+          }
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+          };
+        },
+      };
 
-      // エラーを連続で発生させる
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
+
+      // エラーと成功を交互に実行
       for (let i = 0; i < 20; i++) {
-        agent.queueEvent({
+        const event: AgentEvent = {
           type: 'REPEATED_ERROR',
           priority: 'normal',
           payload: { shouldError: i % 2 === 0 },
           timestamp: new Date(),
-        });
+        };
+
+        const result = await agent.executeWorkflow(
+          errorProneWorkflow,
+          event,
+          mockContext,
+          
+          mockEmitter
+        );
+
+        if (i % 2 === 0) {
+          expect(result.success).toBe(false);
+        } else {
+          expect(result.success).toBe(true);
+        }
       }
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-      await agent.stop();
-      await startPromise;
-
       expect(errorCount).toBe(10);
-      expect(successCount).toBe(10);
     });
   });
 
   describe('Edge Cases and Boundary Conditions', () => {
     it('should handle empty event type', async () => {
-      let processedEmptyType = false;
+      const workflow: WorkflowDefinition = {
+        name: 'empty-type-workflow',
+        description: 'Workflow for empty event type',
+        executor: async (event) => {
+          return {
+            success: !event.type || event.type === '',
+            context: createMockWorkflowContext(),
+          };
+        },
+      };
 
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if (!event.type || event.type === '') {
-          processedEmptyType = true;
-        }
-        return originalProcessEvent.call(agent, event);
-      });
-
-      agent.queueEvent({
+      const event: AgentEvent = {
         type: '',
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
-      });
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      expect(processedEmptyType).toBe(true);
-      expect(consoleWarnSpy).toHaveBeenCalledWith('Unknown event type: ');
+      const result = await agent.executeWorkflow(
+        workflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
+
+      expect(result.success).toBe(true);
     });
 
     it('should handle very long event types', async () => {
       const longEventType = 'A'.repeat(1000);
 
-      agent.queueEvent({
+      const workflow: WorkflowDefinition = {
+        name: 'long-type-workflow',
+        description: 'Workflow for long event type',
+        executor: async (event) => {
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+            output: { typeLength: event.type.length },
+          };
+        },
+      };
+
+      const event: AgentEvent = {
         type: longEventType,
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
-      });
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      expect(consoleLogSpy).toHaveBeenCalledWith(`Event queued: ${longEventType}`);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(`Unknown event type: ${longEventType}`);
+      const result = await agent.executeWorkflow(
+        workflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.output).toEqual({ typeLength: 1000 });
     });
 
     it('should handle undefined payload gracefully', async () => {
-      let processedUndefinedPayload = false;
+      const workflow: WorkflowDefinition = {
+        name: 'undefined-payload-workflow',
+        description: 'Workflow for undefined payload',
+        executor: async (event) => {
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+            output: { hasPayload: event.payload !== undefined },
+          };
+        },
+      };
 
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if (event.payload === undefined) {
-          processedUndefinedPayload = true;
-        }
-        return originalProcessEvent.call(agent, event);
-      });
-
-      agent.queueEvent({
+      const event: AgentEvent = {
         type: 'UNDEFINED_PAYLOAD',
         priority: 'normal',
-        payload: undefined as unknown,
+        payload: undefined as unknown as Record<string, unknown>,
         timestamp: new Date(),
-      });
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      expect(processedUndefinedPayload).toBe(true);
+      const result = await agent.executeWorkflow(
+        workflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.output).toEqual({ hasPayload: false });
     });
 
     it('should handle invalid priority values', async () => {
+      const workflow: WorkflowDefinition = {
+        name: 'invalid-priority-workflow',
+        description: 'Workflow for invalid priority',
+        executor: async (event) => {
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+            output: { priority: event.priority },
+          };
+        },
+      };
+
       const invalidEvent = {
         type: 'INVALID_PRIORITY',
-        priority: 'ultra-high', // 無効な優先度
+        priority: 'ultra-high' as any, // 無効な優先度
         payload: {},
         timestamp: new Date(),
       };
 
-      agent.queueEvent(invalidEvent as AgentEvent);
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      await agent.stop();
-      await startPromise;
+      const result = await agent.executeWorkflow(
+        workflow,
+        invalidEvent as AgentEvent,
+        mockContext,
+        
+        mockEmitter
+      );
 
-      expect(consoleLogSpy).toHaveBeenCalledWith('Processing event: INVALID_PRIORITY');
+      expect(result.success).toBe(true);
+      expect(result.output).toEqual({ priority: 'ultra-high' });
     });
   });
 
-  describe('Concurrent Error Scenarios', () => {
-    it('should handle errors during high concurrency', async () => {
-      let processedCount = 0;
-      let errorCount = 0;
+  describe('Concurrent Workflow Scenarios', () => {
+    it('should handle concurrent workflow executions', async () => {
+      const concurrentWorkflow: WorkflowDefinition = {
+        name: 'concurrent-workflow',
+        description: 'Workflow for concurrent execution',
+        executor: async (event) => {
+          // ランダムな処理時間
+          await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
 
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        processedCount++;
+          // ランダムにエラーを発生させる
+          if (Math.random() < 0.3) {
+            throw new Error('Random error during processing');
+          }
 
-        // ランダムにエラーを発生させる
-        if (Math.random() < 0.3) {
-          errorCount++;
-          throw new Error('Random error during processing');
-        }
+          const payload = event.payload as { index?: number };
+          return {
+            success: true,
+            context: createMockWorkflowContext(),
+            output: { processed: payload.index },
+          };
+        },
+      };
 
-        // 処理時間をランダムに
-        await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-        return originalProcessEvent.call(agent, event);
-      });
-
-      // 多数のイベントを短時間で追加
-      for (let i = 0; i < 50; i++) {
-        agent.queueEvent({
+      // 複数のワークフローを並行実行
+      const promises = [];
+      for (let i = 0; i < 10; i++) {
+        const event: AgentEvent = {
           type: `CONCURRENT_${i}`,
           priority: ['high', 'normal', 'low'][i % 3] as AgentEvent['priority'],
           payload: { index: i },
           timestamp: new Date(),
-        });
+        };
+
+        promises.push(
+          agent.executeWorkflow(concurrentWorkflow, event, mockContext, mockEmitter)
+        );
       }
 
-      const startPromise = agent.start();
+      const results = await Promise.all(promises);
+      const successCount = results.filter((r) => r.success).length;
+      const errorCount = results.filter((r) => !r.success).length;
 
-      // 処理が進むまで待つ
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      await agent.stop();
-      await startPromise;
-
-      expect(processedCount).toBe(50);
-      expect(errorCount).toBeGreaterThan(0);
-      expect(errorCount).toBeLessThan(50);
-    });
-
-    it('should maintain queue integrity under error conditions', async () => {
-      const queueStates: number[] = [];
-
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        // キューの状態を記録
-        queueStates.push(agent['eventQueue'].length);
-
-        if (event.type === 'QUEUE_ERROR') {
-          throw new Error('Queue processing error');
-        }
-
-        return originalProcessEvent.call(agent, event);
-      });
-
-      // エラーイベントと正常イベントを交互に
-      for (let i = 0; i < 10; i++) {
-        agent.queueEvent({
-          type: i % 2 === 0 ? 'QUEUE_ERROR' : 'QUEUE_NORMAL',
-          priority: 'normal',
-          payload: { index: i },
-          timestamp: new Date(),
-        });
-      }
-
-      const initialQueueSize = agent['eventQueue'].length;
-      expect(initialQueueSize).toBe(10);
-
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      await agent.stop();
-      await startPromise;
-
-      // 最終的にキューが空になっていることを確認
-      expect(agent['eventQueue'].length).toBe(0);
-
-      // キューサイズが単調減少していることを確認
-      for (let i = 1; i < queueStates.length; i++) {
-        expect(queueStates[i]).toBeLessThanOrEqual(queueStates[i - 1] + 1);
-      }
+      expect(successCount + errorCount).toBe(10);
+      expect(successCount).toBeGreaterThan(0);
     });
   });
 
   describe('Recovery Mechanisms', () => {
-    it('should recover from stack overflow scenarios', async () => {
-      let recursionDepth = 0;
-      const MAX_DEPTH = 100;
-
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if (event.type === 'RECURSIVE_EVENT') {
-          recursionDepth++;
-
-          if (recursionDepth < MAX_DEPTH) {
-            // 再帰的にイベントを生成
-            agent.queueEvent({
-              type: 'RECURSIVE_EVENT',
-              priority: 'normal',
-              payload: { depth: recursionDepth },
-              timestamp: new Date(),
+    it('should handle nested workflow errors', async () => {
+      const nestedWorkflow: WorkflowDefinition = {
+        name: 'nested-workflow',
+        description: 'Workflow with nested error handling',
+        executor: async (event, context, emitter) => {
+          try {
+            // 内部でエラーを発生させる
+            throw new Error('Inner error');
+          } catch (error) {
+            // エラーをキャッチして処理
+            emitter.emit({
+              type: 'ERROR_LOGGED',
+              priority: 'high',
+              payload: { error: (error as Error).message },
             });
+
+            // リカバリー処理
+            return {
+              success: true,
+              context,
+              output: { recovered: true },
+            };
           }
-        }
+        },
+      };
 
-        return originalProcessEvent.call(agent, event);
-      });
-
-      agent.queueEvent({
-        type: 'RECURSIVE_EVENT',
+      const event: AgentEvent = {
+        type: 'NESTED_ERROR',
         priority: 'normal',
-        payload: { depth: 0 },
+        payload: {},
         timestamp: new Date(),
+      };
+
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
+
+      const result = await agent.executeWorkflow(
+        nestedWorkflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.output).toEqual({ recovered: true });
+      expect(mockEmitter.emit).toHaveBeenCalledWith({
+        type: 'ERROR_LOGGED',
+        priority: 'high',
+        payload: { error: 'Inner error' },
       });
-
-      const startPromise = agent.start();
-
-      // 再帰処理が完了するまで待つ
-      const maxWaitTime = 5000;
-      const startTime = Date.now();
-
-      while (recursionDepth < MAX_DEPTH && Date.now() - startTime < maxWaitTime) {
-        await new Promise((resolve) => setTimeout(resolve, 50));
-      }
-
-      await agent.stop();
-      await startPromise;
-
-      expect(recursionDepth).toBe(MAX_DEPTH);
     });
 
-    it('should handle promise rejection in event processing', async () => {
-      const originalProcessEvent = agent['processEvent'];
-      agent['processEvent'] = vi.fn().mockImplementation(async (event: AgentEvent) => {
-        if (event.type === 'REJECTION_EVENT') {
-          return Promise.reject(new Error('Promise rejection in event'));
-        }
-        return originalProcessEvent.call(agent, event);
-      });
+    it('should handle promise rejection in workflow', async () => {
+      const rejectionWorkflow: WorkflowDefinition = {
+        name: 'rejection-workflow',
+        description: 'Workflow with promise rejection',
+        executor: async () => {
+          return Promise.reject(new Error('Promise rejection in workflow'));
+        },
+      };
 
-      // Promiseの拒否をキャッチするハンドラを設定
-      const originalProcessEventLoop = agent['processEventLoop'];
-      agent['processEventLoop'] = async function (this: CoreAgent) {
-        try {
-          await originalProcessEventLoop.call(this);
-        } catch (error) {
-          // エラーをキャッチ
-        }
-      }.bind(agent);
-
-      agent.queueEvent({
+      const event: AgentEvent = {
         type: 'REJECTION_EVENT',
         priority: 'normal',
         payload: {},
         timestamp: new Date(),
-      });
+      };
 
-      const startPromise = agent.start();
-      await new Promise((resolve) => setTimeout(resolve, 200));
-      await agent.stop();
-      await startPromise;
+      const mockContext = createMockWorkflowContext();
+      // Logger is now part of context
+      const mockEmitter: WorkflowEventEmitter = {
+        emit: vi.fn(),
+      };
 
-      // エージェントがクラッシュしていないことを確認
-      expect(agent).toBeDefined();
+      const result = await agent.executeWorkflow(
+        rejectionWorkflow,
+        event,
+        mockContext,
+        
+        mockEmitter
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
+      expect(result.error?.message).toBe('Promise rejection in workflow');
     });
   });
 });

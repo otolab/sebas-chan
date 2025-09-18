@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { Issue } from '@sebas-chan/shared-types';
+import { Issue, Knowledge } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -343,6 +343,54 @@ export class DBClient extends EventEmitter {
       updates: JSON.parse((r.updates as string) || '[]'),
       relations: JSON.parse((r.relations as string) || '[]'),
     })) as Issue[];
+  }
+
+  async updateIssue(id: string, update: Partial<Issue>): Promise<Issue> {
+    const existing = await this.getIssue(id);
+    if (!existing) {
+      throw new Error(`Issue not found: ${id}`);
+    }
+
+    const updated = {
+      ...existing,
+      ...update,
+      id, // IDは変更しない
+    };
+
+    // TODO: 実際のDB更新を実装
+    // 現時点では更新されたオブジェクトを返すのみ
+    return updated;
+  }
+
+  // Knowledge関連のメソッド
+  async getKnowledge(id: string): Promise<Knowledge | null> {
+    // TODO: 実際のDB実装
+    // 現時点では検索を使用
+    const results = await this.searchKnowledge(`id:${id}`);
+    return results.length > 0 ? results[0] : null;
+  }
+
+  async searchKnowledge(_query: string): Promise<Knowledge[]> {
+    // TODO: 実際のDB実装
+    // 現時点では空配列を返す
+    return [];
+  }
+
+  async updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge> {
+    const existing = await this.getKnowledge(id);
+    if (!existing) {
+      throw new Error(`Knowledge not found: ${id}`);
+    }
+
+    const updated = {
+      ...existing,
+      ...update,
+      id, // IDは変更しない
+    };
+
+    // TODO: 実際のDB更新を実装
+    // 現時点では更新されたオブジェクトを返すのみ
+    return updated;
   }
 
   // State文書関連のメソッド

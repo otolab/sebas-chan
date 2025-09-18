@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import {
   Event,
+  EventPayload,
   CoreAPI,
   Issue,
   Flow,
@@ -11,12 +12,25 @@ import {
   PondSearchResponse,
 } from '@sebas-chan/shared-types';
 export { Event };
-import { EventQueue } from './event-queue.js';
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
-import { CoreAgent, AgentContext } from '@sebas-chan/core';
+import {
+  CoreAgent,
+  AgentEvent,
+  AgentEventPayload,
+  WorkflowLogger,
+  EventQueueImpl,
+} from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
+import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
+import {
+  DriverRegistry,
+  registerDriverFactories,
+  type DriverSelectionCriteria,
+} from '@moduler-prompt/utils';
+import type { DriverFactory } from '@sebas-chan/core';
+import * as Drivers from '@moduler-prompt/driver';
 
 export interface EngineStatus {
   isRunning: boolean;
@@ -27,25 +41,36 @@ export interface EngineStatus {
 }
 
 export class CoreEngine extends EventEmitter implements CoreAPI {
-  private eventQueue: EventQueue;
   private stateManager: StateManager;
   private dbClient: DBClient | null = null;
   private coreAgent: CoreAgent | null = null;
   private isRunning: boolean = false;
-  private processInterval: NodeJS.Timeout | null = null;
   private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
   private lastError?: string;
+  private driverRegistry: DriverRegistry;
+  private eventQueue: EventQueueImpl;
 
-  constructor() {
+  constructor(coreAgent?: CoreAgent) {
     super();
-    this.eventQueue = new EventQueue();
     this.stateManager = new StateManager();
+    this.eventQueue = new EventQueueImpl();
+
+    // CoreAgentが提供された場合はそれを使用
+    this.coreAgent = coreAgent || null;
+
+    // DriverRegistryを初期化
+    this.driverRegistry = new DriverRegistry();
+    registerDriverFactories(this.driverRegistry, Drivers);
   }
 
   async initialize(): Promise<void> {
     logger.info('Initializing Core Engine...');
 
     try {
+      // DriverRegistryの設定をロード（設定ファイルが存在する場合）
+      // TODO: 設定ファイルパスを環境変数または設定から取得
+      // 例: await this.driverRegistry.loadConfig('./drivers.yaml');
+
       // DBクライアントを初期化
       this.dbStatus = 'connecting';
       this.dbClient = new DBClient();
@@ -54,13 +79,25 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       this.dbStatus = 'ready';
       logger.info('DB client connected and initialized');
 
-      // CoreAgentを初期化し、コンテキストを設定（startは呼ばない）
-      this.coreAgent = new CoreAgent();
-      const agentContext = this.createAgentContext();
-      this.coreAgent.setContext(agentContext);
-      logger.info('Core Agent initialized with context');
+      // CoreAgentを初期化（ステートレス）- 既に注入されていない場合のみ
+      if (!this.coreAgent) {
+        this.coreAgent = new CoreAgent();
+        logger.info('Core Agent initialized');
+      } else {
+        logger.info('Core Agent already provided');
+      }
 
+      // StateManagerを初期化（DBから既存の状態を読み込む）
       await this.stateManager.initialize();
+      try {
+        const existingState = await this.dbClient.getStateDocument();
+        if (existingState && existingState !== this.stateManager.getState()) {
+          this.stateManager.updateState(existingState);
+          logger.info('Loaded existing state from DB');
+        }
+      } catch (error) {
+        logger.warn('Could not load state from DB, using default state:', error);
+      }
       // startは別途呼び出す必要がある
     } catch (error) {
       this.dbStatus = 'error';
@@ -70,80 +107,29 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     }
   }
 
-  // CoreAgent用のコンテキストを作成
-  private createAgentContext(): AgentContext {
-    return {
-      getState: () => this.stateManager.getState(),
-
-      searchIssues: async (query: string) => {
-        if (!this.dbClient) throw new Error('DB client not initialized');
-        return this.dbClient.searchIssues(query);
-      },
-
-      searchKnowledge: async (query: string) => {
-        // TODO: Implement when Knowledge methods are added to DBClient
-        logger.debug('Searching knowledge', { query });
-        return [];
-      },
-
-      searchPond: async (query: string) => {
-        if (!this.dbClient) throw new Error('DB client not initialized');
-        const results = await this.dbClient.searchPond({ q: query, limit: 100 });
-        // DBClientのレスポンスをPondEntry型に変換
-        return results.data.map((r) => ({
-          id: r.id,
-          content: r.content,
-          source: r.source,
-          timestamp: new Date(r.timestamp),
-          vector: r.vector,
-        }));
-      },
-
-      addPondEntry: async (entry: Omit<PondEntry, 'id'>) => {
-        if (!this.dbClient) throw new Error('DB client not initialized');
-        const id = nanoid();
-        const success = await this.dbClient.addPondEntry({
-          id,
-          ...entry,
-        });
-
-        if (success) {
-          return { id, ...entry };
-        } else {
-          throw new Error('Failed to add pond entry');
-        }
-      },
-
-      emitEvent: (event: Omit<Event, 'id' | 'timestamp'>) => {
-        this.enqueueEvent(event);
-      },
-    };
-  }
-
   async start(): Promise<void> {
     if (this.isRunning) return;
 
-    // CoreAgentを開始
-    if (this.coreAgent) {
-      await this.coreAgent.start();
-    }
-
     this.isRunning = true;
-    this.processInterval = setInterval(() => {
-      this.processNextEvent();
-    }, 1000);
+
+    // イベント処理ループを開始（非同期実行）
+    this.startEventLoop();
 
     logger.info('Core Engine started');
+  }
+
+  private async startEventLoop(): Promise<void> {
+    while (this.isRunning) {
+      await this.processNextEvent();
+      // 次のイベント処理まで待機
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
   }
 
   async stop(): Promise<void> {
     if (!this.isRunning) return;
 
     this.isRunning = false;
-    if (this.processInterval) {
-      clearInterval(this.processInterval);
-      this.processInterval = null;
-    }
 
     // DBクライアントを切断
     if (this.dbClient) {
@@ -207,69 +193,70 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   }
 
   private async processNextEvent(): Promise<void> {
-    const event = this.eventQueue.dequeue();
-    if (!event) return;
+    if (!this.coreAgent || !this.dbClient) {
+      return;
+    }
 
-    logger.debug(`Processing event: ${event.type}`, { eventId: event.id });
+    const event = this.dequeueEvent();
+    if (!event) {
+      return;
+    }
 
     try {
-      await this.handleEvent(event);
-    } catch (error) {
-      logger.error(`Failed to process event ${event.id}:`, error);
+      // ワークフローを取得
+      const registry = this.coreAgent.getWorkflowRegistry();
+      const workflow = registry.get(event.type);
 
-      if (event.retryCount !== undefined && event.maxRetries !== undefined) {
-        if (event.retryCount < event.maxRetries) {
-          // 直接キューに追加（enqueueEventだと新しいIDとタイムスタンプが付与される）
-          const retryEvent = {
-            ...event,
-            retryCount: event.retryCount + 1,
-          };
-          this.eventQueue.enqueue(retryEvent);
-          logger.debug(`Event re-enqueued for retry`, {
-            eventId: event.id,
-            retryCount: retryEvent.retryCount,
-            maxRetries: event.maxRetries,
-          });
-        }
+      if (!workflow) {
+        logger.warn(`No workflow found for event type: ${event.type}`);
+        return;
       }
-    }
-  }
 
-  private async handleEvent(event: Event): Promise<void> {
-    this.emit('event:processing', event);
+      // 実行ごとに新しいloggerを作成
+      const workflowLogger = new WorkflowLogger(workflow.name);
 
-    // CoreAgentにイベントを渡す
-    if (this.coreAgent) {
-      // AgentEvent形式に変換
-      const agentEvent = {
+      // contextを作成（loggerを含む）
+      const context = createWorkflowContext(
+        this,
+        this.stateManager,
+        this.dbClient,
+        (async (criteria: DriverSelectionCriteria) => {
+          const result = this.driverRegistry.selectDriver(criteria);
+          if (!result) {
+            throw new Error('No suitable driver found for the given criteria');
+          }
+          return await this.driverRegistry.createDriver(result.driver);
+        }) as DriverFactory,
+        workflowLogger,
+        {}
+      );
+
+      // emitterを作成
+      const emitter = createWorkflowEventEmitter(this);
+
+      // AgentEventに変換
+      const agentEvent: AgentEvent = {
         type: event.type,
         priority: event.priority,
-        payload: event.payload,
+        payload: event.payload as AgentEventPayload,
         timestamp: event.timestamp,
       };
 
-      // CoreAgentのキューに追加
-      this.coreAgent.queueEvent(agentEvent);
-      logger.debug('Event forwarded to Core Agent', { eventType: event.type });
-    } else {
-      logger.warn('Core Agent not initialized, handling event locally');
+      // 実行前の状態を保存
+      const originalState = context.state;
 
-      // フォールバック処理
-      switch (event.type) {
-        case 'PROCESS_USER_REQUEST':
-          logger.info('Processing user request', { payload: event.payload });
-          break;
+      // CoreAgentに実行を委譲
+      const result = await this.coreAgent.executeWorkflow(workflow, agentEvent, context, emitter);
 
-        case 'INGEST_INPUT':
-          logger.info('Ingesting input', { payload: event.payload });
-          break;
-
-        default:
-          logger.warn(`Unhandled event type: ${event.type}`);
+      // ワークフローで更新されたstateをStateManagerに反映
+      if (result.success && result.context.state !== originalState) {
+        this.stateManager.updateState(result.context.state);
       }
-    }
 
-    this.emit('event:processed', event);
+      logger.debug(`Workflow ${workflow.name} executed for event ${event.type}`);
+    } catch (error) {
+      logger.error(`Error processing event ${event.type}:`, error);
+    }
   }
 
   async getIssue(_id: string): Promise<Issue> {
@@ -285,8 +272,23 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return issue;
   }
 
-  async updateIssue(_id: string, _data: Partial<Issue>): Promise<Issue> {
-    throw new Error('Not implemented');
+  async updateIssue(id: string, data: Partial<Issue>): Promise<Issue> {
+    // DBClientが利用可能な場合
+    if (this.dbClient) {
+      return await this.dbClient.updateIssue(id, data);
+    }
+
+    // フォールバック: インメモリで更新をシミュレート
+    const existing = await this.getIssue(id);
+    if (!existing) {
+      throw new Error(`Issue not found: ${id}`);
+    }
+
+    return {
+      ...existing,
+      ...data,
+      id, // IDは変更しない
+    };
   }
 
   async searchIssues(query: string): Promise<Issue[]> {
@@ -316,8 +318,18 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return [];
   }
 
-  async getKnowledge(_id: string): Promise<Knowledge> {
-    throw new Error('Not implemented');
+  async getKnowledge(id: string): Promise<Knowledge> {
+    // DBClientが利用可能な場合
+    if (this.dbClient) {
+      const knowledge = await this.dbClient.getKnowledge(id);
+      if (!knowledge) {
+        throw new Error(`Knowledge not found: ${id}`);
+      }
+      return knowledge;
+    }
+
+    // フォールバック
+    throw new Error(`Knowledge not found: ${id}`);
   }
 
   async createKnowledge(data: Omit<Knowledge, 'id'>): Promise<Knowledge> {
@@ -329,8 +341,19 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return knowledge;
   }
 
-  async updateKnowledge(_id: string, _data: Partial<Knowledge>): Promise<Knowledge> {
-    throw new Error('Not implemented');
+  async updateKnowledge(id: string, data: Partial<Knowledge>): Promise<Knowledge> {
+    // DBClientが利用可能な場合
+    if (this.dbClient) {
+      return await this.dbClient.updateKnowledge(id, data);
+    }
+
+    // フォールバック: インメモリで更新をシミュレート
+    const existing = await this.getKnowledge(id);
+    return {
+      ...existing,
+      ...data,
+      id, // IDは変更しない
+    };
   }
 
   async searchKnowledge(query: string): Promise<Knowledge[]> {
@@ -453,19 +476,50 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   updateState(content: string): void {
     this.stateManager.updateState(content);
+    // DBにも非同期で保存
+    if (this.dbClient) {
+      this.dbClient.updateStateDocument(content).catch((error: Error) => {
+        logger.error('Failed to persist state to DB', error);
+      });
+    }
+  }
+
+  appendToState(section: string, content: string): void {
+    this.stateManager.appendToState(section, content);
+  }
+
+  getStateLastUpdate(): Date | null {
+    return this.stateManager.getLastUpdate();
   }
 
   enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void {
+    // イベントキューに追加（Engine内で管理）
     const fullEvent: Event = {
-      id: `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: new Date(),
       ...event,
+      id: nanoid(),
+      timestamp: new Date(),
     };
-    this.eventQueue.enqueue(fullEvent);
-    logger.debug('Event enqueued', { event: fullEvent });
+    // EventQueueImplはAgentEventを期待するので変換
+    const agentEvent: AgentEvent = {
+      type: fullEvent.type,
+      priority: fullEvent.priority,
+      payload: fullEvent.payload as AgentEventPayload,
+      timestamp: fullEvent.timestamp,
+    };
+    this.eventQueue.enqueue(agentEvent);
+    this.emit('event:queued', fullEvent);
   }
 
   dequeueEvent(): Event | null {
-    return this.eventQueue.dequeue();
+    const agentEvent = this.eventQueue.dequeue();
+    if (!agentEvent) return null;
+    // AgentEventをEventに変換
+    return {
+      id: nanoid(),
+      type: agentEvent.type,
+      priority: agentEvent.priority,
+      payload: agentEvent.payload as EventPayload,
+      timestamp: agentEvent.timestamp,
+    } as Event;
   }
 }

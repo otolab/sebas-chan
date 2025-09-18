@@ -35,18 +35,16 @@ jobs:
       - name: Build packages
         run: npm run build
 
-      - name: Create dependency archive with permissions
+      - name: Create build archive
         run: |
-          tar -czf dependencies.tar.gz \
-            node_modules \
-            packages/*/node_modules \
+          tar -czf build-artifacts.tar.gz \
             packages/*/dist
 
-      - name: Upload dependency archive
+      - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: dependencies
-          path: dependencies.tar.gz
+          name: build-artifacts
+          path: build-artifacts.tar.gz
           retention-days: 1
 
   lint-and-typecheck:
@@ -62,14 +60,20 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Download dependencies
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
+
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Check TypeScript
         run: npm run typecheck
@@ -90,20 +94,29 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
-      - name: Download dependencies
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
+
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Run unit tests
         run: npm run test:unit
 
-  setup-python:
-    name: Setup Python Environment
+  # Python環境のセットアップは各ジョブで独立して実行（uvキャッシュ利用）
+  # このジョブは削除して、integration-testsとe2e-testsで独立実行
+
+  integration-tests:
+    name: Integration Tests
     runs-on: ubuntu-latest
     needs: setup
 
@@ -111,69 +124,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install uv
-        run: pip install uv
-      
-      - name: Setup Python dependencies for DB package
-        run: |
-          cd packages/db
-          uv --project . venv
-          uv --project . sync
-
-      - name: Create Python environment archive
-        run: |
-          tar -czf python-env.tar.gz \
-            packages/db/.venv
-
-      - name: Upload Python environment
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-env
-          path: python-env.tar.gz
-          retention-days: 1
-
-  integration-tests:
-    name: Integration Tests
-    runs-on: ubuntu-latest
-    needs: [setup, setup-python]
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install uv
-        run: pip install uv
+      - name: Setup uv with cache
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "packages/db/pyproject.toml"
 
-      - name: Download dependencies
+      - name: Setup Python dependencies for DB package
+        run: |
+          cd packages/db
+          uv venv .venv
+          uv sync
+
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
-
-      - name: Download Python environment
-        uses: actions/download-artifact@v4
-        with:
-          name: python-env
-
-      - name: Extract Python environment
-        run: tar -xzf python-env.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Run integration tests
         run: npm run test:integration
@@ -181,10 +166,9 @@ jobs:
           PYTHON_BIN: ${{ github.workspace }}/packages/db/.venv/bin/python
 
   e2e-tests:
-    name: E2E Tests (Optional)
+    name: E2E Tests
     runs-on: ubuntu-latest
-    needs: [setup, setup-python]
-    continue-on-error: true  # E2Eテストの失敗はCIを失敗させない
+    needs: setup
 
     steps:
       - name: Checkout code
@@ -194,41 +178,48 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install uv
-        run: pip install uv
+      - name: Setup uv with cache
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+          cache-dependency-glob: "packages/db/pyproject.toml"
 
-      - name: Download dependencies
+      - name: Setup Python dependencies for DB package
+        run: |
+          cd packages/db
+          uv venv .venv
+          uv sync
+
+      - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: dependencies
+          name: build-artifacts
 
-      - name: Extract dependencies with permissions
-        run: tar -xzf dependencies.tar.gz
-
-      - name: Download Python environment
-        uses: actions/download-artifact@v4
-        with:
-          name: python-env
-
-      - name: Extract Python environment
-        run: tar -xzf python-env.tar.gz
+      - name: Extract build artifacts
+        run: tar -xzf build-artifacts.tar.gz
 
       - name: Run E2E tests
         run: npm run test:e2e
         env:
           PYTHON_BIN: ${{ github.workspace }}/packages/db/.venv/bin/python
 
-  # 全テスト完了の確認（必須テストのみ）
+  # 全テスト完了の確認
   tests-complete:
-    name: All Required Tests Complete
+    name: All Tests Complete
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, unit-tests, integration-tests]
+    needs: [lint-and-typecheck, unit-tests, integration-tests, e2e-tests]
     
     steps:
       - name: Tests completed successfully
