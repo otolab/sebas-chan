@@ -28,6 +28,9 @@ Thumbs.db
 *.swo
 *~
 
+# Development tools
+.serena/
+
 # Environment variables
 .env
 .env.local
