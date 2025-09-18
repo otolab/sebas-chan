@@ -362,8 +362,7 @@ describe('API Unit Tests', () => {
   });
   
   describe('Rate Limiting', () => {
-    it.skip('should rate limit requests', async () => {
-      // レート制限のテストはE2Eで実施
-    });
+    // レート制限のテストはE2Eテストで実施
+    // TODO: test/e2e/rate-limiting.test.tsに実装
   });
 });
