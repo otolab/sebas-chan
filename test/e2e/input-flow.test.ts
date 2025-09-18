@@ -521,15 +521,21 @@ describe('Input処理フローのE2Eテスト', () => {
       await engine.initialize();
 
       let processCount = 0;
+      const workflowLoggers: any[] = [];
+
       const partialFailureWorkflow: WorkflowDefinition = {
         name: 'PartialFailure',
         description: '部分的に失敗するワークフロー',
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           processCount++;
+          const currentCount = processCount;
+
+          // WorkflowLoggerインスタンスを保存
+          workflowLoggers.push(context.logger);
 
           // 偶数番目は失敗
-          if (processCount % 2 === 0) {
-            throw new Error(`Process ${processCount} failed`);
+          if (currentCount % 2 === 0) {
+            throw new Error(`Process ${currentCount} failed`);
           }
 
           // 奇数番目は成功
@@ -577,16 +583,43 @@ describe('Input処理フローのE2Eテスト', () => {
       });
 
       // 奇数番目（1, 3）は成功、偶数番目（2, 4）は失敗
-      // 注意: CoreAgentのtry-catchによりexecutor自体はthrowを返さない
       const mockCalls = partialFailureWorkflow.executor.mock.calls;
       expect(mockCalls).toHaveLength(4);
 
-      // processCountで成功/失敗を判定
-      // 1番目: processCount=1（奇数）→成功
-      // 2番目: processCount=2（偶数）→失敗
-      // 3番目: processCount=3（奇数）→成功
-      // 4番目: processCount=4（偶数）→失敗
-      expect(mockCalls).toHaveLength(4);
+      // WorkflowLoggerインスタンスが4つ作成されている
+      expect(workflowLoggers).toHaveLength(4);
+
+      // 各実行のログを確認
+      let successCount = 0;
+      let failureCount = 0;
+
+      workflowLoggers.forEach((logger, index) => {
+        const logs = logger.getLogRecords();
+
+        // INPUTログは必ず記録される（CoreAgent側で）
+        const hasInput = logs.some(log => log.type === 'input');
+
+        // OUTPUTログがあれば成功
+        const hasOutput = logs.some(log => log.type === 'output');
+
+        // ERRORログがあれば失敗（CoreAgentのcatchブロックで記録）
+        const hasError = logs.some(log => log.type === 'error');
+
+        // index 0, 2は成功（processCount 1, 3）
+        // index 1, 3は失敗（processCount 2, 4）
+        if (index % 2 === 0) {
+          // 奇数回目の実行（成功するはず）
+          if (hasOutput) successCount++;
+          expect(hasOutput).toBe(true);
+        } else {
+          // 偶数回目の実行（失敗するはず）
+          if (hasError || !hasOutput) failureCount++;
+          expect(hasError || !hasOutput).toBe(true);
+        }
+      });
+
+      expect(successCount).toBe(2);
+      expect(failureCount).toBe(2);
 
       // エンジンは動作し続ける
       expect((engine as any).isRunning).toBe(true);
