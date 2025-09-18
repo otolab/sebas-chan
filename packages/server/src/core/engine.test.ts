@@ -32,6 +32,8 @@ describe('CoreEngine', () => {
       addPondEntry: vi.fn().mockResolvedValue(true),
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
+      updateState: vi.fn().mockResolvedValue(undefined),
+      getState: vi.fn().mockResolvedValue({ content: '# Initial State', lastUpdated: new Date() }),
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);
@@ -92,13 +94,16 @@ describe('CoreEngine', () => {
         payload: { test: true },
       });
 
+      // イベントループが処理されるのを待つ
+      await vi.advanceTimersByTimeAsync(1000);
+
       // CoreAgentのexecuteWorkflowが呼ばれることを確認
       await vi.waitFor(() => {
         expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
       });
     });
 
-    it('should forward events to CoreAgent', async () => {
+    it('should handle INGEST_INPUT events', async () => {
       await engine.initialize();
       await engine.start();
 
@@ -108,7 +113,8 @@ describe('CoreEngine', () => {
         payload: { inputId: 'test-input' },
       });
 
-      vi.advanceTimersByTime(1000);
+      // イベントループが処理されるのを待つ
+      await vi.advanceTimersByTimeAsync(1000);
 
       // CoreAgentのexecuteWorkflowが呼ばれることを確認
       await vi.waitFor(() => {
@@ -116,7 +122,7 @@ describe('CoreEngine', () => {
       });
     });
 
-    it('should retry failed events with retry configuration', async () => {
+    it('should handle workflow errors without retry', async () => {
       await engine.initialize();
       await engine.start();
 
@@ -131,16 +137,17 @@ describe('CoreEngine', () => {
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
         payload: {},
-        retryCount: 0,
-        maxRetries: 2,
       };
 
       engine.enqueueEvent(event);
 
+      // イベントループが処理されるのを待つ
+      await vi.advanceTimersByTimeAsync(1000);
+
       // 処理を待つ
       await vi.waitFor(() => {
-        // 初回処理 + 2回のリトライ = 3回呼ばれるはず
-        expect(callCount).toBeGreaterThanOrEqual(1);
+        // エラーが発生しても1回だけ実行される（リトライなし）
+        expect(callCount).toBe(1);
       });
     });
   });
@@ -229,6 +236,9 @@ describe('CoreEngine', () => {
       expect(input.source).toBe('test');
       expect(input.content).toBe('Test input');
 
+      // イベントループが処理されるのを待つ
+      await vi.advanceTimersByTimeAsync(1000);
+
       // イベントがCoreAgentに転送されたか確認
       await vi.waitFor(() => {
         expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
@@ -315,10 +325,9 @@ describe('CoreEngine', () => {
       // 2回目のstartは何もしない
       await engine.start();
 
-      // processIntervalが重複して設定されていないことを確認
-      const processInterval = (engine as unknown as { processInterval: NodeJS.Timeout })
-        .processInterval;
-      expect(processInterval).toBeDefined();
+      // isRunningフラグが変わらないことを確認
+      const isRunning = (engine as unknown as { isRunning: boolean }).isRunning;
+      expect(isRunning).toBe(true);
     });
 
     it('should stop processing when stopped', async () => {
@@ -485,6 +494,9 @@ describe('CoreEngine', () => {
         priority: 'normal',
         payload: {},
       });
+
+      // イベントループが処理されるのを待つ
+      await vi.advanceTimersByTimeAsync(2000); // 2つのイベント分
 
       // 処理を実行
       await vi.waitFor(() => {

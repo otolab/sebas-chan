@@ -4,7 +4,7 @@ import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 
 // モックを作成
-vi.mock('@sebas-chan/core');
+// CoreAgentはモックしない（注入するため）
 vi.mock('@sebas-chan/db');
 vi.mock('../../packages/server/src/utils/logger', () => ({
   logger: {
@@ -19,6 +19,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
   let engine: CoreEngine;
   let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
   let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
+  let mockWorkflowRegistry: any;
 
   beforeEach(() => {
     // DBClientモックの設定
@@ -26,6 +27,12 @@ describe('CoreEngine - CoreAgent Integration', () => {
       connect: vi.fn().mockResolvedValue(undefined),
       disconnect: vi.fn().mockResolvedValue(undefined),
       initModel: vi.fn().mockResolvedValue(true),
+      getStatus: vi.fn().mockResolvedValue({
+        status: 'ok',
+        model_loaded: true,
+        tables: ['issues', 'pond', 'state'],
+        vector_dimension: 256,
+      }),
       addPondEntry: vi.fn().mockImplementation(async (entry) => {
         return {
           ...entry,
@@ -35,12 +42,14 @@ describe('CoreEngine - CoreAgent Integration', () => {
       }),
       searchPond: vi.fn().mockResolvedValue([]),
       searchIssues: vi.fn().mockResolvedValue([]),
+      updateState: vi.fn().mockResolvedValue(undefined),
+      getState: vi.fn().mockResolvedValue({ content: '# Initial State', lastUpdated: new Date() }),
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);
 
     // CoreAgentモックの設定
-    const mockWorkflowRegistry = {
+    mockWorkflowRegistry = {
       get: vi.fn((eventType: string) => {
         // INGEST_INPUTなどのイベントタイプに対応するワークフローを返す
         if (eventType === 'INGEST_INPUT' || eventType === 'PROCESS_USER_REQUEST' || eventType === 'ANALYZE_ISSUE_IMPACT') {
@@ -66,9 +75,8 @@ describe('CoreEngine - CoreAgent Integration', () => {
       registerWorkflow: vi.fn(),
     };
 
-    vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent as CoreAgent);
-
-    engine = new CoreEngine();
+    // モックしたCoreAgentをコンストラクタに渡す
+    engine = new CoreEngine(mockCoreAgent as CoreAgent);
     vi.useFakeTimers();
   });
 
@@ -83,12 +91,12 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.initialize();
       await engine.start();
 
-      // CoreAgentが作成されることを確認
-      expect(CoreAgent).toHaveBeenCalled();
-
-      // CoreAgentがステートレスなので、contextの設定は不要
-      // getWorkflowRegistryが正しく動作することを確認
+      // CoreAgentが注入されていることを確認
       expect(mockCoreAgent.getWorkflowRegistry).toBeDefined();
+
+      // ヘルスステータスでCoreAgentが初期化済みであることを確認
+      const health = engine.getHealthStatus();
+      expect(health.agent).toBe('initialized');
     });
   });
 
@@ -246,12 +254,8 @@ describe('CoreEngine - CoreAgent Integration', () => {
         return;
       }
 
-      expect(contextArg.getState).toBeDefined();
-      expect(typeof contextArg.getState).toBe('function');
-
-      const state = contextArg.getState();
-      expect(state).toBeDefined();
-      expect(typeof state).toBe('string');
+      expect(contextArg.state).toBeDefined();
+      expect(typeof contextArg.state).toBe('string');
     });
 
     it('should provide logger and createDriver', async () => {
@@ -298,8 +302,9 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       await expect(engine.initialize()).rejects.toThrow('Connection failed');
 
-      // CoreAgentが初期化されないことを確認
-      expect(CoreAgent).not.toHaveBeenCalled();
+      // エラー時でも注入されたCoreAgentは存在する
+      const health = engine.getHealthStatus();
+      expect(health.agent).toBe('initialized');
     });
 
     it('should handle DB model initialization failure', async () => {

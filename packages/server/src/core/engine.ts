@@ -45,16 +45,18 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private dbClient: DBClient | null = null;
   private coreAgent: CoreAgent | null = null;
   private isRunning: boolean = false;
-  private processInterval: NodeJS.Timeout | null = null;
   private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
   private lastError?: string;
   private driverRegistry: DriverRegistry;
   private eventQueue: EventQueueImpl;
 
-  constructor() {
+  constructor(coreAgent?: CoreAgent) {
     super();
     this.stateManager = new StateManager();
     this.eventQueue = new EventQueueImpl();
+
+    // CoreAgentが提供された場合はそれを使用
+    this.coreAgent = coreAgent || null;
 
     // DriverRegistryを初期化
     this.driverRegistry = new DriverRegistry();
@@ -77,9 +79,13 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       this.dbStatus = 'ready';
       logger.info('DB client connected and initialized');
 
-      // CoreAgentを初期化（ステートレス）
-      this.coreAgent = new CoreAgent();
-      logger.info('Core Agent initialized');
+      // CoreAgentを初期化（ステートレス）- 既に注入されていない場合のみ
+      if (!this.coreAgent) {
+        this.coreAgent = new CoreAgent();
+        logger.info('Core Agent initialized');
+      } else {
+        logger.info('Core Agent already provided');
+      }
 
       await this.stateManager.initialize();
       // startは別途呼び出す必要がある
@@ -94,24 +100,26 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   async start(): Promise<void> {
     if (this.isRunning) return;
 
-    // CoreAgentはステートレスなので、startは不要
-
     this.isRunning = true;
-    this.processInterval = setInterval(async () => {
-      await this.processNextEvent();
-    }, 1000);
+
+    // イベント処理ループを開始（非同期実行）
+    this.startEventLoop();
 
     logger.info('Core Engine started');
+  }
+
+  private async startEventLoop(): Promise<void> {
+    while (this.isRunning) {
+      await this.processNextEvent();
+      // 次のイベント処理まで待機
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
   }
 
   async stop(): Promise<void> {
     if (!this.isRunning) return;
 
     this.isRunning = false;
-    if (this.processInterval) {
-      clearInterval(this.processInterval);
-      this.processInterval = null;
-    }
 
     // DBクライアントを切断
     if (this.dbClient) {
@@ -224,11 +232,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         timestamp: event.timestamp,
       };
 
+      // 実行前の状態を保存
+      const originalState = context.state;
+
       // CoreAgentに実行を委譲
       const result = await this.coreAgent.executeWorkflow(workflow, agentEvent, context, emitter);
 
       // ワークフローで更新されたstateをStateManagerに反映
-      if (result.success && result.context.state !== context.state) {
+      if (result.success && result.context.state !== originalState) {
         this.stateManager.updateState(result.context.state);
       }
 
@@ -455,6 +466,12 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   updateState(content: string): void {
     this.stateManager.updateState(content);
+    // DBにも非同期で保存
+    if (this.dbClient) {
+      this.dbClient.updateState(content).catch(error => {
+        logger.error('Failed to persist state to DB', error);
+      });
+    }
   }
 
   appendToState(section: string, content: string): void {
