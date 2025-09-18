@@ -517,12 +517,22 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       `Resolved ${resolution.workflows.length} workflows for event ${event.type} in ${resolution.resolutionTime}ms`
     );
 
+    // 優先度を数値に変換するヘルパー
+    const priorityToNumber = (priority: 'high' | 'normal' | 'low'): number => {
+      switch (priority) {
+        case 'high': return 100;
+        case 'normal': return 50;
+        case 'low': return 10;
+        default: return 50;
+      }
+    };
+
     // 各ワークフローをキューに追加
     for (const workflow of resolution.workflows) {
       this.workflowQueue.enqueue({
         workflow,
         event: agentEvent,
-        priority: workflow.triggers.priority ?? agentEvent.priority,
+        priority: workflow.triggers.priority ?? priorityToNumber(agentEvent.priority),
         timestamp: new Date(),
       });
     }

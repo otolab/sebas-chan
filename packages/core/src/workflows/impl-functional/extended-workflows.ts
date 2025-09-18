@@ -4,6 +4,7 @@
  */
 
 import type { ExtendedWorkflowDefinition, IWorkflowRegistry } from '../workflow-types.js';
+import { LogType } from '../logger.js';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { processUserRequestWorkflow } from './process-user-request.js';
 import { analyzeIssueImpactWorkflow } from './analyze-issue-impact.js';
@@ -42,7 +43,7 @@ export const loggingWorkflow: ExtendedWorkflowDefinition = {
   },
   executor: async (event, context) => {
     const input = event.payload?.input as any;
-    context.logger.log('input', {
+    context.logger.log(LogType.INPUT, {
       id: input?.id,
       source: input?.source,
       contentLength: input?.content?.length,

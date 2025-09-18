@@ -178,14 +178,8 @@ Available commands:
   }
 
   private showQueue(): void {
-    const event = this.coreEngine.dequeueEvent();
-    if (event) {
-      console.log('Next event in queue:');
-      console.log(JSON.stringify(event, null, 2));
-      this.coreEngine.enqueueEvent(event);
-    } else {
-      console.log('Event queue is empty');
-    }
+    // EventQueueが削除されたため、この機能は現在利用できません
+    console.log('Queue inspection is not available in the new WorkflowQueue architecture');
   }
 
   private stop(): void {

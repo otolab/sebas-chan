@@ -151,13 +151,14 @@ export class WorkflowQueue implements IWorkflowQueue {
   /**
    * 特定のイベントに関連するワークフローを取得
    */
-  findByEventId(eventId: string): WorkflowQueueItem[] {
-    const pending = this.queue.filter((item) => item.event.id === eventId);
-    const running = Array.from(this.running.values()).filter(
-      (item) => item.event.id === eventId
-    );
-    return [...pending, ...running];
-  }
+  /**
+   * 特定のイベントに関連するワークフローを取得
+   * 注: AgentEventにはidフィールドがないため、このメソッドは現在使用できません
+   */
+  // findByEventId(eventId: string): WorkflowQueueItem[] {
+  //   // AgentEventにidがないため、実装保留
+  //   return [];
+  // }
 
   /**
    * キューの統計情報を取得

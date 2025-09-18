@@ -49,8 +49,7 @@ export interface CoreAPI {
   updateState(content: string): void;
 
   // イベントキュー
-  enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void;
-  dequeueEvent(): Event | null;
+  enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void | Promise<void>;
 }
 
 /**
@@ -75,7 +74,7 @@ export interface WorkflowContext {
   state: string; // 現在のState文書
   coreAPI: CoreAPI; // Core API呼び出し
   llm: LLMDriver; // 生成AI呼び出しAPI
-  enqueue: (event: Omit<Event, 'id' | 'timestamp'>) => void; // 新規イベント追加
+  enqueue: (event: Omit<Event, 'id' | 'timestamp'>) => void | Promise<void>; // 新規イベント追加
   logger: Logger; // ログ出力
 }
 
