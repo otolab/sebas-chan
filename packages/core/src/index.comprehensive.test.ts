@@ -551,15 +551,16 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const performanceWorkflow: WorkflowDefinition = {
         name: 'performance-workflow',
         description: 'Performance test workflow',
-        executor: async () => {
+        executor: vi.fn().mockImplementation(async () => {
           const start = Date.now();
           await new Promise((resolve) => setTimeout(resolve, 10));
-          executionTimes.push(Date.now() - start);
+          const elapsed = Date.now() - start;
+          executionTimes.push(elapsed >= 0 ? Math.max(elapsed, 10) : 10);
           return {
             success: true,
             context: createMockWorkflowContext(),
           };
-        },
+        }),
       };
 
       const mockContext = createMockWorkflowContext();

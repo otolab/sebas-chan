@@ -466,9 +466,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   updateState(content: string): void {
     this.stateManager.updateState(content);
-    // DBにも非同期で保存
-    if (this.dbClient) {
-      this.dbClient.updateState(content).catch(error => {
+    // DBにも非同期で保存（DBClientにupdateStateメソッドがある場合）
+    if (this.dbClient && 'updateState' in this.dbClient) {
+      (this.dbClient as any).updateState(content).catch((error: Error) => {
         logger.error('Failed to persist state to DB', error);
       });
     }

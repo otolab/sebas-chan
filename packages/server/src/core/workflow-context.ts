@@ -150,15 +150,6 @@ export class EngineWorkflowContext implements WorkflowContext {
     this.storage = new EngineWorkflowStorage(db, engine);
     this.state = stateManager.getState();
   }
-
-  getState(): string {
-    return this.state;
-  }
-
-  setState(newState: string): void {
-    this.state = newState;
-    this.stateManager.updateState(newState);
-  }
 }
 
 /**

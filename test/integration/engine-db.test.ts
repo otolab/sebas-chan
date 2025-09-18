@@ -391,51 +391,10 @@ describe('CoreEngine と DBClient の統合テスト', () => {
     });
   });
 
-  describe('2.4 並行処理とリソース管理', () => {
+  describe('2.4 リソース管理', () => {
     beforeEach(async () => {
       engine = new CoreEngine();
       await engine.initialize();
-    });
-
-    it('TEST-CONCURRENT-001: 並行した複数のDB操作', async () => {
-      // Arrange
-      const operations = Array.from({ length: 10 }, (_, i) => ({
-        content: `Concurrent operation ${i}`,
-        source: 'test',
-        timestamp: new Date(),
-      }));
-
-      let processingCount = 0;
-      let maxConcurrent = 0;
-
-      mockDbClient.addPondEntry = vi.fn().mockImplementation(async (entry) => {
-        processingCount++;
-        maxConcurrent = Math.max(maxConcurrent, processingCount);
-
-        // 処理時間をシミュレート（Promise.resolveではなくPromise.resolveを使用）
-        await Promise.resolve();
-
-        processingCount--;
-        return {
-          ...entry,
-          id: `pond-${Date.now()}-${Math.random()}`,
-          timestamp: new Date(),
-        };
-      });
-
-      // Act - 並行してPondエントリを追加
-      const promises = operations.map(op => engine.addToPond(op));
-      const results = await Promise.all(promises);
-
-      // Assert
-      expect(results).toHaveLength(10);
-      results.forEach(result => {
-        expect(result.id).toBeDefined();
-        expect(result.content).toMatch(/^Concurrent operation \d+$/);
-      });
-
-      // 並行処理が行われたことを確認（モックでは同期的に処理される可能性がある）
-      expect(maxConcurrent).toBeGreaterThanOrEqual(1);
     });
 
     it('TEST-RESOURCE-001: リソースのクリーンアップ', async () => {

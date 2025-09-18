@@ -36,9 +36,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     description: 'テスト用ワークフロー',
     executor: vi.fn().mockImplementation(async (event, context, emitter) => {
       // contextの内容を記録（検証用）
-      const currentState = typeof context.getState === 'function'
-        ? context.getState()
-        : context.state || '';
+      const currentState = context.state || '';
 
       return {
         success: true,
@@ -352,27 +350,15 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
         expect(capturedContext).toBeDefined();
       });
 
-      // getStateとsetStateが存在することを確認（関数またはundefined）
-      expect(capturedContext).toHaveProperty('getState');
-      expect(capturedContext).toHaveProperty('setState');
+      // stateプロパティが存在することを確認
+      expect(capturedContext).toHaveProperty('state');
 
       // state操作が動作することを確認
-      if (typeof capturedContext.getState === 'function') {
-        const initialState = capturedContext.getState();
-        expect(typeof initialState).toBe('string');
-      } else {
-        // getStateが関数でない場合、stateプロパティを直接確認
-        expect(typeof capturedContext.state).toBe('string');
-      }
+      expect(typeof capturedContext.state).toBe('string');
 
-      if (typeof capturedContext.setState === 'function') {
-        capturedContext.setState('New State');
-        expect(capturedContext.state).toBe('New State');
-      } else {
-        // setStateが関数でない場合、stateプロパティを直接設定
-        capturedContext.state = 'New State';
-        expect(capturedContext.state).toBe('New State');
-      }
+      // stateプロパティを直接設定できることを確認
+      capturedContext.state = 'New State';
+      expect(capturedContext.state).toBe('New State');
     });
 
     it('TEST-CONTEXT-004: WorkflowContextにDriverFactory経由でドライバーが提供される', async () => {

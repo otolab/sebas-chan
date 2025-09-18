@@ -69,15 +69,8 @@ describe('Input処理フローのE2Eテスト', () => {
       }
 
       // 状態を更新
-      const currentState = typeof context.getState === 'function'
-        ? context.getState()
-        : context.state || '';
-
-      if (typeof context.setState === 'function') {
-        context.setState(currentState + `\n[Processed Input: ${input.id}]`);
-      } else {
-        context.state = currentState + `\n[Processed Input: ${input.id}]`;
-      }
+      const currentState = context.state || '';
+      context.state = currentState + `\n[Processed Input: ${input.id}]`;
 
       return {
         success: true,
@@ -413,17 +406,11 @@ describe('Input処理フローのE2Eテスト', () => {
         name: 'StateTracking',
         description: '状態の変化を追跡',
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
-          const currentState = typeof context.getState === 'function'
-            ? context.getState()
-            : context.state || '';
+          const currentState = context.state || '';
           const inputCount = (currentState.match(/\[Processed Input:/g) || []).length;
 
           // 処理済み数をコンテキストに記録
-          if (typeof context.setState === 'function') {
-            context.setState(currentState + `\n[Processed Input: ${event.payload.input.id}]`);
-          } else {
-            context.state = currentState + `\n[Processed Input: ${event.payload.input.id}]`;
-          }
+          context.state = currentState + `\n[Processed Input: ${event.payload.input.id}]`;
 
           return {
             success: true,
@@ -475,72 +462,49 @@ describe('Input処理フローのE2Eテスト', () => {
   });
 
   describe('3.4 エラーハンドリングとリカバリー', () => {
-    it('TEST-FLOW-006: ワークフローエラー時のリトライ処理', async () => {
+    it('TEST-FLOW-006: ワークフローエラー時はリトライせず失敗する', async () => {
       // Arrange
       engine = new CoreEngine();
       await engine.initialize();
 
       let attemptCount = 0;
-      const retryableWorkflow: WorkflowDefinition = {
-        name: 'RetryableWorkflow',
-        description: 'リトライ可能なワークフロー',
+      const errorWorkflow: WorkflowDefinition = {
+        name: 'ErrorWorkflow',
+        description: 'エラーを発生させるワークフロー',
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           attemptCount++;
-
-          // 最初の2回は失敗
-          if (attemptCount < 3) {
-            throw new Error(`Attempt ${attemptCount} failed`);
-          }
-
-          // 3回目で成功
-          const pondEntry = await context.storage.addPondEntry({
-            content: event.payload.input.content,
-            source: event.payload.input.source,
-          });
-
-          return {
-            success: true,
-            context,
-            output: {
-              pondEntryId: pondEntry.id,
-              attempts: attemptCount,
-            },
-          };
+          throw new Error(`Workflow failed: attempt ${attemptCount}`);
         }),
       };
 
       // ワークフローを登録
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
-      registry.register(retryableWorkflow);
+      registry.register(errorWorkflow);
       registry.get = vi.fn((eventType) => {
-        if (eventType === 'INGEST_INPUT') return retryableWorkflow;
+        if (eventType === 'INGEST_INPUT') return errorWorkflow;
         return undefined;
       });
 
       await engine.start();
 
-      // Act - リトライ設定付きでInput投稿
+      // Act - Input投稿
       const input = await engine.createInput({
-        source: 'retry-test',
-        content: 'Retry test content',
+        source: 'error-test',
+        content: 'Error test content',
         timestamp: new Date(),
       });
 
-      // リトライを含む処理を実行
-      for (let i = 0; i < 5; i++) {
-        await vi.advanceTimersByTimeAsync(2000);
-      }
+      // 処理を実行
+      await vi.advanceTimersByTimeAsync(2000);
 
       // Assert
       await vi.waitFor(() => {
-        // 3回実行される（初回 + 2回のリトライ）
-        expect(retryableWorkflow.executor).toHaveBeenCalledTimes(3);
+        // エラーが発生しても1回だけ実行される（リトライなし）
+        expect(errorWorkflow.executor).toHaveBeenCalledTimes(1);
       });
 
-      // 最終的に成功する
-      const lastResult = await retryableWorkflow.executor.mock.results[2].value;
-      expect(lastResult.success).toBe(true);
-      expect(lastResult.output.attempts).toBe(3);
+      // エラーが発生したことを確認
+      expect(attemptCount).toBe(1);
     });
 
     it('TEST-FLOW-007: 部分的な失敗でも処理が継続される', async () => {
