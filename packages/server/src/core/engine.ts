@@ -112,7 +112,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     while (this.isRunning) {
       await this.processNextEvent();
       // 次のイベント処理まで待機
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 
@@ -466,12 +466,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
   updateState(content: string): void {
     this.stateManager.updateState(content);
-    // DBにも非同期で保存（DBClientにupdateStateメソッドがある場合）
-    if (this.dbClient && 'updateState' in this.dbClient) {
-      (this.dbClient as any).updateState(content).catch((error: Error) => {
-        logger.error('Failed to persist state to DB', error);
-      });
-    }
+    // 現時点ではDBへの永続化は実装されていない
+    // TODO: DBClientにupdateStateメソッドを追加後に実装
   }
 
   appendToState(section: string, content: string): void {
