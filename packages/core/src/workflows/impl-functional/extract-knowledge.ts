@@ -1,6 +1,7 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
-import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
+import type { WorkflowResult } from '../functional-types.js';
+import type { ExtendedWorkflowDefinition } from '../workflow-types.js';
 import type { Knowledge, KnowledgeSource } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
@@ -177,8 +178,12 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 /**
  * EXTRACT_KNOWLEDGE ワークフロー定義
  */
-export const extractKnowledgeWorkflow: WorkflowDefinition = {
+export const extractKnowledgeWorkflow: ExtendedWorkflowDefinition = {
   name: 'ExtractKnowledge',
   description: '情報から再利用可能な知識を抽出し、Knowledge DBに保存する',
+  triggers: {
+    eventTypes: ['EXTRACT_KNOWLEDGE'],
+    priority: 5,
+  },
   executor: executeExtractKnowledge,
 };

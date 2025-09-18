@@ -94,6 +94,11 @@ export * from './workflows/index.js';
 // イベントキューのエクスポート
 export { EventQueueImpl } from './event-queue.js';
 
+// 新しいワークフローシステムのエクスポート
+export * from './workflows/workflow-types.js';
+export { WorkflowRegistry as ExtendedWorkflowRegistry } from './workflows/workflow-registry.js';
+export { WorkflowResolver } from './workflows/workflow-resolver.js';
+
 // 標準ワークフローをすべて登録したRegistryを生成
 export function generateWorkflowRegistry(): WorkflowRegistry {
   const registry = new WorkflowRegistry();
