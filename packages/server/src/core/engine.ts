@@ -507,7 +507,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     // イベントから実行すべきワークフローを解決
     const resolution = await this.workflowResolver.resolve(agentEvent);
 
-    if (resolution.workflows.length === 0) {
+    if (!resolution || resolution.workflows.length === 0) {
       logger.warn(`No workflows found for event type: ${event.type}`);
       return;
     }

@@ -52,6 +52,7 @@ describe('CoreEngine と DBClient の統合テスト', () => {
       searchIssues: vi.fn().mockResolvedValue([]),
       updateStateDocument: vi.fn().mockResolvedValue(undefined),
       getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnull（新規状態）
+      saveStateDocument: vi.fn().mockResolvedValue(undefined),
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient as DBClient);
