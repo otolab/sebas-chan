@@ -32,15 +32,15 @@ const validateWorkflow: WorkflowDefinition = {
   triggers: {
     eventTypes: ['INGEST_INPUT'],
     condition: (event) => {
-      const input = event.payload?.input as any;
-      return input?.content?.length > 0;
+      const input = (event.payload as { input?: { content?: string } })?.input;
+      return (input?.content?.length ?? 0) > 0;
     },
   },
   executor: async (event, context) => {
-    const input = event.payload?.input as any;
+    const input = (event.payload as { input?: { content?: string } })?.input;
     console.log(`[ValidateInput] Validating input: ${input?.content}`);
 
-    const isValid = input?.content && input.content.length > 0;
+    const isValid = Boolean(input?.content && input.content.length > 0);
     return {
       success: isValid,
       context,
@@ -55,13 +55,13 @@ const analyzeErrorWorkflow: WorkflowDefinition = {
   triggers: {
     eventTypes: ['INGEST_INPUT'],
     condition: (event) => {
-      const input = event.payload?.input as any;
+      const input = (event.payload as { input?: { content?: string } })?.input;
       const content = input?.content?.toLowerCase() || '';
       return content.includes('error') || content.includes('エラー');
     },
   },
   executor: async (event, context, emitter) => {
-    const input = event.payload?.input as any;
+    const input = (event.payload as { input?: { content?: string } })?.input;
     console.log(`[AnalyzeError] Error detected in: ${input?.content}`);
 
     // 後続イベントを発行

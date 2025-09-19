@@ -26,7 +26,7 @@ export interface WorkflowTrigger {
 export interface WorkflowResult {
   success: boolean;
   context: WorkflowContextInterface;
-  output?: any;
+  output?: unknown;
   error?: Error;
 }
 
