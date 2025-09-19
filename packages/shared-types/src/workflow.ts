@@ -48,8 +48,8 @@ export interface CoreAPI {
   getState(): string;
   updateState(content: string): void;
 
-  // イベントキュー
-  enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void | Promise<void>;
+  // イベント発行
+  emitEvent(event: Omit<Event, 'id' | 'timestamp'>): void;
 }
 
 /**
@@ -72,10 +72,21 @@ export interface LLMOptions {
  */
 export interface WorkflowContext {
   state: string; // 現在のState文書
-  coreAPI: CoreAPI; // Core API呼び出し
-  llm: LLMDriver; // 生成AI呼び出しAPI
-  enqueue: (event: Omit<Event, 'id' | 'timestamp'>) => void | Promise<void>; // 新規イベント追加
+  storage: {
+    // DB操作インターフェース
+    searchIssues(query: string): Promise<Issue[]>;
+    searchKnowledge(query: string): Promise<Knowledge[]>;
+    searchPond(query: string): Promise<PondEntry[]>;
+    getIssue(id: string): Promise<Issue | null>;
+    createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
+    updateIssue(id: string, update: Partial<Issue>): Promise<Issue>;
+    addPondEntry(entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry>;
+    createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge>;
+    updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
+  };
+  createDriver: (criteria: any) => Promise<any>; // AIドライバーファクトリ
   logger: Logger; // ログ出力
+  metadata?: Record<string, unknown>; // 実行時メタデータ
 }
 
 /**

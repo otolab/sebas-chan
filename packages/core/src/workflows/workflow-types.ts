@@ -126,7 +126,7 @@ export interface IWorkflowRegistry {
  */
 export interface IWorkflowResolver {
   /** イベントにマッチするワークフローを解決 */
-  resolve(event: AgentEvent): Promise<WorkflowResolution>;
+  resolve(event: AgentEvent): WorkflowResolution;
 
   /** 解決ルールを検証 */
   validate(): boolean;

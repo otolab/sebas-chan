@@ -205,7 +205,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: { data: 'test' },
@@ -232,7 +232,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       const warnSpy = vi.mocked(logger.warn);
 
       // Act
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'UNKNOWN_EVENT',
         priority: 'normal',
         payload: {},
@@ -277,7 +277,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -308,7 +308,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -331,7 +331,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -360,7 +360,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -395,19 +395,19 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       executorSpy.mockClear();
 
       // Act
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'EVENT_1',
         priority: 'normal',
         payload: { id: 1 },
       });
 
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'EVENT_2',
         priority: 'normal',
         payload: { id: 2 },
       });
 
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'EVENT_3',
         priority: 'normal',
         payload: { id: 3 },
@@ -437,19 +437,19 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       executorSpy.mockClear();
 
       // Act - 優先度の異なるイベントを追加
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'LOW_EVENT',
         priority: 'low',
         payload: { priority: 'low' },
       });
 
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'HIGH_EVENT',
         priority: 'high',
         payload: { priority: 'high' },
       });
 
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'NORMAL_EVENT',
         priority: 'normal',
         payload: { priority: 'normal' },

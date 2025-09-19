@@ -169,7 +169,7 @@ Available commands:
       return;
     }
 
-    this.coreEngine.enqueueEvent({
+    this.coreEngine.emitEvent({
       type: 'PROCESS_USER_REQUEST',
       priority: 'high',
       payload: { prompt },

@@ -122,8 +122,8 @@ export class EngineWorkflowEventEmitter implements WorkflowEventEmitter {
   constructor(private engine: CoreEngine) {}
 
   emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void {
-    // EngineのenqueueEventを使用してイベントをキューに追加
-    this.engine.enqueueEvent({
+    // EngineのemitEventを使用してイベントを発行
+    this.engine.emitEvent({
       type: event.type as WorkflowType,
       priority: event.priority || 'normal',
       payload: event.payload as EventPayload,

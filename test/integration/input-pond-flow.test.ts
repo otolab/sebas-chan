@@ -218,7 +218,7 @@ describe('Input to Pond Flow Integration', () => {
 
     it('should maintain event priority during input processing', async () => {
       // High priority event
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
         payload: { urgent: true },
@@ -232,7 +232,7 @@ describe('Input to Pond Flow Integration', () => {
       });
 
       // Low priority event
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'SALVAGE_FROM_POND',
         priority: 'low',
         payload: { cleanup: true },

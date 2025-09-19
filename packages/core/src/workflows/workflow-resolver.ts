@@ -17,7 +17,7 @@ export class WorkflowResolver implements IWorkflowResolver {
   /**
    * イベントにマッチするワークフローを解決
    */
-  async resolve(event: AgentEvent): Promise<WorkflowResolution> {
+  resolve(event: AgentEvent): WorkflowResolution {
     const startTime = Date.now();
     const allWorkflows = this.registry.getAll();
     const debug = {
@@ -110,8 +110,8 @@ export class WorkflowResolver implements IWorkflowResolver {
   /**
    * デバッグ用：解決のシミュレーション
    */
-  async simulate(event: AgentEvent): Promise<string[]> {
-    const resolution = await this.resolve(event);
+  simulate(event: AgentEvent): string[] {
+    const resolution = this.resolve(event);
     return resolution.workflows.map((w) => w.name);
   }
 }

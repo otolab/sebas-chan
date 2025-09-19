@@ -142,13 +142,13 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.start();
 
       // 異なるタイプのイベントを追加
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
         payload: { request: 'user request' },
       });
 
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'ANALYZE_ISSUE_IMPACT',
         priority: 'normal',
         payload: { issueId: 'issue-123' },
@@ -481,7 +481,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await testEngine.start();
 
       // ワークフローが定義されていないイベントを追加
-      await testEngine.enqueueEvent({
+      testEngine.emitEvent({
         type: 'UNKNOWN_EVENT_TYPE',
         priority: 'high',
         payload: { test: true },

@@ -367,7 +367,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       ...data,
     };
     logger.info('Created input', { input });
-    this.enqueueEvent({
+    this.emitEvent({
       type: 'INGEST_INPUT',
       priority: 'normal',
       payload: { input }, // Inputオブジェクト全体を渡す
@@ -488,7 +488,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     return this.stateManager.getLastUpdate();
   }
 
-  async enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): Promise<void> {
+  emitEvent(event: Omit<Event, 'id' | 'timestamp'>): void {
     // イベントを完全な形にする
     const fullEvent: Event = {
       ...event,
@@ -505,7 +505,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     };
 
     // イベントから実行すべきワークフローを解決
-    const resolution = await this.workflowResolver.resolve(agentEvent);
+    const resolution = this.workflowResolver.resolve(agentEvent);
 
     if (!resolution || resolution.workflows.length === 0) {
       logger.warn(`No workflows found for event type: ${event.type}`);

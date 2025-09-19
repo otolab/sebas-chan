@@ -17,7 +17,7 @@ vi.mock('@sebas-chan/core', () => ({
     getByEventType: vi.fn().mockReturnValue([]),
   })),
   WorkflowResolver: vi.fn().mockImplementation(() => ({
-    resolve: vi.fn().mockResolvedValue({
+    resolve: vi.fn().mockReturnValue({
       workflows: [
         {
           name: 'MockWorkflow',
@@ -102,7 +102,7 @@ describe('CoreEngine', () => {
       await engine.initialize();
       await engine.start();
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
         payload: { test: true },
@@ -121,7 +121,7 @@ describe('CoreEngine', () => {
       await engine.initialize();
       await engine.start();
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'INGEST_INPUT',
         priority: 'normal',
         payload: { inputId: 'test-input' },
@@ -153,7 +153,7 @@ describe('CoreEngine', () => {
         payload: {},
       };
 
-      engine.enqueueEvent(event);
+      engine.emitEvent(event);
 
       // イベントループが処理されるのを待つ
       await vi.advanceTimersByTimeAsync(1000);
@@ -343,7 +343,7 @@ describe('CoreEngine', () => {
 
   describe('Event queue management', () => {
     it('should enqueue events and resolve to workflows', async () => {
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'INGEST_INPUT',
         priority: 'normal',
         payload: { input: { id: '123', content: 'test', source: 'test' } },
@@ -380,7 +380,7 @@ describe('CoreEngine', () => {
       const listener = vi.fn();
       engine.on('event:queued', listener);
 
-      await engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
         payload: {},
@@ -412,13 +412,13 @@ describe('CoreEngine', () => {
       });
 
       // 複数のイベントを投入
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
         payload: {},
       });
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'INGEST_INPUT',
         priority: 'normal',
         payload: {},
