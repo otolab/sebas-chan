@@ -1,0 +1,585 @@
+# ワークフロー開発者ガイド
+
+## 1. はじめに
+
+このガイドでは、sebas-chanのワークフローを開発するための実践的な手順を説明します。ワークフローは、特定のイベントに反応して実行される独立した処理単位です。
+
+## 2. クイックスタート
+
+### 2.1 最小限のワークフロー
+
+```typescript
+import type { WorkflowDefinition } from '@sebas-chan/core';
+
+export const myWorkflow: WorkflowDefinition = {
+  name: 'my-workflow',
+  description: 'シンプルなワークフローの例',
+  triggers: {
+    eventTypes: ['USER_INPUT']
+  },
+  executor: async (event, context, emitter) => {
+    context.logger.info('ワークフロー実行開始', { eventType: event.type });
+
+    // 処理を実装
+    const result = await processInput(event.payload);
+
+    return {
+      success: true,
+      context,
+      output: result
+    };
+  }
+};
+```
+
+## 3. ステップバイステップガイド
+
+### Step 1: ワークフローの目的を定義
+
+まず、ワークフローが何を達成するのかを明確にします。
+
+```typescript
+// 目的: ユーザー入力を処理してIssueを作成する
+const PURPOSE = {
+  trigger: 'ユーザーが新しい入力を送信したとき',
+  action: '入力を分析してIssueとして保存',
+  output: '作成されたIssueオブジェクト'
+};
+```
+
+### Step 2: トリガー条件を設計
+
+#### 基本的なトリガー
+
+```typescript
+triggers: {
+  eventTypes: ['USER_INPUT']
+}
+```
+
+#### 条件付きトリガー
+
+```typescript
+triggers: {
+  eventTypes: ['USER_INPUT', 'SYSTEM_ALERT'],
+  condition: (event) => {
+    // payloadにtextフィールドが存在する場合のみ実行
+    return event.payload &&
+           typeof event.payload === 'object' &&
+           'text' in event.payload;
+  },
+  priority: 10 // 他のワークフローより優先
+}
+```
+
+### Step 3: 実行関数を実装
+
+#### 基本構造
+
+```typescript
+executor: async (event, context, emitter) => {
+  try {
+    // 1. 入力検証
+    const validated = validateInput(event.payload);
+
+    // 2. メイン処理
+    const result = await processData(validated, context);
+
+    // 3. 副作用（必要に応じて）
+    if (result.needsFollowUp) {
+      emitter.emit({
+        type: 'FOLLOW_UP_REQUIRED',
+        payload: { issueId: result.id }
+      });
+    }
+
+    // 4. 成功を返す
+    return {
+      success: true,
+      context,
+      output: result
+    };
+
+  } catch (error) {
+    // 5. エラーハンドリング
+    context.logger.error('処理エラー', { error });
+    return {
+      success: false,
+      context,
+      error: error instanceof Error ? error : new Error(String(error))
+    };
+  }
+}
+```
+
+### Step 4: データ操作
+
+#### Storageを使った操作
+
+```typescript
+// Issue作成
+const issue = await context.storage.createIssue({
+  title: 'ユーザーからの要望',
+  description: event.payload.text,
+  status: 'open',
+  priority: 'medium'
+});
+
+// 検索
+const relatedIssues = await context.storage.searchIssues(
+  `関連: ${issue.title}`
+);
+
+// 更新
+await context.storage.updateIssue(issue.id, {
+  status: 'in_progress'
+});
+```
+
+### Step 5: AI処理の統合
+
+```typescript
+// AIドライバーの作成
+const driver = await context.createDriver({
+  capabilities: ['text-generation'],
+  model: 'gpt-4'
+});
+
+// プロンプト実行
+const response = await driver.generate({
+  prompt: `以下のテキストを分析してください: ${text}`,
+  maxTokens: 500
+});
+```
+
+## 4. ベストプラクティス
+
+### 4.1 エラーハンドリング
+
+```typescript
+executor: async (event, context, emitter) => {
+  try {
+    // バリデーション
+    if (!isValidPayload(event.payload)) {
+      throw new ValidationError('Invalid payload structure');
+    }
+
+    // タイムアウト設定
+    const result = await Promise.race([
+      performOperation(event, context),
+      timeout(5000) // 5秒でタイムアウト
+    ]);
+
+    return { success: true, context, output: result };
+
+  } catch (error) {
+    // エラーの種類に応じた処理
+    if (error instanceof ValidationError) {
+      context.logger.warn('Validation failed', { error });
+      // リトライ不要
+    } else if (error instanceof NetworkError) {
+      context.logger.error('Network error', { error });
+      // リトライ可能
+    }
+
+    return {
+      success: false,
+      context,
+      error: error instanceof Error ? error : new Error(String(error))
+    };
+  }
+}
+```
+
+### 4.2 ログ記録
+
+```typescript
+// 構造化ログを使用
+context.logger.info('処理開始', {
+  workflowName: 'my-workflow',
+  eventType: event.type,
+  timestamp: new Date().toISOString()
+});
+
+// 重要なステップをログ
+context.logger.debug('Issue作成', {
+  issueId: issue.id,
+  title: issue.title
+});
+
+// エラーは詳細に記録
+context.logger.error('処理失敗', {
+  error: error.message,
+  stack: error.stack,
+  eventPayload: event.payload
+});
+```
+
+### 4.3 優先度の設計
+
+| 優先度 | 範囲 | 用途 | 例 |
+|--------|------|------|-----|
+| Critical | 80-100 | システム重要処理 | エラー処理、緊急アラート |
+| High | 50-79 | ユーザー操作の即時応答 | ユーザー入力処理 |
+| Normal | 0-49 | 通常の業務処理 | データ分析、レポート生成 |
+| Low | -100--1 | バックグラウンド処理 | 定期クリーンアップ、統計収集 |
+
+```typescript
+triggers: {
+  eventTypes: ['USER_INPUT'],
+  priority: 60 // 高優先度：ユーザー応答
+}
+```
+
+## 5. テスト
+
+### 5.1 単体テスト
+
+```typescript
+import { describe, it, expect, vi } from 'vitest';
+import { myWorkflow } from './my-workflow';
+
+describe('MyWorkflow', () => {
+  it('should process user input successfully', async () => {
+    // モックコンテキストの作成
+    const mockContext = {
+      state: 'idle',
+      storage: {
+        createIssue: vi.fn().mockResolvedValue({
+          id: 'issue-1',
+          title: 'Test Issue'
+        })
+      },
+      logger: {
+        info: vi.fn(),
+        error: vi.fn()
+      }
+    };
+
+    const mockEmitter = {
+      emit: vi.fn()
+    };
+
+    // ワークフロー実行
+    const result = await myWorkflow.executor(
+      { type: 'USER_INPUT', payload: { text: 'test' } },
+      mockContext,
+      mockEmitter
+    );
+
+    // アサーション
+    expect(result.success).toBe(true);
+    expect(mockContext.storage.createIssue).toHaveBeenCalled();
+  });
+});
+```
+
+### 5.2 統合テスト
+
+```typescript
+import { CoreEngine } from '@sebas-chan/core';
+import { myWorkflow } from './my-workflow';
+
+describe('Workflow Integration', () => {
+  let engine: CoreEngine;
+
+  beforeEach(() => {
+    engine = new CoreEngine();
+    engine.registerWorkflow(myWorkflow);
+  });
+
+  it('should trigger on USER_INPUT event', async () => {
+    const event = {
+      type: 'USER_INPUT',
+      payload: { text: 'integration test' }
+    };
+
+    const results = await engine.processEvent(event);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].workflow).toBe('my-workflow');
+    expect(results[0].success).toBe(true);
+  });
+});
+```
+
+## 6. デバッグ
+
+### 6.1 ログレベルの活用
+
+```typescript
+// 開発環境では詳細ログを有効化
+if (process.env.NODE_ENV === 'development') {
+  context.logger.debug('デバッグ情報', {
+    fullPayload: event.payload,
+    contextState: context.state
+  });
+}
+```
+
+### 6.2 実行トレース
+
+```typescript
+const trace = {
+  workflowName: 'my-workflow',
+  startTime: Date.now(),
+  steps: []
+};
+
+// 各ステップを記録
+trace.steps.push({
+  name: 'validation',
+  duration: Date.now() - stepStart
+});
+
+// 最後にトレースを出力
+context.logger.info('Workflow trace', trace);
+```
+
+## 7. よくあるパターン
+
+### 7.1 チェーンワークフロー
+
+```typescript
+// 最初のワークフロー
+executor: async (event, context, emitter) => {
+  const result = await processStep1(event.payload);
+
+  // 次のワークフローをトリガー
+  emitter.emit({
+    type: 'STEP1_COMPLETED',
+    payload: {
+      originalEvent: event.type,
+      step1Result: result
+    }
+  });
+
+  return { success: true, context, output: result };
+}
+```
+
+### 7.2 条件分岐
+
+```typescript
+executor: async (event, context, emitter) => {
+  const analysis = await analyzeContent(event.payload);
+
+  if (analysis.category === 'urgent') {
+    emitter.emit({
+      type: 'URGENT_ISSUE_DETECTED',
+      payload: analysis
+    });
+  } else if (analysis.category === 'question') {
+    emitter.emit({
+      type: 'USER_QUESTION',
+      payload: analysis
+    });
+  }
+
+  return { success: true, context, output: analysis };
+}
+```
+
+### 7.3 バッチ処理
+
+```typescript
+executor: async (event, context, emitter) => {
+  const items = event.payload.items;
+  const results = [];
+
+  // 並列処理（最大5件）
+  const chunks = chunkArray(items, 5);
+  for (const chunk of chunks) {
+    const chunkResults = await Promise.all(
+      chunk.map(item => processItem(item, context))
+    );
+    results.push(...chunkResults);
+  }
+
+  return { success: true, context, output: results };
+}
+```
+
+## 8. トラブルシューティング
+
+### 問題: ワークフローがトリガーされない
+
+**確認項目:**
+1. eventTypesが正しく設定されているか
+2. conditionが常にfalseを返していないか
+3. ワークフローが正しく登録されているか
+
+```typescript
+// デバッグ用ログを追加
+triggers: {
+  eventTypes: ['MY_EVENT'],
+  condition: (event) => {
+    const result = checkCondition(event);
+    console.log('Condition check:', { event: event.type, result });
+    return result;
+  }
+}
+```
+
+### 問題: タイムアウトが発生する
+
+**解決策:**
+```typescript
+// タイムアウトを明示的に設定
+const withTimeout = async (promise: Promise<any>, ms: number) => {
+  const timeout = new Promise((_, reject) =>
+    setTimeout(() => reject(new Error('Timeout')), ms)
+  );
+  return Promise.race([promise, timeout]);
+};
+
+executor: async (event, context, emitter) => {
+  try {
+    const result = await withTimeout(
+      heavyOperation(event.payload),
+      10000 // 10秒
+    );
+    return { success: true, context, output: result };
+  } catch (error) {
+    if (error.message === 'Timeout') {
+      context.logger.error('Operation timed out');
+    }
+    return { success: false, context, error };
+  }
+}
+```
+
+### 問題: メモリ使用量が多い
+
+**解決策:**
+```typescript
+// ストリーミング処理を使用
+executor: async (event, context, emitter) => {
+  const stream = createReadStream(event.payload.filePath);
+  let processedCount = 0;
+
+  for await (const chunk of stream) {
+    await processChunk(chunk, context);
+    processedCount++;
+
+    // 定期的にガベージコレクションを促す
+    if (processedCount % 100 === 0) {
+      if (global.gc) global.gc();
+    }
+  }
+
+  return { success: true, context, output: { processedCount } };
+}
+```
+
+## 9. パフォーマンス最適化
+
+### 9.1 キャッシュの活用
+
+```typescript
+const cache = new Map();
+
+executor: async (event, context, emitter) => {
+  const cacheKey = generateCacheKey(event.payload);
+
+  // キャッシュチェック
+  if (cache.has(cacheKey)) {
+    context.logger.debug('Cache hit', { key: cacheKey });
+    return {
+      success: true,
+      context,
+      output: cache.get(cacheKey)
+    };
+  }
+
+  // 処理実行
+  const result = await expensiveOperation(event.payload);
+
+  // キャッシュ保存（5分間）
+  cache.set(cacheKey, result);
+  setTimeout(() => cache.delete(cacheKey), 5 * 60 * 1000);
+
+  return { success: true, context, output: result };
+}
+```
+
+### 9.2 並列処理
+
+```typescript
+executor: async (event, context, emitter) => {
+  // 独立した処理を並列実行
+  const [issues, knowledge, pondEntries] = await Promise.all([
+    context.storage.searchIssues(event.payload.query),
+    context.storage.searchKnowledge(event.payload.query),
+    context.storage.searchPond(event.payload.query)
+  ]);
+
+  return {
+    success: true,
+    context,
+    output: { issues, knowledge, pondEntries }
+  };
+}
+```
+
+## 10. セキュリティ考慮事項
+
+### 10.1 入力検証
+
+```typescript
+import { z } from 'zod';
+
+const InputSchema = z.object({
+  text: z.string().min(1).max(1000),
+  userId: z.string().uuid(),
+  timestamp: z.string().datetime()
+});
+
+executor: async (event, context, emitter) => {
+  // スキーマ検証
+  const validation = InputSchema.safeParse(event.payload);
+  if (!validation.success) {
+    return {
+      success: false,
+      context,
+      error: new Error(`Validation failed: ${validation.error.message}`)
+    };
+  }
+
+  const validatedInput = validation.data;
+  // 安全に処理を続行
+}
+```
+
+### 10.2 機密情報の扱い
+
+```typescript
+executor: async (event, context, emitter) => {
+  // 機密情報をログに含めない
+  const sanitizedPayload = {
+    ...event.payload,
+    apiKey: '[REDACTED]',
+    password: '[REDACTED]'
+  };
+
+  context.logger.info('Processing request', {
+    payload: sanitizedPayload
+  });
+
+  // 処理...
+}
+```
+
+## 11. まとめ
+
+ワークフロー開発の重要なポイント：
+
+1. **明確な目的**: 各ワークフローは単一の明確な責任を持つ
+2. **適切なトリガー**: イベントタイプと条件を正確に設定
+3. **エラー処理**: すべての例外を適切にハンドリング
+4. **ログ記録**: デバッグと監視のための十分な情報を記録
+5. **テスト**: 単体テストと統合テストで品質を保証
+6. **パフォーマンス**: 必要に応じて最適化を実施
+7. **セキュリティ**: 入力検証と機密情報の保護
+
+詳細な仕様については、[SPECIFICATION.md](./SPECIFICATION.md)を参照してください。

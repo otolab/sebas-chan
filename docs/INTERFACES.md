@@ -194,25 +194,37 @@ interface EventQueue {
 
 ### ワークフロー実行インターフェース
 
+> **注**: 最新の仕様については[ワークフロー技術仕様書](workflows/SPECIFICATION.md)を参照してください。
+
 ```typescript
-interface Workflow {
+// ワークフロー定義
+interface WorkflowDefinition {
   name: string;
   description: string;
-  priority: 'high' | 'normal' | 'low';
-  execute(context: WorkflowContext): Promise<WorkflowResult>;
+  triggers: WorkflowTrigger;
+  executor: WorkflowExecutor;
 }
 
-interface WorkflowContext {
-  state: string;  // 現在のState文書
-  coreAPI: CoreAPI;  // Core API呼び出し
-  llm: LLMDriver;  // 生成AI呼び出しAPI
-  enqueue: (event: Event) => void;  // 新規イベント追加
+// トリガー条件
+interface WorkflowTrigger {
+  eventTypes: string[];
+  condition?: (event: AgentEvent) => boolean;
+  priority?: number;  // -100 ~ 100
 }
 
+// 実行関数
+type WorkflowExecutor = (
+  event: AgentEvent,
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
+) => Promise<WorkflowResult>;
+
+// 実行結果
 interface WorkflowResult {
   success: boolean;
-  stateUpdate?: string;  // State文書の更新内容
-  logs: LogEntry[];  // 実行ログ
+  context: WorkflowContextInterface;
+  output?: unknown;
+  error?: Error;
 }
 ```
 
