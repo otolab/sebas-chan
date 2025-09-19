@@ -108,12 +108,12 @@ docs/
 | 知りたいこと | 参照ドキュメント |
 |------------|----------------|
 | プロジェクトの目的は？ | [CONCEPT.md](CONCEPT.md) |
-| システムの全体構成は？ | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| システムの全体構成は？ | [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) |
 | ワークフローの作り方は？ | [workflows/DEVELOPER_GUIDE.md](workflows/DEVELOPER_GUIDE.md) |
-| APIの仕様は？ | [INTERFACES.md](INTERFACES.md) |
+| APIの仕様は？ | [architecture/INTERFACES.md](architecture/INTERFACES.md) |
 | 現在の開発状況は？ | [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) |
-| テストの書き方は？ | [TESTING_STRATEGY.md](TESTING_STRATEGY.md) |
-| データモデルは？ | [INFORMATION_MODEL.md](INFORMATION_MODEL.md) |
+| テストの書き方は？ | [testing/STRATEGY.md](testing/STRATEGY.md) |
+| データモデルは？ | [architecture/INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md) |
 | 全ドキュメント一覧は？ | [DOCUMENT_INDEX.md](DOCUMENT_INDEX.md) |
 
 ## 📋 関連リンク

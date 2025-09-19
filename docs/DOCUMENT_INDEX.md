@@ -12,32 +12,35 @@
 ### 2. アーキテクチャ・設計
 | ファイル | 内容 | 種別 | 状態 |
 |---------|------|------|------|
-| [ARCHITECTURE.md](ARCHITECTURE.md) | システムアーキテクチャ全体像 | 正式 | 最新 |
-| [SYSTEM_DESIGN.md](SYSTEM_DESIGN.md) | システム設計の詳細 | 正式 | 維持 |
-| [INTERFACES.md](INTERFACES.md) | モジュール間インターフェース仕様 | 正式 | 最新 |
-| [INFORMATION_MODEL.md](INFORMATION_MODEL.md) | データモデル定義 | 正式 | 維持 |
+| [architecture/README.md](architecture/README.md) | アーキテクチャドキュメントの概要 | インデックス | 最新 |
+| [architecture/ARCHITECTURE.md](architecture/ARCHITECTURE.md) | システムアーキテクチャ全体像 | 正式 | 最新 |
+| [architecture/SYSTEM_DESIGN.md](architecture/SYSTEM_DESIGN.md) | システム設計の詳細 | 正式 | 維持 |
+| [architecture/INTERFACES.md](architecture/INTERFACES.md) | モジュール間インターフェース仕様 | 正式 | 最新 |
+| [architecture/INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md) | データモデル定義 | 正式 | 維持 |
+| [architecture/CORE_ENGINE_AGENT_SPEC.md](architecture/CORE_ENGINE_AGENT_SPEC.md) | Core EngineとCore Agentの詳細仕様 | 正式 | 維持 |
 
-### 3. コア機能仕様
+### 3. 機能仕様
 | ファイル | 内容 | 種別 | 状態 |
 |---------|------|------|------|
-| [CORE_ENGINE_AGENT_SPEC.md](CORE_ENGINE_AGENT_SPEC.md) | Core EngineとCore Agentの詳細仕様 | 正式 | 維持 |
-| [COGNITIVE_WORKFLOWS.md](COGNITIVE_WORKFLOWS.md) | 認知ワークフローの設計 | 正式 | 維持 |
-| [pond-filtering-spec.md](pond-filtering-spec.md) | Pondフィルタリング機能仕様 | 正式 | 維持 |
+| [features/README.md](features/README.md) | 機能仕様ドキュメントの概要 | インデックス | 最新 |
+| [features/pond-filtering-spec.md](features/pond-filtering-spec.md) | Pondフィルタリング機能仕槕 | 正式 | 維持 |
 
 ### 4. ワークフロー関連
 | ファイル | 内容 | 種別 | 状態 |
 |---------|------|------|------|
+| [workflows/README.md](workflows/README.md) | ワークフロードキュメントの概要 | インデックス | 最新 |
 | [workflows/SPECIFICATION.md](workflows/SPECIFICATION.md) | ワークフロー技術仕様書 | 正式 | 最新 |
 | [workflows/DEVELOPER_GUIDE.md](workflows/DEVELOPER_GUIDE.md) | ワークフロー開発者ガイド | 正式 | 最新 |
-| [WORKFLOW_ARCHITECTURE.md](WORKFLOW_ARCHITECTURE.md) | ワークフローアーキテクチャ詳細 | 正式 | 維持 |
-| [WORKFLOW_LOGGING_SPEC.md](WORKFLOW_LOGGING_SPEC.md) | ワークフローログ仕様 | 正式 | 維持 |
+| [workflows/ARCHITECTURE.md](workflows/ARCHITECTURE.md) | ワークフローアーキテクチャ詳細 | 正式 | 維持 |
+| [workflows/COGNITIVE_WORKFLOWS.md](workflows/COGNITIVE_WORKFLOWS.md) | 認知ワークフローの設計 | 正式 | 維持 |
+| [workflows/LOGGING_SPEC.md](workflows/LOGGING_SPEC.md) | ワークフローログ仕様 | 正式 | 維持 |
 
 ### 5. テスト関連
 | ファイル | 内容 | 種別 | 状態 |
 |---------|------|------|------|
-| [TESTING_STRATEGY.md](TESTING_STRATEGY.md) | テスト戦略と方針 | 正式 | 維持 |
-| [TEST_SPECIFICATIONS.md](TEST_SPECIFICATIONS.md) | テスト仕様書 | 正式 | 維持 |
-| [TEST_ANALYSIS.md](TEST_ANALYSIS.md) | テスト分析レポート | 正式 | 維持 |
+| [testing/README.md](testing/README.md) | テストドキュメントの概要 | インデックス | 最新 |
+| [testing/STRATEGY.md](testing/STRATEGY.md) | テスト戦略と方針 | 正式 | 維持 |
+| [testing/SPECIFICATIONS.md](testing/SPECIFICATIONS.md) | テスト仕様書 | 正式 | 維持 |
 
 ### 6. フェーズ別作業記録
 
@@ -90,5 +93,5 @@
 ## ドキュメント数の変化
 
 - 統廃合前: 31ファイル
-- 統廃合後: 約20ファイル（主要ドキュメント）
-- 削減効果: 重複排除により保守性が向上
+- 統廃合後: 約23ファイル（カテゴリREADME含む）
+- 整理効果: カテゴリ別構成によりナビゲーション改善
