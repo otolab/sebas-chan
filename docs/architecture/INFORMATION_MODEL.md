@@ -27,13 +27,9 @@ Reporterから送られてくる情報の最小単位。
 ```typescript
 interface Input {
   id: string;
-  source: string;     // "slack", "gmail", "manual"等
+  source: string;     // "slack", "gmail", "manual"
   content: string;    // 生のテキストデータ
   timestamp: Date;
-  metadata?: {
-    reporter?: string;
-    originalFormat?: string;
-  };
 }
 ```
 
@@ -78,16 +74,23 @@ interface PondEntry {
 interface Issue {
   id: string;
   title: string;
-  description: string;
+  description: string;        // 自然言語での詳細。ベクトル化の対象
   status: 'open' | 'closed';
-  priority?: 'high' | 'medium' | 'low';
   labels: string[];
-  assignee?: string;
-  sourceInputIds: string[];  // 元となったInputのID
-  relatedIssueIds?: string[];
-  createdAt: Date;
-  updatedAt: Date;
-  closedAt?: Date;
+  updates: IssueUpdate[];      // 履歴
+  relations: IssueRelation[];  // 他のIssueとの関係性
+  sourceInputIds: string[];
+}
+
+interface IssueUpdate {
+  timestamp: Date;
+  content: string;
+  author: 'user' | 'ai';  // ユーザーのメモか、AIの提案か
+}
+
+interface IssueRelation {
+  type: 'blocks' | 'relates_to' | 'duplicates' | 'parent_of';
+  targetIssueId: string;
 }
 ```
 
@@ -97,39 +100,44 @@ interface Issue {
 
 ### 4. Knowledge（知識）
 
-多様な情報源から抽出・蒸留された永続的な知識。
+多様な情報源から抽出・蒸留された永続的な知識。評価システムにより信頼性が管理される。
 
 ```typescript
 interface Knowledge {
   id: string;
   type: KnowledgeType;
-  title: string;
-  content: string;
-  tags: string[];
-  sources: {
-    type: 'issue' | 'pond' | 'manual' | 'workflow';
-    id: string;
-  }[];
-  confidence: number;     // 0.0〜1.0の信頼度スコア
-  createdAt: Date;
-  updatedAt: Date;
-  usageCount: number;     // 参照回数
+  content: string;           // 知識の本体（自然言語）
+  reputation: {
+    upvotes: number;         // ポジティブ評価の累積
+    downvotes: number;       // ネガティブ評価の累積
+  };
+  sources: KnowledgeSource[]; // この知識を構成する情報源（複数）
 }
 
 type KnowledgeType =
-  | 'best_practice'      // ベストプラクティス
-  | 'troubleshooting'    // トラブルシューティング
-  | 'configuration'      // 設定情報
-  | 'business_rule'      // ビジネスルール
-  | 'technical_spec'     // 技術仕様
-  | 'general';           // 一般知識
+  | 'system_rule'         // AIの振る舞いを定義するルール
+  | 'process_manual'      // 定型的な業務フローや手順書
+  | 'entity_profile'      // 特定の人物、組織、プロジェクトに関する情報
+  | 'curated_summary'     // 特定のトピックについて横断的に集められた要約情報
+  | 'factoid';            // 再利用可能な単一の事実や情報
+
+type KnowledgeSource =
+  | { type: 'issue'; issueId: string }
+  | { type: 'pond'; pondEntryId: string }
+  | { type: 'user_direct' }
+  | { type: 'knowledge'; knowledgeId: string };  // 他のKnowledgeを参照
 ```
+
+**評価システム**:
+- **upvotes**: 有用と判断された回数
+- **downvotes**: 不正確・陳腐化と判断された回数
+- **信頼度スコア**: `upvotes / (upvotes + downvotes)`で計算可能
 
 **抽出元**:
 - Closedになったissueからの学習
 - Pondからのパターン発見
 - ユーザーによる直接入力
-- ワークフロー実行結果からの蒸留
+- 他のKnowledgeからの派生
 
 **ワークフロー**:
 - `EXTRACT_KNOWLEDGE`: Issueから知識を抽出
@@ -142,25 +150,25 @@ type KnowledgeType =
 interface Flow {
   id: string;
   title: string;
-  description: string;
+  description: string;       // このフローの目的や依存関係。自然言語で記述
   status: FlowStatus;
-  priorityScore: number;    // 0.0〜1.0
+  priorityScore: number;      // 0.0 ~ 1.0 AIが動的に評価
   issueIds: string[];
-  milestones?: {
-    title: string;
-    dueDate?: Date;
-    completed: boolean;
-  }[];
-  createdAt: Date;
-  updatedAt: Date;
 }
 
 type FlowStatus =
-  | 'active'               // アクティブ
-  | 'blocked'              // ブロック中
-  | 'pending'              // 保留中
-  | 'completed'            // 完了
-  | 'archived';            // アーカイブ済み
+  | 'focused'               // 最優先で集中
+  | 'active'                // アクティブ
+  | 'monitoring'            // 監視中
+  | 'blocked'               // ブロック中
+  | 'pending_user_decision' // ユーザー判断待ち
+  | 'pending_review'        // レビュー待ち
+  | 'backlog'               // バックログ
+  | 'paused'                // 一時停止
+  | 'someday'               // いつかやる
+  | 'completed'             // 完了
+  | 'cancelled'             // キャンセル
+  | 'archived';             // アーカイブ済み
 ```
 
 ## データフロー
