@@ -3,7 +3,7 @@
  * 1イベント対nワークフローをサポート
  */
 
-import type { AgentEvent } from '../index.js';
+import type { AgentEvent } from '../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './context.js';
 
 /**

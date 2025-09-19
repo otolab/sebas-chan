@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ingestInputWorkflow } from './ingest-input.js';
-import { executeWorkflow } from '../functional-types.js';
-import type { AgentEvent } from '../../index.js';
+import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
 import { LogType, WorkflowLogger } from '../logger.js';
@@ -71,7 +70,7 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should trigger analysis when error keywords are detected', async () => {
-    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
+    const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
 
@@ -88,7 +87,7 @@ describe('IngestInput Workflow (Functional)', () => {
   it('should not trigger analysis when no keywords are detected', async () => {
     (mockEvent.payload as any).input.content = '今日の天気はどうですか？';
 
-    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
+    const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
     expect((result.output as any).analyzed).toBe(false);
@@ -98,7 +97,7 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should update state with processing information', async () => {
-    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
+    const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
     // Stateが更新されたことを確認
@@ -112,7 +111,7 @@ describe('IngestInput Workflow (Functional)', () => {
     const error = new Error('Database connection failed');
     mockContext.storage.addPondEntry = vi.fn().mockRejectedValue(error);
 
-    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
+    const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(error);
@@ -125,7 +124,7 @@ describe('IngestInput Workflow (Functional)', () => {
         responses: ['First response', 'Second response', 'Third response'],
       });
 
-    const result = await executeWorkflow(ingestInputWorkflow, mockEvent, mockContext, mockEmitter);
+    const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
   });

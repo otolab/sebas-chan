@@ -1,8 +1,9 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+import type { AgentEvent, AgentEventPayload } from './types.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { WorkflowLogger, LogType } from './workflows/logger.js';
-import { WorkflowRegistry } from './workflows/functional-registry.js';
-import type { WorkflowDefinition, WorkflowResult } from './workflows/functional-types.js';
+import { WorkflowRegistry } from './workflows/workflow-registry.js';
+import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface, DriverFactory } from './workflows/context.js';
 import {
   ingestInputWorkflow,
@@ -78,14 +79,8 @@ class CoreAgent {
   }
 }
 
-// AgentEventのペイロード型定義
-export type AgentEventPayload = Record<string, unknown>;
-
-export interface AgentEvent {
-  type: string;
-  payload: AgentEventPayload;
-  timestamp: Date;
-}
+// 型の再エクスポート
+export type { AgentEvent, AgentEventPayload } from './types.js';
 
 // ワークフロー関連のエクスポート
 export * from './workflows/index.js';

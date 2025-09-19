@@ -3,7 +3,7 @@
  * イベントから実行すべきワークフローを解決する
  */
 
-import type { AgentEvent } from '../index.js';
+import type { AgentEvent } from '../types.js';
 import type { WorkflowDefinition, WorkflowResolution } from './workflow-types.js';
 import type { WorkflowRegistry } from './workflow-registry.js';
 

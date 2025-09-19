@@ -4,7 +4,7 @@
  */
 
 import type { WorkflowDefinition } from './workflow-types.js';
-import type { AgentEvent } from '../index.js';
+import type { AgentEvent } from '../types.js';
 import { WorkflowRegistry } from './workflow-registry.js';
 import { WorkflowResolver } from './workflow-resolver.js';
 

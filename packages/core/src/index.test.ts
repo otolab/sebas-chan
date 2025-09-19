@@ -41,7 +41,7 @@ describe('CoreAgent', () => {
     };
 
     const registry = agent.getWorkflowRegistry();
-    const workflow = registry.get('ProcessUserRequest');
+    const workflow = registry.getByName('ProcessUserRequest');
 
     if (!workflow) {
       throw new Error('Workflow not found');
@@ -75,6 +75,9 @@ describe('CoreAgent', () => {
     const errorWorkflow = {
       name: 'error-workflow',
       description: 'Test workflow that throws an error',
+      triggers: {
+        eventTypes: ['TEST_ERROR'],
+      },
       executor: async () => {
         throw new Error('Test error');
       },
@@ -82,10 +85,7 @@ describe('CoreAgent', () => {
 
     agent.registerWorkflow(errorWorkflow);
     const registry = agent.getWorkflowRegistry();
-    registry.register({
-      ...errorWorkflow,
-      name: 'TEST_ERROR', // イベントタイプと一致させる
-    });
+    registry.register(errorWorkflow);
 
     const result = await agent.executeWorkflow(
       errorWorkflow,
@@ -106,6 +106,9 @@ describe('CoreAgent', () => {
     const customWorkflow = {
       name: 'CUSTOM_WORKFLOW',
       description: 'Custom test workflow',
+      triggers: {
+        eventTypes: ['CUSTOM_WORKFLOW'],
+      },
       executor: async () => ({
         success: true,
         context: createMockWorkflowContext(),
@@ -114,7 +117,7 @@ describe('CoreAgent', () => {
 
     agent.registerWorkflow(customWorkflow);
     const registry = agent.getWorkflowRegistry();
-    const retrieved = registry.get('CUSTOM_WORKFLOW');
+    const retrieved = registry.getByName('CUSTOM_WORKFLOW');
 
     expect(retrieved).toBeDefined();
     expect(retrieved?.name).toBe('CUSTOM_WORKFLOW');
@@ -124,9 +127,9 @@ describe('CoreAgent', () => {
     const registry = generateWorkflowRegistry();
 
     // 標準ワークフローが登録されていることを確認
-    expect(registry.get('IngestInput')).toBeDefined();
-    expect(registry.get('ProcessUserRequest')).toBeDefined();
-    expect(registry.get('AnalyzeIssueImpact')).toBeDefined();
-    expect(registry.get('ExtractKnowledge')).toBeDefined();
+    expect(registry.getByName('IngestInput')).toBeDefined();
+    expect(registry.getByName('ProcessUserRequest')).toBeDefined();
+    expect(registry.getByName('AnalyzeIssueImpact')).toBeDefined();
+    expect(registry.getByName('ExtractKnowledge')).toBeDefined();
   });
 });

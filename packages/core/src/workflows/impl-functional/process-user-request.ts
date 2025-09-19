@@ -1,6 +1,6 @@
-import type { AgentEvent } from '../../index.js';
+import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
-import type { WorkflowResult } from '../functional-types.js';
+import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import { compile } from '@moduler-prompt/core';
 
@@ -162,7 +162,11 @@ async function executeProcessUserRequest(
       },
     };
   } catch (error) {
-    throw error;
+    return {
+      success: false,
+      context,
+      error: error as Error,
+    };
   }
 }
 

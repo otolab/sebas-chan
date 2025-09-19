@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent, WorkflowLogger } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
-import { WorkflowDefinition } from './workflows/functional-types.js';
+import { WorkflowDefinition } from './workflows/workflow-types.js';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
@@ -29,6 +29,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const errorWorkflow: WorkflowDefinition = {
         name: 'error-workflow',
         description: 'Workflow that throws synchronous error',
+        triggers: {
+          eventTypes: ['ERROR_WORKFLOW'],
+        },
         executor: () => {
           throw new Error('Synchronous error in workflow');
         },
@@ -67,6 +70,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const asyncErrorWorkflow: WorkflowDefinition = {
         name: 'async-error-workflow',
         description: 'Workflow that throws asynchronous error',
+        triggers: {
+          eventTypes: ['ASYNC_ERROR_WORKFLOW'],
+        },
         executor: async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           throw new Error('Asynchronous error in workflow');
@@ -102,6 +108,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const slowWorkflow: WorkflowDefinition = {
         name: 'slow-workflow',
         description: 'Workflow with long-running operation',
+        triggers: {
+          eventTypes: ['SLOW_WORKFLOW'],
+        },
         executor: async () => {
           // 長時間の処理をシミュレート
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -146,6 +155,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const largePayloadWorkflow: WorkflowDefinition = {
         name: 'large-payload-workflow',
         description: 'Workflow handling large payloads',
+        triggers: {
+          eventTypes: ['LARGE_PAYLOAD_WORKFLOW'],
+        },
         executor: async (event) => {
           const payload = event.payload as { largeArray?: unknown[] };
           return {
@@ -199,6 +211,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const errorProneWorkflow: WorkflowDefinition = {
         name: 'error-prone-workflow',
         description: 'Workflow that may throw errors',
+        triggers: {
+          eventTypes: ['ERROR_PRONE_WORKFLOW'],
+        },
         executor: async (event) => {
           const payload = event.payload as { shouldError?: boolean };
           if (payload.shouldError) {
@@ -250,6 +265,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'empty-type-workflow',
         description: 'Workflow for empty event type',
+        triggers: {
+          eventTypes: ['EMPTY_TYPE_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: !event.type || event.type === '',
@@ -287,6 +305,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'long-type-workflow',
         description: 'Workflow for long event type',
+        triggers: {
+          eventTypes: ['LONG_TYPE_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: true,
@@ -324,6 +345,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'undefined-payload-workflow',
         description: 'Workflow for undefined payload',
+        triggers: {
+          eventTypes: ['UNDEFINED_PAYLOAD_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: true,
@@ -361,6 +385,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'invalid-priority-workflow',
         description: 'Workflow for invalid priority',
+        triggers: {
+          eventTypes: ['INVALID_PRIORITY_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: true,
@@ -398,6 +425,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const concurrentWorkflow: WorkflowDefinition = {
         name: 'concurrent-workflow',
         description: 'Workflow for concurrent execution',
+        triggers: {
+          eventTypes: ['CONCURRENT_WORKFLOW'],
+        },
         executor: async (event) => {
           // ランダムな処理時間
           await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
@@ -450,6 +480,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const nestedWorkflow: WorkflowDefinition = {
         name: 'nested-workflow',
         description: 'Workflow with nested error handling',
+        triggers: {
+          eventTypes: ['NESTED_WORKFLOW'],
+        },
         executor: async (event, context, emitter) => {
           try {
             // 内部でエラーを発生させる
@@ -503,6 +536,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const rejectionWorkflow: WorkflowDefinition = {
         name: 'rejection-workflow',
         description: 'Workflow with promise rejection',
+        triggers: {
+          eventTypes: ['REJECTION_WORKFLOW'],
+        },
         executor: async () => {
           return Promise.reject(new Error('Promise rejection in workflow'));
         },
