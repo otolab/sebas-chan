@@ -28,7 +28,7 @@ export class WorkflowQueue implements IWorkflowQueue {
       retryCount: 0,
     };
 
-    // 優先度順に挿入
+    // 優先度順に挿入（高い優先度が先）
     const insertIndex = this.queue.findIndex((existing) => existing.priority < fullItem.priority);
 
     if (insertIndex === -1) {

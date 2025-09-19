@@ -20,6 +20,9 @@ describe('Input to Pond Flow Integration', () => {
   let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
 
   beforeEach(async () => {
+    // タイマーのモック
+    vi.useFakeTimers();
+
     // DBClientモックの設定
     mockDbClient = {
       connect: vi.fn().mockResolvedValue(undefined),
@@ -57,6 +60,7 @@ describe('Input to Pond Flow Integration', () => {
 
   afterEach(() => {
     engine.stop();
+    vi.useRealTimers();
     vi.clearAllMocks();
   });
 
@@ -75,7 +79,8 @@ describe('Input to Pond Flow Integration', () => {
       expect(input.content).toContain('バックアップ処理');
 
       // Wait for event processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await engine.start();
+      await vi.advanceTimersByTimeAsync(2000);
 
       // Search in pond for the processed content
       await engine.searchPond('バックアップ エラー');
@@ -209,7 +214,8 @@ describe('Input to Pond Flow Integration', () => {
       });
 
       // Give time for event processing
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await engine.start();
+      await vi.advanceTimersByTimeAsync(100);
 
       // Manual processing since we're in test mode
       // WorkflowQueueベースのシステムでは、ワークフローが実行されたことを確認
