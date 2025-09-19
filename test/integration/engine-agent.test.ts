@@ -41,7 +41,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     },
     executor: vi.fn().mockImplementation(async (event, context) => {
       // contextの内容を記録（検証用）
-      const currentState = context.state?.getState() || '';
+      const currentState = context.state || '';
 
       return {
         success: true,
@@ -243,7 +243,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Assert
       await vi.waitFor(() => {
         expect(warnSpy).toHaveBeenCalledWith(
-          expect.stringContaining('No workflow found for event type: UNKNOWN_EVENT')
+          expect.stringContaining('No workflows found for event type: UNKNOWN_EVENT')
         );
       });
 
@@ -262,14 +262,23 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // コンテキストをキャプチャするワークフロー
       const contextCaptureWorkflow: WorkflowDefinition = {
         name: 'ContextCapture',
+        description: 'コンテキストキャプチャ用',
+        triggers: {
+          eventTypes: ['TEST_EVENT'],
+          priority: 50,
+        },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           capturedContext = context;
           return { success: true, context };
         }),
       };
 
-      const registry = (engine as any).coreAgent.getWorkflowRegistry();
-      registry.get = vi.fn(() => contextCaptureWorkflow);
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn().mockReturnValue({
+        event: { type: 'TEST_EVENT' },
+        workflows: [contextCaptureWorkflow],
+      });
     });
 
     it('TEST-CONTEXT-001: WorkflowContextにstorageが正しく提供される', async () => {
@@ -383,9 +392,12 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       engine = new CoreEngine(coreAgent);
       await engine.initialize();
 
-      // ワークフローを登録
-      const registry = (engine as any).coreAgent.getWorkflowRegistry();
-      registry.get = vi.fn(() => testWorkflow);
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn().mockImplementation((event) => ({
+        event,
+        workflows: [testWorkflow],
+      }));
     });
 
     it('TEST-MULTI-001: 複数のイベントが順次処理される', async () => {
