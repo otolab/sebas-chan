@@ -38,6 +38,9 @@ describe('Input処理フローのE2Eテスト', () => {
   const ingestInputWorkflow: WorkflowDefinition = {
     name: 'IngestInput',
     description: '入力データをPondに保存し、必要に応じて分析',
+    triggers: {
+      eventTypes: ['INGEST_INPUT'],
+    },
     executor: vi.fn().mockImplementation(async (event, context, emitter) => {
       const input = event.payload.input;
       processedInputs.push(input);
@@ -57,7 +60,6 @@ describe('Input処理フローのE2Eテスト', () => {
       if (input.content.includes('エラー') || input.content.includes('error')) {
         const analysisEvent = {
           type: 'ANALYZE_ISSUE_IMPACT',
-          priority: 'high' as const,
           payload: {
             pondEntryId: pondEntry.id,
             originalInput: input,
@@ -86,6 +88,9 @@ describe('Input処理フローのE2Eテスト', () => {
   const analyzeIssueWorkflow: WorkflowDefinition = {
     name: 'AnalyzeIssueImpact',
     description: 'エラーを含む入力を分析してIssueを作成',
+    triggers: {
+      eventTypes: ['ANALYZE_ISSUE_IMPACT'],
+    },
     executor: vi.fn().mockImplementation(async (event, context, emitter) => {
       const { pondEntryId, originalInput, detectedKeywords } = event.payload;
 
@@ -95,7 +100,6 @@ describe('Input処理フローのE2Eテスト', () => {
       // Issue作成イベントを発行
       await emitter.emit({
         type: 'CREATE_ISSUE',
-        priority: 'normal',
         payload: {
           title: `Error detected in ${originalInput.source}`,
           description: `Keywords detected: ${detectedKeywords.join(', ')}\n\nOriginal content: ${originalInput.content}`,
@@ -186,9 +190,18 @@ describe('Input処理フローのE2Eテスト', () => {
       // ワークフローを登録
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
       registry.register(ingestInputWorkflow);
-      registry.get = vi.fn((eventType) => {
-        if (eventType === 'INGEST_INPUT') return ingestInputWorkflow;
-        return undefined;
+
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn((event) => {
+        if (event.type === 'INGEST_INPUT') {
+          return {
+            event,
+            workflows: [ingestInputWorkflow],
+            resolutionTime: 1,
+          };
+        }
+        return { event, workflows: [], resolutionTime: 1 };
       });
 
       await engine.start();
@@ -247,9 +260,18 @@ describe('Input処理フローのE2Eテスト', () => {
       // ワークフローを登録
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
       registry.register(ingestInputWorkflow);
-      registry.get = vi.fn((eventType) => {
-        if (eventType === 'INGEST_INPUT') return ingestInputWorkflow;
-        return undefined;
+
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn((event) => {
+        if (event.type === 'INGEST_INPUT') {
+          return {
+            event,
+            workflows: [ingestInputWorkflow],
+            resolutionTime: 1,
+          };
+        }
+        return { event, workflows: [], resolutionTime: 1 };
       });
 
       await engine.start();
@@ -300,10 +322,12 @@ describe('Input処理フローのE2Eテスト', () => {
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
       registry.register(ingestInputWorkflow);
       registry.register(analyzeIssueWorkflow);
-      registry.get = vi.fn((eventType) => {
-        if (eventType === 'INGEST_INPUT') return ingestInputWorkflow;
-        if (eventType === 'ANALYZE_ISSUE_IMPACT') return analyzeIssueWorkflow;
-        return undefined;
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn((event) => {
+        if (event.type === 'INGEST_INPUT') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
+        if (event.type === 'ANALYZE_ISSUE_IMPACT') return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
+        return { event, workflows: [], resolutionTime: 1 };
       });
 
       await engine.start();
@@ -330,7 +354,6 @@ describe('Input処理フローのE2Eテスト', () => {
       // エラーが検出される
       expect(triggeredAnalysis).toHaveLength(1);
       expect(triggeredAnalysis[0].type).toBe('ANALYZE_ISSUE_IMPACT');
-      expect(triggeredAnalysis[0].priority).toBe('high');
       expect(triggeredAnalysis[0].payload.detectedKeywords).toContain('エラー');
       expect(triggeredAnalysis[0].payload.detectedKeywords).toContain('error');
 
@@ -364,10 +387,12 @@ describe('Input処理フローのE2Eテスト', () => {
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
       registry.register(ingestInputWorkflow);
       registry.register(analyzeIssueWorkflow);
-      registry.get = vi.fn((eventType) => {
-        if (eventType === 'INGEST_INPUT') return ingestInputWorkflow;
-        if (eventType === 'ANALYZE_ISSUE_IMPACT') return analyzeIssueWorkflow;
-        return undefined;
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn((event) => {
+        if (event.type === 'INGEST_INPUT') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
+        if (event.type === 'ANALYZE_ISSUE_IMPACT') return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
+        return { event, workflows: [], resolutionTime: 1 };
       });
 
       await engine.start();
@@ -407,6 +432,9 @@ describe('Input処理フローのE2Eテスト', () => {
       const stateTrackingWorkflow: WorkflowDefinition = {
         name: 'StateTracking',
         description: '状態の変化を追跡',
+        triggers: {
+          eventTypes: ['INGEST_INPUT'],
+        },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           const currentState = context.state || '';
           const inputCount = (currentState.match(/\[Processed Input:/g) || []).length;
@@ -427,9 +455,11 @@ describe('Input処理フローのE2Eテスト', () => {
       // ワークフローを登録
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
       registry.register(stateTrackingWorkflow);
-      registry.get = vi.fn((eventType) => {
-        if (eventType === 'INGEST_INPUT') return stateTrackingWorkflow;
-        return undefined;
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn((event) => {
+        if (event.type === 'INGEST_INPUT') return { event, workflows: [stateTrackingWorkflow], resolutionTime: 1 };
+        return { event, workflows: [], resolutionTime: 1 };
       });
 
       await engine.start();
@@ -479,6 +509,9 @@ describe('Input処理フローのE2Eテスト', () => {
       const errorWorkflow: WorkflowDefinition = {
         name: 'ErrorWorkflow',
         description: 'エラーを発生させるワークフロー',
+        triggers: {
+          eventTypes: ['INGEST_INPUT'],
+        },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           attemptCount++;
           throw new Error(`Workflow failed: attempt ${attemptCount}`);
@@ -488,9 +521,11 @@ describe('Input処理フローのE2Eテスト', () => {
       // ワークフローを登録
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
       registry.register(errorWorkflow);
-      registry.get = vi.fn((eventType) => {
-        if (eventType === 'INGEST_INPUT') return errorWorkflow;
-        return undefined;
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn((event) => {
+        if (event.type === 'INGEST_INPUT') return { event, workflows: [errorWorkflow], resolutionTime: 1 };
+        return { event, workflows: [], resolutionTime: 1 };
       });
 
       await engine.start();
@@ -526,6 +561,9 @@ describe('Input処理フローのE2Eテスト', () => {
       const partialFailureWorkflow: WorkflowDefinition = {
         name: 'PartialFailure',
         description: '部分的に失敗するワークフロー',
+        triggers: {
+          eventTypes: ['INGEST_INPUT'],
+        },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           processCount++;
           const currentCount = processCount;
@@ -555,7 +593,9 @@ describe('Input処理フローのE2Eテスト', () => {
       // ワークフローを登録
       const registry = (engine as any).coreAgent.getWorkflowRegistry();
       registry.register(partialFailureWorkflow);
-      registry.get = vi.fn(() => partialFailureWorkflow);
+      // WorkflowResolverをモック
+      const resolver = (engine as any).workflowResolver;
+      resolver.resolve = vi.fn((event) => ({ event, workflows: [partialFailureWorkflow], resolutionTime: 1 }));
 
       await engine.start();
 

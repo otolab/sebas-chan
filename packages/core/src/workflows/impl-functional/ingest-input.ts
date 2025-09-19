@@ -1,6 +1,7 @@
-import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
-import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
+import type { AgentEvent } from '../../types.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { WorkflowResult } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
 
 /**
  * 入力内容から影響分析が必要かを判定
@@ -33,8 +34,8 @@ function updateState(currentState: string, input: any, pondEntryId: string): str
  */
 async function executeIngestInput(
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage } = context;
   const { input } = event.payload as { input: any };
@@ -53,7 +54,6 @@ async function executeIngestInput(
       // 3. 必要に応じて後続のイベントを発行
       emitter.emit({
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'normal',
         payload: {
           pondEntryId: pondEntry.id,
           originalInput: input,
@@ -76,7 +76,11 @@ async function executeIngestInput(
       },
     };
   } catch (error) {
-    throw error;
+    return {
+      success: false,
+      context,
+      error: error as Error,
+    };
   }
 }
 
@@ -86,5 +90,8 @@ async function executeIngestInput(
 export const ingestInputWorkflow: WorkflowDefinition = {
   name: 'IngestInput',
   description: '入力データをPondに取り込み、エラーキーワードを検出して必要に応じて分析を起動する',
+  triggers: {
+    eventTypes: ['INGEST_INPUT'],
+  },
   executor: executeIngestInput,
 };

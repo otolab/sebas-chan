@@ -1,9 +1,10 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
+import type { AgentEvent, AgentEventPayload } from './types.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { WorkflowLogger, LogType } from './workflows/logger.js';
-import { WorkflowRegistry } from './workflows/functional-registry.js';
-import type { WorkflowDefinition, WorkflowResult } from './workflows/functional-types.js';
-import type { WorkflowContext, WorkflowEventEmitter, DriverFactory } from './workflows/context.js';
+import { WorkflowRegistry } from './workflows/workflow-registry.js';
+import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface, DriverFactory } from './workflows/context.js';
 import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
@@ -29,8 +30,8 @@ class CoreAgent {
   public async executeWorkflow(
     workflow: WorkflowDefinition,
     event: AgentEvent,
-    context: WorkflowContext,
-    emitter: WorkflowEventEmitter
+    context: WorkflowContextInterface,
+    emitter: WorkflowEventEmitterInterface
   ): Promise<WorkflowResult> {
     console.log(`Executing workflow: ${workflow.name} for event: ${event.type}`);
 
@@ -78,21 +79,15 @@ class CoreAgent {
   }
 }
 
-// AgentEventのペイロード型定義
-export type AgentEventPayload = Record<string, unknown>;
-
-export interface AgentEvent {
-  type: string;
-  priority: 'high' | 'normal' | 'low';
-  payload: AgentEventPayload;
-  timestamp: Date;
-}
+// 型の再エクスポート
+export type { AgentEvent, AgentEventPayload } from './types.js';
 
 // ワークフロー関連のエクスポート
 export * from './workflows/index.js';
 
-// イベントキューのエクスポート
-export { EventQueueImpl } from './event-queue.js';
+
+// デフォルトワークフロー登録関数
+export { registerDefaultWorkflows } from './workflows/impl-functional/index.js';
 
 // 標準ワークフローをすべて登録したRegistryを生成
 export function generateWorkflowRegistry(): WorkflowRegistry {

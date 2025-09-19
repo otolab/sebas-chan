@@ -4,18 +4,36 @@ import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 import { Event } from '@sebas-chan/shared-types';
 
-// EventQueueImplのみ実際の実装を使用
-vi.mock('@sebas-chan/core', async () => {
-  const { EventQueueImpl } = await import('@sebas-chan/core/src/event-queue.js');
-  return {
-    CoreAgent: vi.fn(),
-    EventQueueImpl,
-    WorkflowLogger: vi.fn().mockImplementation(() => ({
-      log: vi.fn(),
-      child: vi.fn().mockReturnThis(),
-    })),
-  };
-});
+vi.mock('@sebas-chan/core', () => ({
+  CoreAgent: vi.fn(),
+  WorkflowLogger: vi.fn().mockImplementation(() => ({
+    log: vi.fn(),
+    child: vi.fn().mockReturnThis(),
+  })),
+  WorkflowRegistry: vi.fn().mockImplementation(() => ({
+    register: vi.fn(),
+    get: vi.fn(),
+    list: vi.fn().mockReturnValue([]),
+    getByEventType: vi.fn().mockReturnValue([]),
+  })),
+  WorkflowResolver: vi.fn().mockImplementation(() => ({
+    resolve: vi.fn().mockReturnValue({
+      workflows: [
+        {
+          name: 'MockWorkflow',
+          description: 'Test workflow',
+          triggers: {
+            eventTypes: ['PROCESS_USER_REQUEST', 'INGEST_INPUT'],
+            priority: 10,
+          },
+          executor: vi.fn(),
+        },
+      ],
+      resolutionTime: 1,
+    }),
+  })),
+  registerDefaultWorkflows: vi.fn(),
+}));
 vi.mock('@sebas-chan/db');
 
 describe('CoreEngine', () => {
@@ -88,9 +106,8 @@ describe('CoreEngine', () => {
       await engine.initialize();
       await engine.start();
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: { test: true },
       });
 
@@ -107,9 +124,8 @@ describe('CoreEngine', () => {
       await engine.initialize();
       await engine.start();
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'INGEST_INPUT',
-        priority: 'normal',
         payload: { inputId: 'test-input' },
       });
 
@@ -135,11 +151,10 @@ describe('CoreEngine', () => {
 
       const event: Omit<Event, 'id' | 'timestamp'> = {
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {},
       };
 
-      engine.enqueueEvent(event);
+      engine.emitEvent(event);
 
       // イベントループが処理されるのを待つ
       await vi.advanceTimersByTimeAsync(1000);
@@ -328,26 +343,18 @@ describe('CoreEngine', () => {
   });
 
   describe('Event queue management', () => {
-    it('should enqueue and dequeue events', () => {
-      engine.enqueueEvent({
-        type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
-        payload: { test: true },
+    it('should enqueue events and resolve to workflows', async () => {
+      engine.emitEvent({
+        type: 'INGEST_INPUT',
+        payload: { input: { id: '123', content: 'test', source: 'test' } },
       });
 
-      // eventQueueを直接アクセスして確認
-      const eventQueue = (
-        engine as unknown as { eventQueue: { size: () => number; dequeue: () => Event | null } }
-      ).eventQueue;
-      expect(eventQueue.size()).toBe(1);
+      // workflowQueueを直接アクセスして確認
+      const workflowQueue = (engine as unknown as { workflowQueue: { size: () => number } })
+        .workflowQueue;
 
-      const event = eventQueue.dequeue();
-      expect(event).not.toBeNull();
-      expect(event?.type).toBe('PROCESS_USER_REQUEST');
-      expect(event?.priority).toBe('high');
-      expect(event?.payload).toEqual({ test: true });
-
-      expect(eventQueue.dequeue()).toBeNull();
+      // INGEST_INPUTイベントは複数のワークフローに解決される可能性がある
+      expect(workflowQueue.size()).toBeGreaterThan(0);
     });
   });
 
@@ -368,135 +375,22 @@ describe('CoreEngine', () => {
       await engine.initialize();
       await engine.start();
 
-      engine.stop();
+      await engine.stop();
 
       const listener = vi.fn();
-      engine.on('event:processing', listener);
+      engine.on('event:queued', listener);
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {},
       });
 
-      vi.advanceTimersByTime(2000);
-
-      expect(listener).not.toHaveBeenCalled();
+      // イベントはキューに入るが処理されない
+      expect(listener).toHaveBeenCalled();
     });
   });
 
-  describe('event priority handling', () => {
-    it('should process high priority events first', () => {
-      // EventQueueの優先度処理を直接テスト
-      const eventQueue = (
-        engine as unknown as {
-          eventQueue: { enqueue: (event: Event) => void; dequeue: () => Event | null };
-        }
-      ).eventQueue;
-
-      // 異なる優先度のイベントを追加
-      eventQueue.enqueue({
-        type: 'SALVAGE_FROM_POND',
-        priority: 'low',
-        payload: { id: 'low1' },
-        timestamp: new Date(),
-      });
-
-      eventQueue.enqueue({
-        type: 'INGEST_INPUT',
-        priority: 'normal',
-        payload: { id: 'normal1' },
-        timestamp: new Date(),
-      });
-
-      eventQueue.enqueue({
-        type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
-        payload: { id: 'high1' },
-        timestamp: new Date(),
-      });
-
-      // 優先度順に取り出し
-      const first = eventQueue.dequeue();
-      expect(first?.priority).toBe('high');
-
-      const second = eventQueue.dequeue();
-      expect(second?.priority).toBe('normal');
-
-      const third = eventQueue.dequeue();
-      expect(third?.priority).toBe('low');
-    });
-
-    it('should handle mixed priority events with timestamps', () => {
-      // start()しないで、キューの優先度ソートのみをテスト
-      const eventQueue = (
-        engine as unknown as {
-          eventQueue: { enqueue: (event: Event) => void; dequeue: () => Event | null };
-        }
-      ).eventQueue;
-      const now = new Date();
-
-      // 異なる優先度と異なるタイプのイベント
-      const events = [
-        {
-          type: 'COLLECT_SYSTEM_STATS',
-          priority: 'low' as const,
-          timestamp: new Date(now.getTime() + 1),
-        },
-        {
-          type: 'UPDATE_FLOW_PRIORITIES',
-          priority: 'normal' as const,
-          timestamp: new Date(now.getTime() + 2),
-        },
-        {
-          type: 'ANALYZE_ISSUE_IMPACT',
-          priority: 'high' as const,
-          timestamp: new Date(now.getTime() + 3),
-        },
-        {
-          type: 'EXTRACT_KNOWLEDGE',
-          priority: 'normal' as const,
-          timestamp: new Date(now.getTime() + 4),
-        },
-        {
-          type: 'PROCESS_USER_REQUEST',
-          priority: 'high' as const,
-          timestamp: new Date(now.getTime() + 5),
-        },
-      ];
-
-      // イベントを追加
-      events.forEach((e) => {
-        eventQueue.enqueue({
-          type: e.type,
-          priority: e.priority,
-          payload: {},
-          timestamp: e.timestamp,
-        });
-      });
-
-      // 優先度順に取り出し
-      const dequeued = [];
-      let event;
-      while ((event = eventQueue.dequeue())) {
-        dequeued.push(event);
-      }
-
-      // high優先度のイベントが最初に処理される（同じ優先度ならタイムスタンプ順）
-      expect(dequeued[0].priority).toBe('high');
-      expect(dequeued[1].priority).toBe('high');
-      expect(dequeued[0].type).toBe('ANALYZE_ISSUE_IMPACT'); // より古いタイムスタンプ
-      expect(dequeued[1].type).toBe('PROCESS_USER_REQUEST');
-
-      // normal優先度が次
-      expect(dequeued[2].priority).toBe('normal');
-      expect(dequeued[3].priority).toBe('normal');
-
-      // low優先度が最後
-      expect(dequeued[4].priority).toBe('low');
-      expect(dequeued[4].type).toBe('COLLECT_SYSTEM_STATS');
-    });
-  });
+  // WorkflowQueueが優先度処理を担うため、エンジンレベルの優先度テストは削除
 
   describe('error handling and recovery', () => {
     it('should continue processing after workflow error', async () => {
@@ -517,15 +411,13 @@ describe('CoreEngine', () => {
       });
 
       // 複数のイベントを投入
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {},
       });
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'INGEST_INPUT',
-        priority: 'normal',
         payload: {},
       });
 

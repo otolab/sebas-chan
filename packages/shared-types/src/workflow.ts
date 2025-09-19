@@ -2,6 +2,8 @@
  * ワークフロー実行関連の型定義
  */
 
+import type { AIDriver } from '@moduler-prompt/driver';
+import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 import {
   Issue,
   Flow,
@@ -12,6 +14,9 @@ import {
   PondSearchResponse,
 } from './index.js';
 import { Event, WorkflowType } from './events.js';
+
+// @moduler-prompt/utilsからDriverSelectionCriteriaをre-export
+export type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 
 /**
  * Core APIインターフェース
@@ -48,24 +53,8 @@ export interface CoreAPI {
   getState(): string;
   updateState(content: string): void;
 
-  // イベントキュー
-  enqueueEvent(event: Omit<Event, 'id' | 'timestamp'>): void;
-  dequeueEvent(): Event | null;
-}
-
-/**
- * LLMドライバーインターフェース
- */
-export interface LLMDriver {
-  complete(prompt: string, options?: LLMOptions): Promise<string>;
-  embed(text: string): Promise<number[]>;
-}
-
-export interface LLMOptions {
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  systemPrompt?: string;
+  // イベント発行
+  emitEvent(event: Omit<Event, 'id' | 'timestamp'>): void;
 }
 
 /**
@@ -73,10 +62,21 @@ export interface LLMOptions {
  */
 export interface WorkflowContext {
   state: string; // 現在のState文書
-  coreAPI: CoreAPI; // Core API呼び出し
-  llm: LLMDriver; // 生成AI呼び出しAPI
-  enqueue: (event: Omit<Event, 'id' | 'timestamp'>) => void; // 新規イベント追加
+  storage: {
+    // DB操作インターフェース
+    searchIssues(query: string): Promise<Issue[]>;
+    searchKnowledge(query: string): Promise<Knowledge[]>;
+    searchPond(query: string): Promise<PondEntry[]>;
+    getIssue(id: string): Promise<Issue | null>;
+    createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
+    updateIssue(id: string, update: Partial<Issue>): Promise<Issue>;
+    addPondEntry(entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry>;
+    createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge>;
+    updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
+  };
+  createDriver: (criteria: DriverSelectionCriteria) => Promise<AIDriver>; // AIドライバーファクトリ
   logger: Logger; // ログ出力
+  metadata?: Record<string, unknown>; // 実行時メタデータ
 }
 
 /**

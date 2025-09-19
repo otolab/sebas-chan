@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent, WorkflowLogger, generateWorkflowRegistry } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
-import { WorkflowEventEmitter } from './workflows/context.js';
-import { WorkflowDefinition } from './workflows/functional-types.js';
+import { WorkflowEventEmitterInterface } from './workflows/context.js';
+import { WorkflowDefinition } from './workflows/workflow-types.js';
 
 describe('CoreAgent - Comprehensive Tests', () => {
   let agent: CoreAgent;
@@ -31,6 +31,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const createWorkflow = (name: string): WorkflowDefinition => ({
         name,
         description: `Test workflow ${name}`,
+        triggers: {
+          eventTypes: [name.toUpperCase()],
+        },
         executor: async (event) => {
           executedWorkflows.push(event.type);
           return {
@@ -45,7 +48,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const lowPriorityWorkflow = createWorkflow('low-priority');
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -53,29 +56,27 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const events: AgentEvent[] = [
         {
           type: 'LOW_PRIORITY',
-          priority: 'low',
           payload: {},
           timestamp: new Date(),
         },
         {
           type: 'HIGH_PRIORITY',
-          priority: 'high',
           payload: {},
           timestamp: new Date(),
         },
         {
           type: 'NORMAL_PRIORITY',
-          priority: 'normal',
           payload: {},
           timestamp: new Date(),
         },
       ];
 
       for (const event of events) {
+        // イベントタイプに基づいてワークフローを選択
         const workflow =
-          event.priority === 'high'
+          event.type === 'PROCESS_USER_REQUEST'
             ? highPriorityWorkflow
-            : event.priority === 'normal'
+            : event.type === 'INGEST_INPUT'
               ? normalPriorityWorkflow
               : lowPriorityWorkflow;
 
@@ -95,6 +96,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const workflow: WorkflowDefinition = {
         name: 'fifo-workflow',
         description: 'Test FIFO ordering',
+        triggers: {
+          eventTypes: ['SAME_PRIORITY'],
+        },
         executor: async (event) => {
           const payload = event.payload as { id: string };
           processedOrder.push(payload.id);
@@ -106,7 +110,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -114,7 +118,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       for (let i = 1; i <= 5; i++) {
         const event: AgentEvent = {
           type: 'SAME_PRIORITY',
-          priority: 'normal',
           payload: { id: `event-${i}` },
           timestamp: new Date(),
         };
@@ -134,6 +137,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const stateWorkflow: WorkflowDefinition = {
         name: 'state-workflow',
         description: 'Test state management',
+        triggers: {
+          eventTypes: ['CHECK_STATE', 'UPDATE_STATE'],
+        },
         executor: async (event, context) => {
           const currentState = context.state;
           stateTransitions.push(currentState);
@@ -155,14 +161,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
       // 初期状態を確認
       const event1: AgentEvent = {
         type: 'CHECK_STATE',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -173,7 +178,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 状態を変更
       const event2: AgentEvent = {
         type: 'UPDATE_STATE',
-        priority: 'normal',
         payload: { newState: 'processing' },
         timestamp: new Date(),
       };
@@ -184,7 +188,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 変更後の状態を確認
       const event3: AgentEvent = {
         type: 'CHECK_STATE',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -200,14 +203,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
   describe('Complex Workflows', () => {
     it('should handle INGEST_INPUT workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('IngestInput');
+      const workflow = registry.getByName('IngestInput');
 
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('IngestInput');
 
       const event: AgentEvent = {
         type: 'INGEST_INPUT',
-        priority: 'normal',
         payload: {
           input: {
             content: 'Test input',
@@ -220,7 +222,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -239,14 +241,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
     it('should handle PROCESS_USER_REQUEST workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('ProcessUserRequest');
+      const workflow = registry.getByName('ProcessUserRequest');
 
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('ProcessUserRequest');
 
       const event: AgentEvent = {
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {
           request: 'Test user request',
           userId: 'test-user',
@@ -256,7 +257,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -274,14 +275,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
     it('should handle ANALYZE_ISSUE_IMPACT workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('AnalyzeIssueImpact');
+      const workflow = registry.getByName('AnalyzeIssueImpact');
 
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('AnalyzeIssueImpact');
 
       const event: AgentEvent = {
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'normal',
         payload: {
           issueId: 'test-issue-123',
           impact: 'high',
@@ -291,7 +291,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -309,14 +309,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
     it('should handle EXTRACT_KNOWLEDGE workflow', async () => {
       const registry = agent.getWorkflowRegistry();
-      const workflow = registry.get('ExtractKnowledge');
+      const workflow = registry.getByName('ExtractKnowledge');
 
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('ExtractKnowledge');
 
       const event: AgentEvent = {
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'low',
         payload: {
           source: 'test-document',
           content: 'Test knowledge content',
@@ -326,7 +325,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -345,18 +344,20 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
   describe('Event Emitter Integration', () => {
     it('should trigger new events from workflows', async () => {
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
       const cascadingWorkflow: WorkflowDefinition = {
         name: 'cascading-workflow',
         description: 'Workflow that triggers other events',
+        triggers: {
+          eventTypes: ['TRIGGER_CASCADE'],
+        },
         executor: async (event, context, emitter) => {
           // 新しいイベントを発行
           emitter.emit({
             type: 'TRIGGERED_EVENT',
-            priority: 'high',
             payload: { triggered: true },
           });
 
@@ -369,7 +370,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'TRIGGER_CASCADE',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -388,19 +388,21 @@ describe('CoreAgent - Comprehensive Tests', () => {
       expect(result.success).toBe(true);
       expect(mockEmitter.emit).toHaveBeenCalledWith({
         type: 'TRIGGERED_EVENT',
-        priority: 'high',
         payload: { triggered: true },
       });
     });
 
     it('should handle multiple event emissions', async () => {
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
       const multiEmitWorkflow: WorkflowDefinition = {
         name: 'multi-emit-workflow',
         description: 'Workflow that emits multiple events',
+        triggers: {
+          eventTypes: ['MULTI_EMIT'],
+        },
         executor: async (event, context, emitter) => {
           const payload = event.payload as { count?: number };
           const count = payload.count || 3;
@@ -408,7 +410,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
           for (let i = 0; i < count; i++) {
             emitter.emit({
               type: `EVENT_${i}`,
-              priority: 'normal',
               payload: { index: i },
             });
           }
@@ -423,7 +424,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'MULTI_EMIT',
-        priority: 'normal',
         payload: { count: 5 },
         timestamp: new Date(),
       };
@@ -450,6 +450,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const customWorkflow: WorkflowDefinition = {
         name: 'CUSTOM_WORKFLOW',
         description: 'Custom test workflow',
+        triggers: {
+          eventTypes: ['CUSTOM_WORKFLOW'],
+        },
         executor: async (event, context) => ({
           success: true,
           context,
@@ -459,7 +462,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       agent.registerWorkflow(customWorkflow);
       const registry = agent.getWorkflowRegistry();
-      const retrieved = registry.get('CUSTOM_WORKFLOW');
+      const retrieved = registry.getByName('CUSTOM_WORKFLOW');
 
       expect(retrieved).toBeDefined();
       expect(retrieved?.name).toBe('CUSTOM_WORKFLOW');
@@ -470,6 +473,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const originalWorkflow: WorkflowDefinition = {
         name: 'OVERRIDE_TEST',
         description: 'Original workflow',
+        triggers: {
+          eventTypes: ['OVERRIDE_TEST'],
+        },
         executor: async (event, context) => ({
           success: true,
           context,
@@ -480,6 +486,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const overrideWorkflow: WorkflowDefinition = {
         name: 'OVERRIDE_TEST',
         description: 'Override workflow',
+        triggers: {
+          eventTypes: ['OVERRIDE_TEST'],
+        },
         executor: async (event, context) => ({
           success: true,
           context,
@@ -491,14 +500,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
       agent.registerWorkflow(overrideWorkflow);
 
       const registry = agent.getWorkflowRegistry();
-      const retrieved = registry.get('OVERRIDE_TEST');
+      const retrieved = registry.getByName('OVERRIDE_TEST');
 
       expect(retrieved?.description).toBe('Override workflow');
     });
 
     it('should return undefined for non-existent workflows', () => {
       const registry = agent.getWorkflowRegistry();
-      const retrieved = registry.get('NON_EXISTENT_WORKFLOW');
+      const retrieved = registry.getByName('NON_EXISTENT_WORKFLOW');
 
       expect(retrieved).toBeUndefined();
     });
@@ -519,6 +528,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const loggingWorkflow: WorkflowDefinition = {
         name: 'logging-workflow',
         description: 'Workflow with logging',
+        triggers: {
+          eventTypes: ['LOG_TEST'],
+        },
         executor: async () => ({
           success: true,
           context: mockContext,
@@ -528,12 +540,11 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'LOG_TEST',
-        priority: 'normal',
         payload: { test: true },
         timestamp: new Date(),
       };
 
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -551,6 +562,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const performanceWorkflow: WorkflowDefinition = {
         name: 'performance-workflow',
         description: 'Performance test workflow',
+        triggers: {
+          eventTypes: ['PERFORMANCE_TEST'],
+        },
         executor: vi.fn().mockImplementation(async () => {
           const start = Date.now();
           await new Promise((resolve) => setTimeout(resolve, 10));
@@ -564,7 +578,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -572,7 +586,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       for (let i = 0; i < 10; i++) {
         const event: AgentEvent = {
           type: 'PERFORMANCE_TEST',
-          priority: 'normal',
           payload: { index: i },
           timestamp: new Date(),
         };
@@ -592,6 +605,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const concurrentWorkflow: WorkflowDefinition = {
         name: 'concurrent-perf-workflow',
         description: 'Concurrent performance test',
+        triggers: {
+          eventTypes: ['CONCURRENT_TEST'],
+        },
         executor: async (event) => {
           const payload = event.payload as { delay?: number };
           if (payload.delay) {
@@ -606,7 +622,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -617,7 +633,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       for (let i = 0; i < 5; i++) {
         const event: AgentEvent = {
           type: 'CONCURRENT_PERF',
-          priority: 'normal',
           payload: { delay: 50 },
           timestamp: new Date(),
         };

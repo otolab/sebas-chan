@@ -168,29 +168,57 @@ export class DBClient extends EventEmitter {
       console.error('Python stderr:', data.toString());
     });
 
+    // ワーカープロセスのエラーや異常終了を追跡
+    let workerError: Error | null = null;
+    let workerExited = false;
+
     this.worker.on('error', (error) => {
       console.error('Failed to start Python worker:', error);
+      workerError = error;
       this.emit('error', error);
     });
 
     this.worker.on('exit', (code) => {
       console.log(`Python worker exited with code ${code}`);
       this.isReady = false;
+      workerExited = true;
+      if (code !== 0 && !workerError) {
+        workerError = new Error(`Python worker exited with code ${code}`);
+      }
       this.worker = null;
     });
 
     // ワーカーの起動を待つ（実際にpingが通るまで）
-    await this.waitForReady();
+    try {
+      await this.waitForReady(workerError, () => workerExited);
+    } catch (error) {
+      // ワーカーが異常終了した場合は、より詳細なエラーを投げる
+      if (workerError) {
+        throw workerError;
+      }
+      throw error;
+    }
   }
 
   /**
    * DBが準備完了するまで待つ
    */
-  private async waitForReady(): Promise<void> {
-    const maxRetries = 30; // 最大30秒待つ
+  private async waitForReady(
+    workerError: Error | null,
+    isWorkerExited: () => boolean
+  ): Promise<void> {
+    const maxRetries = 60; // CI環境を考慮して60秒待つ
     const retryInterval = 1000; // 1秒ごとにリトライ
 
     for (let i = 0; i < maxRetries; i++) {
+      // ワーカーが異常終了した場合は即座に失敗
+      if (isWorkerExited()) {
+        if (workerError) {
+          throw workerError;
+        }
+        throw new Error('Python worker exited unexpectedly during initialization');
+      }
+
       try {
         const status = await this.ping();
         if (status.status === 'ok') {
@@ -199,8 +227,10 @@ export class DBClient extends EventEmitter {
           return;
         }
       } catch (e) {
-        // pingが失敗しても続ける
-        console.log(`Waiting for DB to be ready... (${i + 1}/${maxRetries})`);
+        // pingが失敗しても続ける（ワーカーが生きている限り）
+        if (!isWorkerExited()) {
+          console.log(`Waiting for DB to be ready... (${i + 1}/${maxRetries})`);
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, retryInterval));
     }

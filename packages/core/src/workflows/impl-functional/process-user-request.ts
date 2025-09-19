@@ -1,6 +1,7 @@
-import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
-import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
+import type { AgentEvent } from '../../types.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { WorkflowResult } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
 import { compile } from '@moduler-prompt/core';
 
 // リクエストの型定義
@@ -16,10 +17,12 @@ function determineNextEvents(
   requestType: string,
   request: UserRequest,
   aiResponse: string
-): Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: Record<string, unknown> }> {
+): Array<{
+  type: string;
+  payload: Record<string, unknown>;
+}> {
   const events: Array<{
     type: string;
-    priority: 'high' | 'normal' | 'low';
     payload: Record<string, unknown>;
   }> = [];
 
@@ -27,7 +30,6 @@ function determineNextEvents(
     case 'issue':
       events.push({
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'high' as const,
         payload: {
           issue: request,
           aiResponse,
@@ -38,7 +40,6 @@ function determineNextEvents(
     case 'question':
       events.push({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'normal' as const,
         payload: {
           question: request.content,
           context: aiResponse,
@@ -50,7 +51,6 @@ function determineNextEvents(
       // フィードバックの場合は知識として保存
       events.push({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'low' as const,
         payload: {
           feedback: request.content,
           source: 'user_feedback',
@@ -97,8 +97,8 @@ function classifyRequest(content: string): string {
  */
 async function executeProcessUserRequest(
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage, createDriver } = context;
   interface ProcessUserRequestPayload {
@@ -162,7 +162,11 @@ async function executeProcessUserRequest(
       },
     };
   } catch (error) {
-    throw error;
+    return {
+      success: false,
+      context,
+      error: error as Error,
+    };
   }
 }
 
@@ -172,5 +176,8 @@ async function executeProcessUserRequest(
 export const processUserRequestWorkflow: WorkflowDefinition = {
   name: 'ProcessUserRequest',
   description: 'ユーザーリクエストを分類し、適切な後続ワークフローへルーティングする',
+  triggers: {
+    eventTypes: ['PROCESS_USER_REQUEST'],
+  },
   executor: executeProcessUserRequest,
 };

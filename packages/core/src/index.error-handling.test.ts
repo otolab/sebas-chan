@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent, WorkflowLogger } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
-import { WorkflowEventEmitter } from './workflows/context.js';
-import { WorkflowDefinition } from './workflows/functional-types.js';
+import { WorkflowEventEmitterInterface } from './workflows/context.js';
+import { WorkflowDefinition } from './workflows/workflow-types.js';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
@@ -29,6 +29,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const errorWorkflow: WorkflowDefinition = {
         name: 'error-workflow',
         description: 'Workflow that throws synchronous error',
+        triggers: {
+          eventTypes: ['ERROR_WORKFLOW'],
+        },
         executor: () => {
           throw new Error('Synchronous error in workflow');
         },
@@ -36,14 +39,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'ERROR_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -68,6 +70,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const asyncErrorWorkflow: WorkflowDefinition = {
         name: 'async-error-workflow',
         description: 'Workflow that throws asynchronous error',
+        triggers: {
+          eventTypes: ['ASYNC_ERROR_WORKFLOW'],
+        },
         executor: async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
           throw new Error('Asynchronous error in workflow');
@@ -76,14 +81,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'ASYNC_ERROR_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -104,6 +108,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const slowWorkflow: WorkflowDefinition = {
         name: 'slow-workflow',
         description: 'Workflow with long-running operation',
+        triggers: {
+          eventTypes: ['SLOW_WORKFLOW'],
+        },
         executor: async () => {
           // 長時間の処理をシミュレート
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -117,14 +124,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'SLOW_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -149,6 +155,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const largePayloadWorkflow: WorkflowDefinition = {
         name: 'large-payload-workflow',
         description: 'Workflow handling large payloads',
+        triggers: {
+          eventTypes: ['LARGE_PAYLOAD_WORKFLOW'],
+        },
         executor: async (event) => {
           const payload = event.payload as { largeArray?: unknown[] };
           return {
@@ -163,7 +172,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'LARGE_PAYLOAD_EVENT',
-        priority: 'normal',
         payload: {
           largeArray: new Array(10000).fill('data'),
           nestedObject: {
@@ -181,7 +189,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -203,6 +211,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const errorProneWorkflow: WorkflowDefinition = {
         name: 'error-prone-workflow',
         description: 'Workflow that may throw errors',
+        triggers: {
+          eventTypes: ['ERROR_PRONE_WORKFLOW'],
+        },
         executor: async (event) => {
           const payload = event.payload as { shouldError?: boolean };
           if (payload.shouldError) {
@@ -218,7 +229,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -226,7 +237,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       for (let i = 0; i < 20; i++) {
         const event: AgentEvent = {
           type: 'REPEATED_ERROR',
-          priority: 'normal',
           payload: { shouldError: i % 2 === 0 },
           timestamp: new Date(),
         };
@@ -255,6 +265,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'empty-type-workflow',
         description: 'Workflow for empty event type',
+        triggers: {
+          eventTypes: ['EMPTY_TYPE_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: !event.type || event.type === '',
@@ -265,14 +278,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: '',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -293,6 +305,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'long-type-workflow',
         description: 'Workflow for long event type',
+        triggers: {
+          eventTypes: ['LONG_TYPE_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: true,
@@ -304,14 +319,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: longEventType,
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -331,6 +345,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'undefined-payload-workflow',
         description: 'Workflow for undefined payload',
+        triggers: {
+          eventTypes: ['UNDEFINED_PAYLOAD_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: true,
@@ -342,14 +359,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'UNDEFINED_PAYLOAD',
-        priority: 'normal',
         payload: undefined as unknown as Record<string, unknown>,
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -369,25 +385,26 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const workflow: WorkflowDefinition = {
         name: 'invalid-priority-workflow',
         description: 'Workflow for invalid priority',
+        triggers: {
+          eventTypes: ['INVALID_PRIORITY_WORKFLOW'],
+        },
         executor: async (event) => {
           return {
             success: true,
             context: createMockWorkflowContext(),
-            output: { priority: event.priority },
           };
         },
       };
 
       const invalidEvent = {
         type: 'INVALID_PRIORITY',
-        priority: 'ultra-high' as any, // 無効な優先度
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -400,7 +417,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.output).toEqual({ priority: 'ultra-high' });
     });
   });
 
@@ -409,6 +425,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const concurrentWorkflow: WorkflowDefinition = {
         name: 'concurrent-workflow',
         description: 'Workflow for concurrent execution',
+        triggers: {
+          eventTypes: ['CONCURRENT_WORKFLOW'],
+        },
         executor: async (event) => {
           // ランダムな処理時間
           await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
@@ -429,7 +448,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -438,7 +457,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       for (let i = 0; i < 10; i++) {
         const event: AgentEvent = {
           type: `CONCURRENT_${i}`,
-          priority: ['high', 'normal', 'low'][i % 3] as AgentEvent['priority'],
           payload: { index: i },
           timestamp: new Date(),
         };
@@ -462,6 +480,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const nestedWorkflow: WorkflowDefinition = {
         name: 'nested-workflow',
         description: 'Workflow with nested error handling',
+        triggers: {
+          eventTypes: ['NESTED_WORKFLOW'],
+        },
         executor: async (event, context, emitter) => {
           try {
             // 内部でエラーを発生させる
@@ -470,7 +491,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
             // エラーをキャッチして処理
             emitter.emit({
               type: 'ERROR_LOGGED',
-              priority: 'high',
               payload: { error: (error as Error).message },
             });
 
@@ -486,14 +506,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'NESTED_ERROR',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -509,7 +528,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       expect(result.output).toEqual({ recovered: true });
       expect(mockEmitter.emit).toHaveBeenCalledWith({
         type: 'ERROR_LOGGED',
-        priority: 'high',
         payload: { error: 'Inner error' },
       });
     });
@@ -518,6 +536,9 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const rejectionWorkflow: WorkflowDefinition = {
         name: 'rejection-workflow',
         description: 'Workflow with promise rejection',
+        triggers: {
+          eventTypes: ['REJECTION_WORKFLOW'],
+        },
         executor: async () => {
           return Promise.reject(new Error('Promise rejection in workflow'));
         },
@@ -525,14 +546,13 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'REJECTION_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 

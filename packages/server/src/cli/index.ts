@@ -67,10 +67,6 @@ export class CLI {
         await this.processRequest(args.join(' '));
         break;
 
-      case 'queue':
-        this.showQueue();
-        break;
-
       case 'exit':
       case 'quit':
         this.stop();
@@ -91,7 +87,6 @@ Available commands:
   issue <title>         - Create a new issue
   flow <title>          - Create a new flow
   process <prompt>      - Process a user request
-  queue                 - Show event queue status
   exit, quit           - Exit the CLI
     `);
   }
@@ -169,23 +164,11 @@ Available commands:
       return;
     }
 
-    this.coreEngine.enqueueEvent({
+    this.coreEngine.emitEvent({
       type: 'PROCESS_USER_REQUEST',
-      priority: 'high',
       payload: { prompt },
     });
     console.log('Request queued for processing');
-  }
-
-  private showQueue(): void {
-    const event = this.coreEngine.dequeueEvent();
-    if (event) {
-      console.log('Next event in queue:');
-      console.log(JSON.stringify(event, null, 2));
-      this.coreEngine.enqueueEvent(event);
-    } else {
-      console.log('Event queue is empty');
-    }
   }
 
   private stop(): void {

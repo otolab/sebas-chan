@@ -35,9 +35,8 @@ export function createSystemRouter(coreEngine: CoreEngine): Router {
     try {
       const dto: ProcessRequestDto = req.body;
 
-      coreEngine.enqueueEvent({
+      coreEngine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {
           prompt: dto.prompt,
           context: dto.context,

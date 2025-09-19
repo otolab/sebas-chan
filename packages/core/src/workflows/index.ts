@@ -1,8 +1,15 @@
 // ワークフロー関連の型と実装をエクスポート
-export * from './functional-types.js';
 export * from './context.js';
 export * from './logger.js';
-export { WorkflowRegistry } from './functional-registry.js';
+
+// ワークフローシステム
+export {
+  type WorkflowTrigger,
+  type WorkflowDefinition,
+  type WorkflowResolution,
+} from './workflow-types.js';
+export { WorkflowRegistry } from './workflow-registry.js';
+export { WorkflowResolver } from './workflow-resolver.js';
 
 // 実装をエクスポート
 export * from './impl-functional/index.js';

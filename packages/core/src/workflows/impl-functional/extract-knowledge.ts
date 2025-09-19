@@ -1,6 +1,7 @@
-import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
-import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
+import type { AgentEvent } from '../../types.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { WorkflowResult } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Knowledge, KnowledgeSource } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
@@ -76,8 +77,8 @@ function createKnowledgeSources(payload: ExtractKnowledgePayload): KnowledgeSour
  */
 async function executeExtractKnowledge(
   event: AgentEvent,
-  context: WorkflowContext,
-  _emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  _emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage, createDriver } = context;
   const payload = event.payload as unknown as ExtractKnowledgePayload;
@@ -180,5 +181,8 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 export const extractKnowledgeWorkflow: WorkflowDefinition = {
   name: 'ExtractKnowledge',
   description: '情報から再利用可能な知識を抽出し、Knowledge DBに保存する',
+  triggers: {
+    eventTypes: ['EXTRACT_KNOWLEDGE'],
+  },
   executor: executeExtractKnowledge,
 };

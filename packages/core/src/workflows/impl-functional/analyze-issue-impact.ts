@@ -1,6 +1,7 @@
-import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
-import type { WorkflowDefinition, WorkflowResult } from '../functional-types.js';
+import type { AgentEvent } from '../../types.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { WorkflowResult } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
@@ -50,8 +51,8 @@ function shouldCreateNewIssue(existingIssues: Issue[], _content: string): boolea
  */
 async function executeAnalyzeIssueImpact(
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage, createDriver } = context;
   // event.payloadの型を明示的に定義
@@ -146,7 +147,6 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     if (impactScore > 0.8) {
       emitter.emit({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'high',
         payload: {
           issueId,
           impactAnalysis,
@@ -187,5 +187,8 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 export const analyzeIssueImpactWorkflow: WorkflowDefinition = {
   name: 'AnalyzeIssueImpact',
   description: 'Issueの影響範囲を分析し、関連性と優先度を判定して必要に応じて知識抽出を起動する',
+  triggers: {
+    eventTypes: ['ANALYZE_ISSUE_IMPACT'],
+  },
   executor: executeAnalyzeIssueImpact,
 };

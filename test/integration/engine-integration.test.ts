@@ -44,6 +44,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       searchIssues: vi.fn().mockResolvedValue([]),
       updateStateDocument: vi.fn().mockResolvedValue(undefined),
       getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnull（新規状態）
+      saveStateDocument: vi.fn().mockResolvedValue(undefined),
     };
 
     vi.mocked(DBClient).mockImplementation(() => mockDbClient);
@@ -121,7 +122,6 @@ describe('CoreEngine - CoreAgent Integration', () => {
         expect.any(Object), // workflow
         expect.objectContaining({
           type: 'INGEST_INPUT',
-          priority: 'normal',
           payload: expect.objectContaining({
             input: expect.objectContaining({
               id: input.id,
@@ -141,15 +141,13 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.start();
 
       // 異なるタイプのイベントを追加
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: { request: 'user request' },
       });
 
-      engine.enqueueEvent({
+      engine.emitEvent({
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'normal',
         payload: { issueId: 'issue-123' },
       });
 
@@ -480,15 +478,16 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await testEngine.start();
 
       // ワークフローが定義されていないイベントを追加
-      testEngine.enqueueEvent({
+      testEngine.emitEvent({
         type: 'UNKNOWN_EVENT_TYPE',
-        priority: 'high',
         payload: { test: true },
       });
 
-      // イベントがキューに追加される
+      // WorkflowQueueベースのシステムでは、ワークフローが解決されない場合、
+      // queueSizeは0のままになる（イベントがワークフローに解決されないため）
       let status = await testEngine.getStatus();
-      expect(status.queueSize || 0).toBeGreaterThan(0);
+      // ワークフローがないイベントはキューに追加されない
+      expect(status.queueSize).toBe(0);
 
       // タイマーを進めてイベント処理を待つ
       await vi.advanceTimersByTimeAsync(1000);
