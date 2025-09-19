@@ -37,7 +37,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     triggers: {
       eventTypes: ['TEST_EVENT', 'EVENT_1', 'EVENT_2', 'EVENT_3',
                    'LOW_EVENT', 'HIGH_EVENT', 'NORMAL_EVENT'],
-      priority: 50,
+      priority: undefined, // イベントの優先度を使用するため、ワークフロー優先度は未定義
     },
     executor: vi.fn().mockImplementation(async (event, context) => {
       // contextの内容を記録（検証用）
