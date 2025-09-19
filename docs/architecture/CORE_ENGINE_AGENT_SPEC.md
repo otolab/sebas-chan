@@ -9,16 +9,23 @@ sebas-chanシステムにおいて、CoreEngineとCoreAgentは明確に異なる
 ```
 [External] → REST API → CoreEngine → CoreAgent
                   ↓           ↓
-              DB Bridge    State文書
-                  ↓
-              LanceDB
+              DB Bridge    WorkflowContext
+                  ↓           ↓
+              LanceDB     DB Bridge
+                              ↓
+                          LanceDB
 ```
+
+**現在の実装**:
+- State文書もDB経由で管理
+- CoreAgentはWorkflowContextを通じてDB操作を実行
+- DB Bridgeは単一インスタンスをCoreEngineが管理
 
 ## CoreEngine（中継者・管理者）
 
 ### 役割
 - **情報の中継点**: 外部からの入力を受け取り、適切に変換・配信
-- **データ管理**: DB接続、State文書、イベントキューなどの管理
+- **リソース管理**: DB接続、イベントキューなどの管理
 - **インターフェース変換**: REST APIとCoreAgentの間の変換層
 - **整合性維持**: システム全体の状態整合性を保つ
 
@@ -28,44 +35,55 @@ sebas-chanシステムにおいて、CoreEngineとCoreAgentは明確に異なる
    - DBクライアントの管理とデータ永続化
    - イベントキューの管理
 
-2. **データ管理**
-   - State文書の管理（メモリ/DB）
-   - Input/Issue/Knowledge/Flowの CRUD操作
-   - Pondへのデータ格納
+2. **WorkflowContext提供**
+   - DB操作インターフェース（WorkflowStorage）
+   - ログ記録（WorkflowLogger）
+   - AIドライバーファクトリ（DriverFactory）
+   - 実行時メタデータ
 
 3. **CoreAgentの管理**
    - CoreAgentインスタンスの生成と管理
-   - Agent向けの整理されたインターフェース提供
-   - AgentからのリクエストをDBやAPIに変換
+   - ワークフロー実行の制御
+   - エラーハンドリング
 
 ### 実装場所
 `packages/server/src/core/engine.ts`
 
-## CoreAgent（思考エンジン）
+### 主要メソッド
+- `initialize()`: DB接続とCoreAgent初期化
+- `processNextEvent()`: イベントキューから処理
+- `createWorkflowContext()`: WorkflowContext生成
+- `handleRequest()`: REST APIリクエスト処理
+
+## CoreAgent（ワークフロー実行エンジン）
 
 ### 役割
-- **純粋な思考ループ**: 生成AIによる自律的な思考処理
-- **ワークフロー実行**: 各種思考ワークフローの実行
+- **ワークフロー実行**: 各種ワークフローの実行
 - **イベント処理**: 優先度付きイベントの処理
+- **ワークフローレジストリ管理**: ワークフローの登録と解決
 
 ### 責務
-1. **思考処理**
-   - イベントループによる継続的な処理
-   - ワークフロー（INGEST_INPUT等）の実行
-   - LLM呼び出しによる判断・生成
+1. **ワークフロー処理**
+   - WorkflowDefinitionに基づく実行
+   - WorkflowRegistryによる管理
+   - イベントからワークフローへのマッピング
 
-2. **状態参照**
-   - State文書を参照した文脈把握
-   - 新規イベントの生成
-   - 思考結果の出力
+2. **状態管理**
+   - WorkflowContext経由でのDB操作
+   - ワークフロー間のデータ共有
+   - 実行結果の返却
 
 3. **純粋性の維持**
    - I/O処理を直接行わない
    - CoreEngineが提供するインターフェースのみ使用
-   - データ管理の詳細を知らない
+   - 関数ベースのワークフロー実装
 
 ### 実装場所
 `packages/core/src/index.ts`（CoreAgentクラス）
+
+### 主要メソッド
+- `executeWorkflow()`: ワークフロー実行
+- `getWorkflowRegistry()`: レジストリ取得
 
 ## Engine-Agent インターフェース
 
@@ -74,12 +92,12 @@ sebas-chanシステムにおいて、CoreEngineとCoreAgentは明確に異なる
 - **単方向の依存**: ServerパッケージがCoreパッケージに依存（逆はなし）
 - **疎結合**: 将来的にAgentを別プロセスに分離可能な設計
 
-### インターフェース例
+### インターフェース定義
 
 ```typescript
 // CoreEngineがCoreAgentに提供するWorkflowContext
-// packages/core/src/workflows/context.tsで定義
-interface WorkflowContext {
+// packages/core/src/workflows/context.ts
+interface WorkflowContextInterface {
   state: string;                    // システムの現在状態
   storage: WorkflowStorage;         // DB操作インターフェース
   logger: WorkflowLogger;          // ログ記録
@@ -87,59 +105,74 @@ interface WorkflowContext {
   metadata?: Record<string, any>;  // 実行時メタデータ
 }
 
-// CoreAgentがCoreEngineから受け取るイベント
+// ワークフロー定義
+// packages/core/src/workflows/workflow-types.ts
+interface WorkflowDefinition {
+  name: string;
+  description: string;
+  triggers: WorkflowTrigger;
+  executor: WorkflowExecutor;
+}
+
+// イベント定義
 interface AgentEvent {
   type: string;
   priority: 'high' | 'normal' | 'low';
-  payload: AgentEventPayload;
+  payload: unknown;
   timestamp: Date;
 }
 ```
 
-## State文書の管理
+## データアクセスパターン
 
-### 管理責任
-- **CoreEngine**: データの実際の管理（永続化、整合性）
-- **CoreAgent**: ベストエフォートでの利用
+### 現在の実装
+1. **CoreEngine**
+   - DBClientを直接保持
+   - WorkflowContextを生成してCoreAgentに提供
 
-### 更新フロー
-1. Engine/Agent どちらも更新可能
-2. 更新時はEngineが管理
-3. AgentにはEngineから新しいStateが通知される
-4. Agentは新しいStateをベストエフォートで反映
+2. **CoreAgent**
+   - WorkflowContext.storageを通じてDB操作
+   - 直接のDB接続は持たない
 
-### 実装方針
-- 同一プロセス内のshared memoryとして実装も検討
-- 整合性はベストエフォート（厳密な同期は不要）
+### データフロー例
+```typescript
+// 1. REST APIからリクエスト
+POST /api/inputs
+  ↓
+// 2. CoreEngineが処理
+engine.handleRequest()
+  ↓
+// 3. WorkflowContext生成
+const context = engine.createWorkflowContext()
+  ↓
+// 4. CoreAgentでワークフロー実行
+agent.executeWorkflow(workflow, event, context, emitter)
+  ↓
+// 5. WorkflowContext.storageでDB操作
+await context.storage.createIssue(data)
+```
 
-## 実装上の修正点
+## 実装済み機能
 
-### 現在の問題
-1. DBクライアントがCoreAgentに直接存在
-2. ServerとCoreパッケージ間に依存関係がない
-3. 重複した実装が存在
+### ワークフロー
+- `ingestInputWorkflow`: Input取り込み
+- `processUserRequestWorkflow`: リクエスト分類
+- `analyzeIssueImpactWorkflow`: 影響分析
+- `extractKnowledgeWorkflow`: 知識抽出
 
-### 必要な修正
-1. **依存関係の追加**
-   - ServerパッケージにCoreパッケージへの依存を追加
-   
-2. **DBクライアントの移動**
-   - CoreAgentからDBクライアントを削除
-   - CoreEngineでDBクライアントを管理
-   
-3. **インターフェースの整理**
-   - CoreEngineがCoreAgentに整理されたインターフェースを提供
-   - CoreAgentはI/O処理をEngineに委譲
+### DB操作
+- Pond: エントリ追加、検索、フィルタリング
+- Issue: 作成、更新、検索
+- Knowledge: 作成、検索
+- Input: 作成、取得
 
-## 優先順位
+### Web UI統合
+- `/api/pond`: Pond検索API
+- `/api/state`: システム状態取得
+- `/api/knowledge`: Knowledge検索
+- `/api/issues/:id`: Issue詳細取得
 
-**CoreAgentが主人公であり、最優先に実装される**
+---
 
-CoreEngineは：
-- すべての中継点として機能
-- 雑多な問題を整理
-- インターフェースを変換
-- 整合性を保つ
-- システム最大の苦労人
-
-この設計により、CoreAgentは純粋な思考処理に集中でき、システム全体の複雑性はCoreEngineが吸収します。
+更新日: 2025-09-19
+バージョン: 2.0.0（実装に合わせて更新）
