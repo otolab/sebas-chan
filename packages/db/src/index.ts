@@ -187,7 +187,7 @@ export class DBClient extends EventEmitter {
    * DBが準備完了するまで待つ
    */
   private async waitForReady(): Promise<void> {
-    const maxRetries = 30; // 最大30秒待つ
+    const maxRetries = 60; // CI環境を考慮して60秒待つ
     const retryInterval = 1000; // 1秒ごとにリトライ
 
     for (let i = 0; i < maxRetries; i++) {
