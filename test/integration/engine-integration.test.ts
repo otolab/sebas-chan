@@ -142,13 +142,13 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.start();
 
       // 異なるタイプのイベントを追加
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'PROCESS_USER_REQUEST',
         priority: 'high',
         payload: { request: 'user request' },
       });
 
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'ANALYZE_ISSUE_IMPACT',
         priority: 'normal',
         payload: { issueId: 'issue-123' },
@@ -481,15 +481,17 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await testEngine.start();
 
       // ワークフローが定義されていないイベントを追加
-      testEngine.enqueueEvent({
+      await testEngine.enqueueEvent({
         type: 'UNKNOWN_EVENT_TYPE',
         priority: 'high',
         payload: { test: true },
       });
 
-      // イベントがキューに追加される
+      // WorkflowQueueベースのシステムでは、ワークフローが解決されない場合、
+      // queueSizeは0のままになる（イベントがワークフローに解決されないため）
       let status = await testEngine.getStatus();
-      expect(status.queueSize || 0).toBeGreaterThan(0);
+      // ワークフローがないイベントはキューに追加されない
+      expect(status.queueSize).toBe(0);
 
       // タイマーを進めてイベント処理を待つ
       await vi.advanceTimersByTimeAsync(1000);

@@ -30,20 +30,21 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
   let mockDbClient: Partial<DBClient>;
   let coreAgent: CoreAgent;
 
-  // テスト用のワークフロー定義
-  const testWorkflow: WorkflowDefinition = {
+  // テスト用のワークフロー定義（ExtendedWorkflowDefinitionとして）
+  const testWorkflow = {
     name: 'TestWorkflow',
     description: 'テスト用ワークフロー',
-    executor: vi.fn().mockImplementation(async (event, context, emitter) => {
+    triggers: {
+      eventTypes: ['TEST_EVENT', 'EVENT_1', 'EVENT_2', 'EVENT_3',
+                   'LOW_EVENT', 'HIGH_EVENT', 'NORMAL_EVENT'],
+      priority: 50,
+    },
+    executor: vi.fn().mockImplementation(async (event, context) => {
       // contextの内容を記録（検証用）
-      const currentState = context.state || '';
+      const currentState = context.state?.getState() || '';
 
       return {
         success: true,
-        context: {
-          ...context,
-          state: currentState + '\n[TestWorkflow executed]',
-        },
         output: {
           processed: true,
           eventType: event.type,
@@ -52,36 +53,28 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     }),
   };
 
-  const ingestInputWorkflow: WorkflowDefinition = {
+  const ingestInputWorkflow = {
     name: 'IngestInput',
     description: '入力データをPondに保存',
-    executor: vi.fn().mockImplementation(async (event, context, emitter) => {
+    triggers: {
+      eventTypes: ['INGEST_INPUT'],
+      priority: 50,
+    },
+    executor: vi.fn().mockImplementation(async (event, context) => {
       const input = event.payload.input;
 
-      // Pondに保存
-      const pondEntry = await context.storage.addPondEntry({
+      // Pondに保存（モック）
+      const pondEntry = {
+        id: `pond-${Date.now()}`,
         content: input.content,
         source: input.source,
-      });
-
-      // エラーキーワード検出
-      if (input.content.includes('エラー')) {
-        await emitter.emit({
-          type: 'ANALYZE_ISSUE_IMPACT',
-          priority: 'normal',
-          payload: {
-            pondEntryId: pondEntry.id,
-            originalInput: input,
-          },
-        });
-      }
+      };
 
       return {
         success: true,
-        context,
         output: {
           pondEntryId: pondEntry.id,
-          analyzed: input.content.includes('エラー'),
+          analyzed: input.content?.includes('エラー'),
         },
       };
     }),
@@ -130,7 +123,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
   describe('1.1 初期化と接続', () => {
     it('TEST-INIT-001: CoreEngineがCoreAgentとDBClientを正しく初期化できる', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(coreAgent);
 
       // Act
       await engine.initialize();
@@ -147,9 +140,11 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       expect(health.agent).toBe('initialized');
     });
 
-    it('TEST-INIT-002: DB接続エラー時にCoreAgentを初期化しない', async () => {
+    it('TEST-INIT-002: DB接続エラー時でもCoreAgentは提供済みなら利用可能', async () => {
       // Arrange
       mockDbClient.connect = vi.fn().mockRejectedValue(new Error('Connection failed'));
+
+      // CoreAgentを提供せずにEngineを作成
       engine = new CoreEngine();
 
       // Act & Assert
@@ -163,17 +158,13 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
 
   describe('1.2 イベント処理の流れ', () => {
     beforeEach(async () => {
-      engine = new CoreEngine();
+      engine = new CoreEngine(coreAgent);
       await engine.initialize();
 
-      // ワークフローを登録
-      const registry = (engine as any).coreAgent.getWorkflowRegistry();
+      // ワークフローを登録（ExtendedWorkflowRegistryを使用）
+      const registry = (engine as any).workflowRegistry;
       registry.register(testWorkflow);
-      registry.get = vi.fn((eventType) => {
-        if (eventType === 'TEST_EVENT') return testWorkflow;
-        if (eventType === 'INGEST_INPUT') return ingestInputWorkflow;
-        return undefined;
-      });
+      registry.register(ingestInputWorkflow);
     });
 
     it('TEST-EVENT-001: InputからINGEST_INPUTイベントが生成される', async () => {
@@ -214,7 +205,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: { data: 'test' },
@@ -241,7 +232,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       const warnSpy = vi.mocked(logger.warn);
 
       // Act
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'UNKNOWN_EVENT',
         priority: 'normal',
         payload: {},
@@ -265,7 +256,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     let capturedContext: any;
 
     beforeEach(async () => {
-      engine = new CoreEngine();
+      engine = new CoreEngine(coreAgent);
       await engine.initialize();
 
       // コンテキストをキャプチャするワークフロー
@@ -286,7 +277,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -317,7 +308,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -340,7 +331,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -369,7 +360,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       await engine.start();
 
       // Act
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'TEST_EVENT',
         priority: 'normal',
         payload: {},
@@ -389,7 +380,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
 
   describe('1.4 複数イベントの処理', () => {
     beforeEach(async () => {
-      engine = new CoreEngine();
+      engine = new CoreEngine(coreAgent);
       await engine.initialize();
 
       // ワークフローを登録
@@ -404,19 +395,19 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       executorSpy.mockClear();
 
       // Act
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'EVENT_1',
         priority: 'normal',
         payload: { id: 1 },
       });
 
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'EVENT_2',
         priority: 'normal',
         payload: { id: 2 },
       });
 
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'EVENT_3',
         priority: 'normal',
         payload: { id: 3 },
@@ -446,19 +437,19 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       executorSpy.mockClear();
 
       // Act - 優先度の異なるイベントを追加
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'LOW_EVENT',
         priority: 'low',
         payload: { priority: 'low' },
       });
 
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'HIGH_EVENT',
         priority: 'high',
         payload: { priority: 'high' },
       });
 
-      engine.enqueueEvent({
+      await engine.enqueueEvent({
         type: 'NORMAL_EVENT',
         priority: 'normal',
         payload: { priority: 'normal' },
