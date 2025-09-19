@@ -122,7 +122,6 @@ describe('CoreEngine - CoreAgent Integration', () => {
         expect.any(Object), // workflow
         expect.objectContaining({
           type: 'INGEST_INPUT',
-          priority: 'normal',
           payload: expect.objectContaining({
             input: expect.objectContaining({
               id: input.id,
@@ -144,13 +143,11 @@ describe('CoreEngine - CoreAgent Integration', () => {
       // 異なるタイプのイベントを追加
       engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: { request: 'user request' },
       });
 
       engine.emitEvent({
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'normal',
         payload: { issueId: 'issue-123' },
       });
 
@@ -483,7 +480,6 @@ describe('CoreEngine - CoreAgent Integration', () => {
       // ワークフローが定義されていないイベントを追加
       testEngine.emitEvent({
         type: 'UNKNOWN_EVENT_TYPE',
-        priority: 'high',
         payload: { test: true },
       });
 

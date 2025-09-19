@@ -36,7 +36,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'ERROR_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -76,7 +75,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'ASYNC_ERROR_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -117,7 +115,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'SLOW_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -163,7 +160,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'LARGE_PAYLOAD_EVENT',
-        priority: 'normal',
         payload: {
           largeArray: new Array(10000).fill('data'),
           nestedObject: {
@@ -226,7 +222,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       for (let i = 0; i < 20; i++) {
         const event: AgentEvent = {
           type: 'REPEATED_ERROR',
-          priority: 'normal',
           payload: { shouldError: i % 2 === 0 },
           timestamp: new Date(),
         };
@@ -265,7 +260,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: '',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -304,7 +298,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: longEventType,
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -342,7 +335,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'UNDEFINED_PAYLOAD',
-        priority: 'normal',
         payload: undefined as unknown as Record<string, unknown>,
         timestamp: new Date(),
       };
@@ -373,14 +365,12 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           return {
             success: true,
             context: createMockWorkflowContext(),
-            output: { priority: event.priority },
           };
         },
       };
 
       const invalidEvent = {
         type: 'INVALID_PRIORITY',
-        priority: 'ultra-high' as any, // 無効な優先度
         payload: {},
         timestamp: new Date(),
       };
@@ -400,7 +390,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.output).toEqual({ priority: 'ultra-high' });
     });
   });
 
@@ -438,7 +427,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       for (let i = 0; i < 10; i++) {
         const event: AgentEvent = {
           type: `CONCURRENT_${i}`,
-          priority: ['high', 'normal', 'low'][i % 3] as AgentEvent['priority'],
           payload: { index: i },
           timestamp: new Date(),
         };
@@ -470,7 +458,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
             // エラーをキャッチして処理
             emitter.emit({
               type: 'ERROR_LOGGED',
-              priority: 'high',
               payload: { error: (error as Error).message },
             });
 
@@ -486,7 +473,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'NESTED_ERROR',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -509,7 +495,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       expect(result.output).toEqual({ recovered: true });
       expect(mockEmitter.emit).toHaveBeenCalledWith({
         type: 'ERROR_LOGGED',
-        priority: 'high',
         payload: { error: 'Inner error' },
       });
     });
@@ -525,7 +510,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event: AgentEvent = {
         type: 'REJECTION_EVENT',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };

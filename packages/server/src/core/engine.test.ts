@@ -21,7 +21,11 @@ vi.mock('@sebas-chan/core', () => ({
       workflows: [
         {
           name: 'MockWorkflow',
-          triggers: { eventTypes: ['INGEST_INPUT'], priority: 10 },
+          description: 'Test workflow',
+          triggers: {
+            eventTypes: ['PROCESS_USER_REQUEST', 'INGEST_INPUT'],
+            priority: 10,
+          },
           executor: vi.fn(),
         },
       ],
@@ -104,7 +108,6 @@ describe('CoreEngine', () => {
 
       engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: { test: true },
       });
 
@@ -123,7 +126,6 @@ describe('CoreEngine', () => {
 
       engine.emitEvent({
         type: 'INGEST_INPUT',
-        priority: 'normal',
         payload: { inputId: 'test-input' },
       });
 
@@ -149,7 +151,6 @@ describe('CoreEngine', () => {
 
       const event: Omit<Event, 'id' | 'timestamp'> = {
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {},
       };
 
@@ -345,7 +346,6 @@ describe('CoreEngine', () => {
     it('should enqueue events and resolve to workflows', async () => {
       engine.emitEvent({
         type: 'INGEST_INPUT',
-        priority: 'normal',
         payload: { input: { id: '123', content: 'test', source: 'test' } },
       });
 
@@ -382,7 +382,6 @@ describe('CoreEngine', () => {
 
       engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {},
       });
 
@@ -414,13 +413,11 @@ describe('CoreEngine', () => {
       // 複数のイベントを投入
       engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {},
       });
 
       engine.emitEvent({
         type: 'INGEST_INPUT',
-        priority: 'normal',
         payload: {},
       });
 

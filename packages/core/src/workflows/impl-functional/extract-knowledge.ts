@@ -183,7 +183,6 @@ export const extractKnowledgeWorkflow: WorkflowDefinition = {
   description: '情報から再利用可能な知識を抽出し、Knowledge DBに保存する',
   triggers: {
     eventTypes: ['EXTRACT_KNOWLEDGE'],
-    priority: 5,
   },
   executor: executeExtractKnowledge,
 };

@@ -37,7 +37,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     triggers: {
       eventTypes: ['TEST_EVENT', 'EVENT_1', 'EVENT_2', 'EVENT_3',
                    'LOW_EVENT', 'HIGH_EVENT', 'NORMAL_EVENT'],
-      priority: undefined, // イベントの優先度を使用するため、ワークフロー優先度は未定義
     },
     executor: vi.fn().mockImplementation(async (event, context) => {
       // contextの内容を記録（検証用）
@@ -58,7 +57,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     description: '入力データをPondに保存',
     triggers: {
       eventTypes: ['INGEST_INPUT'],
-      priority: 50,
     },
     executor: vi.fn().mockImplementation(async (event, context) => {
       const input = event.payload.input;
@@ -189,7 +187,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       expect(eventListener).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'INGEST_INPUT',
-          priority: 'normal',
           payload: expect.objectContaining({
             input: expect.objectContaining({
               id: input.id,
@@ -207,7 +204,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act
       engine.emitEvent({
         type: 'TEST_EVENT',
-        priority: 'normal',
         payload: { data: 'test' },
       });
 
@@ -234,7 +230,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act
       engine.emitEvent({
         type: 'UNKNOWN_EVENT',
-        priority: 'normal',
         payload: {},
       });
 
@@ -265,7 +260,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
         description: 'コンテキストキャプチャ用',
         triggers: {
           eventTypes: ['TEST_EVENT'],
-          priority: 50,
         },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           capturedContext = context;
@@ -288,7 +282,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act
       engine.emitEvent({
         type: 'TEST_EVENT',
-        priority: 'normal',
         payload: {},
       });
 
@@ -319,7 +312,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act
       engine.emitEvent({
         type: 'TEST_EVENT',
-        priority: 'normal',
         payload: {},
       });
 
@@ -342,7 +334,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act
       engine.emitEvent({
         type: 'TEST_EVENT',
-        priority: 'normal',
         payload: {},
       });
 
@@ -371,7 +362,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act
       engine.emitEvent({
         type: 'TEST_EVENT',
-        priority: 'normal',
         payload: {},
       });
 
@@ -409,19 +399,16 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act
       engine.emitEvent({
         type: 'EVENT_1',
-        priority: 'normal',
         payload: { id: 1 },
       });
 
       engine.emitEvent({
         type: 'EVENT_2',
-        priority: 'normal',
         payload: { id: 2 },
       });
 
       engine.emitEvent({
         type: 'EVENT_3',
-        priority: 'normal',
         payload: { id: 3 },
       });
 
@@ -451,20 +438,14 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // Act - 優先度の異なるイベントを追加
       engine.emitEvent({
         type: 'LOW_EVENT',
-        priority: 'low',
-        payload: { priority: 'low' },
       });
 
       engine.emitEvent({
         type: 'HIGH_EVENT',
-        priority: 'high',
-        payload: { priority: 'high' },
       });
 
       engine.emitEvent({
         type: 'NORMAL_EVENT',
-        priority: 'normal',
-        payload: { priority: 'normal' },
       });
 
       // 全イベントの処理を進める

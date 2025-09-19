@@ -147,7 +147,6 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
     if (impactScore > 0.8) {
       emitter.emit({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'high',
         payload: {
           issueId,
           impactAnalysis,
@@ -190,7 +189,6 @@ export const analyzeIssueImpactWorkflow: WorkflowDefinition = {
   description: 'Issueの影響範囲を分析し、関連性と優先度を判定して必要に応じて知識抽出を起動する',
   triggers: {
     eventTypes: ['ANALYZE_ISSUE_IMPACT'],
-    priority: 15,
   },
   executor: executeAnalyzeIssueImpact,
 };

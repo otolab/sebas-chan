@@ -67,10 +67,6 @@ export class CLI {
         await this.processRequest(args.join(' '));
         break;
 
-      case 'queue':
-        this.showQueue();
-        break;
-
       case 'exit':
       case 'quit':
         this.stop();
@@ -91,7 +87,6 @@ Available commands:
   issue <title>         - Create a new issue
   flow <title>          - Create a new flow
   process <prompt>      - Process a user request
-  queue                 - Show event queue status
   exit, quit           - Exit the CLI
     `);
   }
@@ -171,14 +166,9 @@ Available commands:
 
     this.coreEngine.emitEvent({
       type: 'PROCESS_USER_REQUEST',
-      priority: 'high',
       payload: { prompt },
     });
     console.log('Request queued for processing');
-  }
-
-  private showQueue(): void {
-    console.log('Queue inspection is not available in the new WorkflowQueue architecture');
   }
 
   private stop(): void {

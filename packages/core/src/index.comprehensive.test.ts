@@ -53,29 +53,27 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const events: AgentEvent[] = [
         {
           type: 'LOW_PRIORITY',
-          priority: 'low',
           payload: {},
           timestamp: new Date(),
         },
         {
           type: 'HIGH_PRIORITY',
-          priority: 'high',
           payload: {},
           timestamp: new Date(),
         },
         {
           type: 'NORMAL_PRIORITY',
-          priority: 'normal',
           payload: {},
           timestamp: new Date(),
         },
       ];
 
       for (const event of events) {
+        // イベントタイプに基づいてワークフローを選択
         const workflow =
-          event.priority === 'high'
+          event.type === 'PROCESS_USER_REQUEST'
             ? highPriorityWorkflow
-            : event.priority === 'normal'
+            : event.type === 'INGEST_INPUT'
               ? normalPriorityWorkflow
               : lowPriorityWorkflow;
 
@@ -114,7 +112,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       for (let i = 1; i <= 5; i++) {
         const event: AgentEvent = {
           type: 'SAME_PRIORITY',
-          priority: 'normal',
           payload: { id: `event-${i}` },
           timestamp: new Date(),
         };
@@ -162,7 +159,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 初期状態を確認
       const event1: AgentEvent = {
         type: 'CHECK_STATE',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -173,7 +169,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 状態を変更
       const event2: AgentEvent = {
         type: 'UPDATE_STATE',
-        priority: 'normal',
         payload: { newState: 'processing' },
         timestamp: new Date(),
       };
@@ -184,7 +179,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 変更後の状態を確認
       const event3: AgentEvent = {
         type: 'CHECK_STATE',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -207,7 +201,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'INGEST_INPUT',
-        priority: 'normal',
         payload: {
           input: {
             content: 'Test input',
@@ -246,7 +239,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: {
           request: 'Test user request',
           userId: 'test-user',
@@ -281,7 +273,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'normal',
         payload: {
           issueId: 'test-issue-123',
           impact: 'high',
@@ -316,7 +307,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'low',
         payload: {
           source: 'test-document',
           content: 'Test knowledge content',
@@ -356,7 +346,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
           // 新しいイベントを発行
           emitter.emit({
             type: 'TRIGGERED_EVENT',
-            priority: 'high',
             payload: { triggered: true },
           });
 
@@ -369,7 +358,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'TRIGGER_CASCADE',
-        priority: 'normal',
         payload: {},
         timestamp: new Date(),
       };
@@ -388,7 +376,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       expect(result.success).toBe(true);
       expect(mockEmitter.emit).toHaveBeenCalledWith({
         type: 'TRIGGERED_EVENT',
-        priority: 'high',
         payload: { triggered: true },
       });
     });
@@ -408,7 +395,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
           for (let i = 0; i < count; i++) {
             emitter.emit({
               type: `EVENT_${i}`,
-              priority: 'normal',
               payload: { index: i },
             });
           }
@@ -423,7 +409,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'MULTI_EMIT',
-        priority: 'normal',
         payload: { count: 5 },
         timestamp: new Date(),
       };
@@ -528,7 +513,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const event: AgentEvent = {
         type: 'LOG_TEST',
-        priority: 'normal',
         payload: { test: true },
         timestamp: new Date(),
       };
@@ -572,7 +556,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       for (let i = 0; i < 10; i++) {
         const event: AgentEvent = {
           type: 'PERFORMANCE_TEST',
-          priority: 'normal',
           payload: { index: i },
           timestamp: new Date(),
         };
@@ -617,7 +600,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
       for (let i = 0; i < 5; i++) {
         const event: AgentEvent = {
           type: 'CONCURRENT_PERF',
-          priority: 'normal',
           payload: { delay: 50 },
           timestamp: new Date(),
         };

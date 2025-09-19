@@ -31,7 +31,6 @@ describe('CoreAgent', () => {
   it('should execute workflow successfully', async () => {
     const event: AgentEvent = {
       type: 'PROCESS_USER_REQUEST',
-      priority: 'normal',
       payload: { test: true },
       timestamp: new Date(),
     };
@@ -63,7 +62,6 @@ describe('CoreAgent', () => {
   it('should handle workflow errors', async () => {
     const event: AgentEvent = {
       type: 'TEST_ERROR',
-      priority: 'normal',
       payload: {},
       timestamp: new Date(),
     };

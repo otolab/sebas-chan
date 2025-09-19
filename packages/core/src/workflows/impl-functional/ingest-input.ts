@@ -54,7 +54,6 @@ async function executeIngestInput(
       // 3. 必要に応じて後続のイベントを発行
       emitter.emit({
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'normal',
         payload: {
           pondEntryId: pondEntry.id,
           originalInput: input,
@@ -89,7 +88,6 @@ export const ingestInputWorkflow: WorkflowDefinition = {
   description: '入力データをPondに取り込み、エラーキーワードを検出して必要に応じて分析を起動する',
   triggers: {
     eventTypes: ['INGEST_INPUT'],
-    priority: 10,
   },
   executor: executeIngestInput,
 };

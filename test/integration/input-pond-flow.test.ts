@@ -226,7 +226,6 @@ describe('Input to Pond Flow Integration', () => {
       // High priority event
       engine.emitEvent({
         type: 'PROCESS_USER_REQUEST',
-        priority: 'high',
         payload: { urgent: true },
       });
 
@@ -240,7 +239,6 @@ describe('Input to Pond Flow Integration', () => {
       // Low priority event
       engine.emitEvent({
         type: 'SALVAGE_FROM_POND',
-        priority: 'low',
         payload: { cleanup: true },
       });
 

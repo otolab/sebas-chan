@@ -121,11 +121,10 @@ export class EngineWorkflowStorage implements WorkflowStorageInterface {
 export class EngineWorkflowEventEmitter implements WorkflowEventEmitterInterface {
   constructor(private engine: CoreEngine) {}
 
-  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void {
+  emit(event: { type: string; payload: unknown }): void {
     // EngineのemitEventを使用してイベントを発行
     this.engine.emitEvent({
       type: event.type as WorkflowType,
-      priority: event.priority || 'normal',
       payload: event.payload as EventPayload,
     });
   }

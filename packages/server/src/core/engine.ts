@@ -368,7 +368,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     logger.info('Created input', { input });
     this.emitEvent({
       type: 'INGEST_INPUT',
-      priority: 'normal',
       payload: { input }, // Inputオブジェクト全体を渡す
     });
     return input;
@@ -498,7 +497,6 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     // AgentEventに変換
     const agentEvent: AgentEvent = {
       type: fullEvent.type,
-      priority: fullEvent.priority,
       payload: fullEvent.payload as AgentEventPayload,
       timestamp: fullEvent.timestamp,
     };
@@ -516,36 +514,17 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     );
 
     /**
-     * 優先度を数値に変換
-     * - high: 100 (最高優先度)
-     * - normal: 50 (通常優先度)
-     * - low: 10 (低優先度)
-     */
-    const priorityToNumber = (priority: 'high' | 'normal' | 'low'): number => {
-      switch (priority) {
-        case 'high':
-          return 100;
-        case 'normal':
-          return 50;
-        case 'low':
-          return 10;
-        default:
-          return 50;
-      }
-    };
-
-    /**
      * 各ワークフローをキューに追加
      * 優先度の決定ロジック:
      * 1. ワークフロー定義に優先度が指定されている場合はそれを使用
-     * 2. 指定されていない場合はイベントの優先度を数値に変換して使用
+     * 2. 指定されていない場合はデフォルト値（0）を使用
      * 3. WorkflowQueue内では数値が大きいほど高優先度として処理される
      */
     for (const workflow of resolution.workflows) {
       this.workflowQueue.enqueue({
         workflow,
         event: agentEvent,
-        priority: workflow.triggers.priority ?? priorityToNumber(agentEvent.priority),
+        priority: workflow.triggers.priority ?? 0,
         timestamp: new Date(),
       });
     }

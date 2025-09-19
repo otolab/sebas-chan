@@ -83,7 +83,6 @@ export type AgentEventPayload = Record<string, unknown>;
 
 export interface AgentEvent {
   type: string;
-  priority: 'high' | 'normal' | 'low';
   payload: AgentEventPayload;
   timestamp: Date;
 }

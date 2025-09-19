@@ -93,7 +93,6 @@ export interface WorkflowEventEmitterInterface {
    */
   emit(event: {
     type: WorkflowEventType;
-    priority?: 'high' | 'normal' | 'low';
     payload: unknown;
   }): void;
 }

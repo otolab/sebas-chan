@@ -17,10 +17,12 @@ function determineNextEvents(
   requestType: string,
   request: UserRequest,
   aiResponse: string
-): Array<{ type: string; priority: 'high' | 'normal' | 'low'; payload: Record<string, unknown> }> {
+): Array<{
+  type: string;
+  payload: Record<string, unknown>;
+}> {
   const events: Array<{
     type: string;
-    priority: 'high' | 'normal' | 'low';
     payload: Record<string, unknown>;
   }> = [];
 
@@ -28,7 +30,6 @@ function determineNextEvents(
     case 'issue':
       events.push({
         type: 'ANALYZE_ISSUE_IMPACT',
-        priority: 'high' as const,
         payload: {
           issue: request,
           aiResponse,
@@ -39,7 +40,6 @@ function determineNextEvents(
     case 'question':
       events.push({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'normal' as const,
         payload: {
           question: request.content,
           context: aiResponse,
@@ -51,7 +51,6 @@ function determineNextEvents(
       // フィードバックの場合は知識として保存
       events.push({
         type: 'EXTRACT_KNOWLEDGE',
-        priority: 'low' as const,
         payload: {
           feedback: request.content,
           source: 'user_feedback',
@@ -175,7 +174,6 @@ export const processUserRequestWorkflow: WorkflowDefinition = {
   description: 'ユーザーリクエストを分類し、適切な後続ワークフローへルーティングする',
   triggers: {
     eventTypes: ['PROCESS_USER_REQUEST'],
-    priority: 20,
   },
   executor: executeProcessUserRequest,
 };

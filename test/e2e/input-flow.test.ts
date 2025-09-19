@@ -40,7 +40,6 @@ describe('Input処理フローのE2Eテスト', () => {
     description: '入力データをPondに保存し、必要に応じて分析',
     triggers: {
       eventTypes: ['INGEST_INPUT'],
-      priority: 10,
     },
     executor: vi.fn().mockImplementation(async (event, context, emitter) => {
       const input = event.payload.input;
@@ -61,7 +60,6 @@ describe('Input処理フローのE2Eテスト', () => {
       if (input.content.includes('エラー') || input.content.includes('error')) {
         const analysisEvent = {
           type: 'ANALYZE_ISSUE_IMPACT',
-          priority: 'high' as const,
           payload: {
             pondEntryId: pondEntry.id,
             originalInput: input,
@@ -92,7 +90,6 @@ describe('Input処理フローのE2Eテスト', () => {
     description: 'エラーを含む入力を分析してIssueを作成',
     triggers: {
       eventTypes: ['ANALYZE_ISSUE_IMPACT'],
-      priority: 10,
     },
     executor: vi.fn().mockImplementation(async (event, context, emitter) => {
       const { pondEntryId, originalInput, detectedKeywords } = event.payload;
@@ -103,7 +100,6 @@ describe('Input処理フローのE2Eテスト', () => {
       // Issue作成イベントを発行
       await emitter.emit({
         type: 'CREATE_ISSUE',
-        priority: 'normal',
         payload: {
           title: `Error detected in ${originalInput.source}`,
           description: `Keywords detected: ${detectedKeywords.join(', ')}\n\nOriginal content: ${originalInput.content}`,
@@ -439,7 +435,6 @@ describe('Input処理フローのE2Eテスト', () => {
         description: '状態の変化を追跡',
         triggers: {
           eventTypes: ['INGEST_INPUT'],
-          priority: 10,
         },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           const currentState = context.state || '';
@@ -517,7 +512,6 @@ describe('Input処理フローのE2Eテスト', () => {
         description: 'エラーを発生させるワークフロー',
         triggers: {
           eventTypes: ['INGEST_INPUT'],
-          priority: 10,
         },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           attemptCount++;
@@ -570,7 +564,6 @@ describe('Input処理フローのE2Eテスト', () => {
         description: '部分的に失敗するワークフロー',
         triggers: {
           eventTypes: ['INGEST_INPUT'],
-          priority: 10,
         },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           processCount++;

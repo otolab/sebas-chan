@@ -14,7 +14,6 @@ const logWorkflow: WorkflowDefinition = {
   description: '入力をログに記録',
   triggers: {
     eventTypes: ['INGEST_INPUT'],
-    priority: 100, // 最優先
   },
   executor: async (event, context) => {
     console.log(`[LogInput] Processing event: ${event.type}`);
@@ -36,7 +35,6 @@ const validateWorkflow: WorkflowDefinition = {
       const input = event.payload?.input as any;
       return input?.content?.length > 0;
     },
-    priority: 50,
   },
   executor: async (event, context) => {
     const input = event.payload?.input as any;
@@ -61,7 +59,6 @@ const analyzeErrorWorkflow: WorkflowDefinition = {
       const content = input?.content?.toLowerCase() || '';
       return content.includes('error') || content.includes('エラー');
     },
-    priority: 75,
   },
   executor: async (event, context, emitter) => {
     const input = event.payload?.input as any;
@@ -70,7 +67,6 @@ const analyzeErrorWorkflow: WorkflowDefinition = {
     // 後続イベントを発行
     await emitter.emit({
       type: 'ANALYZE_ISSUE_IMPACT',
-      priority: 'high',
       payload: {
         originalInput: input,
         errorDetected: true,
@@ -90,7 +86,6 @@ const issueAnalysisWorkflow: WorkflowDefinition = {
   description: 'Issue影響分析',
   triggers: {
     eventTypes: ['ANALYZE_ISSUE_IMPACT'],
-    priority: 90,
   },
   executor: async (event, context) => {
     console.log(`[IssueAnalysis] Analyzing issue impact`);
@@ -129,7 +124,6 @@ export async function runWorkflowDemo(): Promise<void> {
   console.log('--- テストケース1: 通常の入力 ---');
   const normalEvent: AgentEvent = {
     type: 'INGEST_INPUT',
-    priority: 'normal',
     payload: {
       input: {
         id: 'input-1',
@@ -153,7 +147,6 @@ export async function runWorkflowDemo(): Promise<void> {
   console.log('--- テストケース2: エラーを含む入力 ---');
   const errorEvent: AgentEvent = {
     type: 'INGEST_INPUT',
-    priority: 'high',
     payload: {
       input: {
         id: 'input-2',
@@ -180,7 +173,6 @@ export async function runWorkflowDemo(): Promise<void> {
   console.log('--- テストケース3: 空の入力 ---');
   const emptyEvent: AgentEvent = {
     type: 'INGEST_INPUT',
-    priority: 'low',
     payload: {
       input: {
         id: 'input-3',
@@ -204,7 +196,6 @@ export async function runWorkflowDemo(): Promise<void> {
   console.log('--- テストケース4: ANALYZE_ISSUE_IMPACTイベント ---');
   const analyzeEvent: AgentEvent = {
     type: 'ANALYZE_ISSUE_IMPACT',
-    priority: 'high',
     payload: {
       originalInput: { content: 'test' },
       errorDetected: true,

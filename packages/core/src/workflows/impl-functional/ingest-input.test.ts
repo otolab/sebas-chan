@@ -40,7 +40,6 @@ describe('IngestInput Workflow (Functional)', () => {
     // モックイベント
     mockEvent = {
       type: 'INGEST_INPUT',
-      priority: 'normal',
       timestamp: new Date(),
       payload: {
         input: {
@@ -79,7 +78,6 @@ describe('IngestInput Workflow (Functional)', () => {
     // ANALYZE_ISSUE_IMPACTイベントが発行されたことを確認
     expect(mockEmitter.emit).toHaveBeenCalledWith({
       type: 'ANALYZE_ISSUE_IMPACT',
-      priority: 'normal',
       payload: {
         pondEntryId: 'pond-123',
         originalInput: (mockEvent.payload as any).input,

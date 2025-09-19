@@ -65,7 +65,6 @@ export type EventPayload =
 export interface Event {
   id: string;
   type: WorkflowType;
-  priority: 'high' | 'normal' | 'low';
   payload: EventPayload;
   timestamp: Date;
   retryCount?: number;
