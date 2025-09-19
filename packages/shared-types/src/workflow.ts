@@ -2,6 +2,7 @@
  * ワークフロー実行関連の型定義
  */
 
+import type { AIDriver } from '@moduler-prompt/driver';
 import {
   Issue,
   Flow,
@@ -53,18 +54,12 @@ export interface CoreAPI {
 }
 
 /**
- * LLMドライバーインターフェース
+ * ドライバー選択基準
  */
-export interface LLMDriver {
-  complete(prompt: string, options?: LLMOptions): Promise<string>;
-  embed(text: string): Promise<number[]>;
-}
-
-export interface LLMOptions {
+export interface DriverSelectionCriteria {
+  task?: string;
   model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  systemPrompt?: string;
+  capabilities?: string[];
 }
 
 /**
@@ -84,7 +79,7 @@ export interface WorkflowContext {
     createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge>;
     updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
   };
-  createDriver: (criteria: any) => Promise<any>; // AIドライバーファクトリ
+  createDriver: (criteria: DriverSelectionCriteria) => Promise<AIDriver>; // AIドライバーファクトリ
   logger: Logger; // ログ出力
   metadata?: Record<string, unknown>; // 実行時メタデータ
 }
