@@ -57,33 +57,73 @@ class LanceDBWorker:
     
     def init_tables(self):
         """必要なテーブルを初期化"""
-        # Issues テーブル
-        if ISSUES_TABLE not in self.db.table_names():
-            self.db.create_table(ISSUES_TABLE, schema=get_issues_schema(self.vector_dimension))
-        
-        # State文書テーブル  
-        if STATE_TABLE not in self.db.table_names():
-            self.db.create_table(STATE_TABLE, schema=get_state_schema())
-            # 初期State文書を作成
-            self.db.open_table(STATE_TABLE).add([{
-                "id": "main",
-                "content": "",
-                "updated_at": pd.Timestamp.now().floor('ms')
-            }])
-        else:
-            # State文書テーブルが既に存在する場合、mainレコードがなければ作成
-            table = self.db.open_table(STATE_TABLE)
-            result = table.search().where("id = 'main'").limit(1).to_list()
-            if not result:
-                table.add([{
-                    "id": "main",
-                    "content": "",
-                    "updated_at": pd.Timestamp.now().floor('ms')
-                }])
-        
-        # Pond テーブル
-        if POND_TABLE not in self.db.table_names():
-            self.db.create_table(POND_TABLE, schema=get_pond_schema(self.vector_dimension))
+        try:
+            # テーブル名を再取得して最新の状態を確認
+            existing_tables = self.db.table_names()
+
+            # Issues テーブル
+            if ISSUES_TABLE not in existing_tables:
+                try:
+                    self.db.create_table(ISSUES_TABLE, schema=get_issues_schema(self.vector_dimension))
+                except ValueError as e:
+                    if "already exists" not in str(e):
+                        raise
+                    # テーブルが既に存在する場合は無視（並行実行時の競合状態対策）
+                    sys.stderr.write(f"Warning: Table {ISSUES_TABLE} already exists, skipping creation\n")
+                    sys.stderr.flush()
+
+            # State文書テーブル
+            if STATE_TABLE not in existing_tables:
+                try:
+                    self.db.create_table(STATE_TABLE, schema=get_state_schema())
+                    # 初期State文書を作成
+                    self.db.open_table(STATE_TABLE).add([{
+                        "id": "main",
+                        "content": "",
+                        "updated_at": pd.Timestamp.now().floor('ms')
+                    }])
+                except ValueError as e:
+                    if "already exists" not in str(e):
+                        raise
+                    # テーブルが既に存在する場合、mainレコードがなければ作成
+                    sys.stderr.write(f"Warning: Table {STATE_TABLE} already exists, checking main record\n")
+                    sys.stderr.flush()
+                    table = self.db.open_table(STATE_TABLE)
+                    result = table.search().where("id = 'main'").limit(1).to_list()
+                    if not result:
+                        table.add([{
+                            "id": "main",
+                            "content": "",
+                            "updated_at": pd.Timestamp.now().floor('ms')
+                        }])
+            else:
+                # State文書テーブルが既に存在する場合、mainレコードがなければ作成
+                table = self.db.open_table(STATE_TABLE)
+                result = table.search().where("id = 'main'").limit(1).to_list()
+                if not result:
+                    table.add([{
+                        "id": "main",
+                        "content": "",
+                        "updated_at": pd.Timestamp.now().floor('ms')
+                    }])
+
+            # Pond テーブル
+            if POND_TABLE not in existing_tables:
+                try:
+                    self.db.create_table(POND_TABLE, schema=get_pond_schema(self.vector_dimension))
+                except ValueError as e:
+                    if "already exists" not in str(e):
+                        raise
+                    # テーブルが既に存在する場合は無視（並行実行時の競合状態対策）
+                    sys.stderr.write(f"Warning: Table {POND_TABLE} already exists, skipping creation\n")
+                    sys.stderr.flush()
+
+        except Exception as e:
+            # テーブル初期化エラーをログに出力してから再raise
+            sys.stderr.write(f"Error initializing tables: {str(e)}\n")
+            sys.stderr.write(f"Traceback: {traceback.format_exc()}\n")
+            sys.stderr.flush()
+            raise
     
     def handle_request(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """JSON-RPCリクエストを処理"""
