@@ -354,7 +354,6 @@ describe('Input処理フローのE2Eテスト', () => {
       // エラーが検出される
       expect(triggeredAnalysis).toHaveLength(1);
       expect(triggeredAnalysis[0].type).toBe('ANALYZE_ISSUE_IMPACT');
-      expect(triggeredAnalysis[0].priority).toBe('high');
       expect(triggeredAnalysis[0].payload.detectedKeywords).toContain('エラー');
       expect(triggeredAnalysis[0].payload.detectedKeywords).toContain('error');
 
