@@ -30,7 +30,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
   let mockDbClient: Partial<DBClient>;
   let coreAgent: CoreAgent;
 
-  // テスト用のワークフロー定義（ExtendedWorkflowDefinitionとして）
+  // テスト用のワークフロー定義（WorkflowDefinitionとして）
   const testWorkflow = {
     name: 'TestWorkflow',
     description: 'テスト用ワークフロー',
@@ -161,7 +161,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       engine = new CoreEngine(coreAgent);
       await engine.initialize();
 
-      // ワークフローを登録（ExtendedWorkflowRegistryを使用）
+      // ワークフローを登録（WorkflowRegistryを使用）
       const registry = (engine as any).workflowRegistry;
       registry.register(testWorkflow);
       registry.register(ingestInputWorkflow);

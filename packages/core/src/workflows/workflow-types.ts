@@ -40,9 +40,9 @@ export type WorkflowExecutor = (
 ) => Promise<WorkflowResult>;
 
 /**
- * 拡張されたワークフロー定義
+ * ワークフロー定義
  */
-export interface ExtendedWorkflowDefinition {
+export interface WorkflowDefinition {
   /** ワークフロー名（ユニーク） */
   name: string;
 
@@ -64,7 +64,7 @@ export interface WorkflowQueueItem {
   id: string;
 
   /** 実行するワークフロー */
-  workflow: ExtendedWorkflowDefinition;
+  workflow: WorkflowDefinition;
 
   /** トリガーとなったイベント */
   event: AgentEvent;
@@ -87,7 +87,7 @@ export interface WorkflowQueueItem {
  */
 export interface WorkflowResolution {
   /** マッチしたワークフロー */
-  workflows: ExtendedWorkflowDefinition[];
+  workflows: WorkflowDefinition[];
 
   /** 解決にかかった時間（ms） */
   resolutionTime: number;
@@ -106,16 +106,16 @@ export interface WorkflowResolution {
  */
 export interface IWorkflowRegistry {
   /** ワークフローを登録 */
-  register(workflow: ExtendedWorkflowDefinition): void;
+  register(workflow: WorkflowDefinition): void;
 
   /** 全ワークフローを取得 */
-  getAll(): ExtendedWorkflowDefinition[];
+  getAll(): WorkflowDefinition[];
 
   /** 名前でワークフローを取得 */
-  getByName(name: string): ExtendedWorkflowDefinition | undefined;
+  getByName(name: string): WorkflowDefinition | undefined;
 
   /** イベントタイプでワークフローを検索 */
-  findByEventType(eventType: string): ExtendedWorkflowDefinition[];
+  findByEventType(eventType: string): WorkflowDefinition[];
 
   /** ワークフローをクリア */
   clear(): void;

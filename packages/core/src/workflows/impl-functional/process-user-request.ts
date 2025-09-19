@@ -1,7 +1,7 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowResult } from '../functional-types.js';
-import type { ExtendedWorkflowDefinition } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
 import { compile } from '@moduler-prompt/core';
 
 // リクエストの型定義
@@ -170,7 +170,7 @@ async function executeProcessUserRequest(
 /**
  * PROCESS_USER_REQUEST ワークフロー定義
  */
-export const processUserRequestWorkflow: ExtendedWorkflowDefinition = {
+export const processUserRequestWorkflow: WorkflowDefinition = {
   name: 'ProcessUserRequest',
   description: 'ユーザーリクエストを分類し、適切な後続ワークフローへルーティングする',
   triggers: {

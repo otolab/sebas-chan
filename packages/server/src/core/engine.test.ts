@@ -10,7 +10,7 @@ vi.mock('@sebas-chan/core', () => ({
     log: vi.fn(),
     child: vi.fn().mockReturnThis(),
   })),
-  ExtendedWorkflowRegistry: vi.fn().mockImplementation(() => ({
+  WorkflowRegistry: vi.fn().mockImplementation(() => ({
     register: vi.fn(),
     get: vi.fn(),
     list: vi.fn().mockReturnValue([]),

@@ -1,7 +1,7 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowResult } from '../functional-types.js';
-import type { ExtendedWorkflowDefinition } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
@@ -185,7 +185,7 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 /**
  * ANALYZE_ISSUE_IMPACT ワークフロー定義
  */
-export const analyzeIssueImpactWorkflow: ExtendedWorkflowDefinition = {
+export const analyzeIssueImpactWorkflow: WorkflowDefinition = {
   name: 'AnalyzeIssueImpact',
   description: 'Issueの影響範囲を分析し、関連性と優先度を判定して必要に応じて知識抽出を起動する',
   triggers: {

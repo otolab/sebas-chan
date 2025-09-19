@@ -3,7 +3,7 @@
 ## 完了項目 ✅
 
 ### 1. 新しい型定義
-- `ExtendedWorkflowDefinition` - 拡張ワークフロー定義
+- `WorkflowDefinition` - ワークフロー定義
 - `WorkflowTrigger` - トリガー条件（eventTypes, condition, priority）
 - `WorkflowQueueItem` - キューアイテム
 - `IWorkflowRegistry`, `IWorkflowResolver`, `IWorkflowQueue` - インターフェース
@@ -14,7 +14,7 @@
 - `WorkflowQueue` - 優先度付きワークフローキュー
 
 ### 3. 既存ワークフローの移行
-- `ingestInputWorkflow` - ExtendedWorkflowDefinition形式に移行
+- `ingestInputWorkflow` - WorkflowDefinition形式に移行
 - `processUserRequestWorkflow` - 同上
 - `analyzeIssueImpactWorkflow` - 同上
 - `extractKnowledgeWorkflow` - 同上

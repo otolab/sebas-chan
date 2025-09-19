@@ -23,7 +23,7 @@ import {
 } from '@sebas-chan/core';
 import { WorkflowQueue } from './workflow-queue.js';
 import type { IWorkflowRegistry } from '@sebas-chan/core';
-import { registerDefaultWorkflows, ExtendedWorkflowRegistry } from '@sebas-chan/core';
+import { registerDefaultWorkflows, WorkflowRegistry } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
 import {
@@ -58,7 +58,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     super();
     this.stateManager = new StateManager();
     this.workflowQueue = new WorkflowQueue();
-    this.workflowRegistry = new ExtendedWorkflowRegistry();
+    this.workflowRegistry = new WorkflowRegistry();
     this.workflowResolver = new WorkflowResolver(this.workflowRegistry);
 
     // デフォルトワークフローを登録

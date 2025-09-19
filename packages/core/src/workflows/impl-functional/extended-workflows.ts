@@ -3,7 +3,7 @@
  * デフォルトワークフローの登録ヘルパー
  */
 
-import type { ExtendedWorkflowDefinition, IWorkflowRegistry } from '../workflow-types.js';
+import type { WorkflowDefinition, IWorkflowRegistry } from '../workflow-types.js';
 import { LogType } from '../logger.js';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { processUserRequestWorkflow } from './process-user-request.js';
@@ -13,7 +13,7 @@ import { extractKnowledgeWorkflow } from './extract-knowledge.js';
 /**
  * 全てのデフォルトワークフロー
  */
-export const DEFAULT_WORKFLOWS: ExtendedWorkflowDefinition[] = [
+export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
   ingestInputWorkflow,
   processUserRequestWorkflow,
   analyzeIssueImpactWorkflow,
@@ -34,7 +34,7 @@ export function registerDefaultWorkflows(registry: IWorkflowRegistry): void {
  * 追加のワークフロー例：ログ記録
  * 全てのINGEST_INPUTイベントをログに記録
  */
-export const loggingWorkflow: ExtendedWorkflowDefinition = {
+export const loggingWorkflow: WorkflowDefinition = {
   name: 'LogAllInputs',
   description: '全ての入力をログに記録',
   triggers: {
@@ -62,7 +62,7 @@ export const loggingWorkflow: ExtendedWorkflowDefinition = {
  * 追加のワークフロー例：メトリクス収集
  * 全てのワークフロー実行をトラッキング
  */
-export const metricsWorkflow: ExtendedWorkflowDefinition = {
+export const metricsWorkflow: WorkflowDefinition = {
   name: 'CollectMetrics',
   description: 'ワークフロー実行メトリクスを収集',
   triggers: {

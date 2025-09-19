@@ -5,7 +5,7 @@
 
 import type { AgentEvent } from '../index.js';
 import type {
-  ExtendedWorkflowDefinition,
+  WorkflowDefinition,
   IWorkflowRegistry,
   IWorkflowResolver,
   WorkflowResolution,
@@ -103,7 +103,7 @@ export class WorkflowResolver implements IWorkflowResolver {
   /**
    * デバッグ用：特定のイベントタイプにマッチするワークフローを取得
    */
-  findWorkflowsForEventType(eventType: string): ExtendedWorkflowDefinition[] {
+  findWorkflowsForEventType(eventType: string): WorkflowDefinition[] {
     return this.registry.findByEventType(eventType);
   }
 

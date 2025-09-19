@@ -3,13 +3,13 @@
  * 1イベント対nワークフローの動作確認
  */
 
-import type { ExtendedWorkflowDefinition } from './workflow-types.js';
+import type { WorkflowDefinition } from './workflow-types.js';
 import type { AgentEvent } from '../index.js';
 import { WorkflowRegistry } from './workflow-registry.js';
 import { WorkflowResolver } from './workflow-resolver.js';
 
 // デモ用のワークフロー定義
-const logWorkflow: ExtendedWorkflowDefinition = {
+const logWorkflow: WorkflowDefinition = {
   name: 'LogInput',
   description: '入力をログに記録',
   triggers: {
@@ -27,7 +27,7 @@ const logWorkflow: ExtendedWorkflowDefinition = {
   },
 };
 
-const validateWorkflow: ExtendedWorkflowDefinition = {
+const validateWorkflow: WorkflowDefinition = {
   name: 'ValidateInput',
   description: '入力を検証',
   triggers: {
@@ -51,7 +51,7 @@ const validateWorkflow: ExtendedWorkflowDefinition = {
   },
 };
 
-const analyzeErrorWorkflow: ExtendedWorkflowDefinition = {
+const analyzeErrorWorkflow: WorkflowDefinition = {
   name: 'AnalyzeError',
   description: 'エラーを分析',
   triggers: {
@@ -85,7 +85,7 @@ const analyzeErrorWorkflow: ExtendedWorkflowDefinition = {
   },
 };
 
-const issueAnalysisWorkflow: ExtendedWorkflowDefinition = {
+const issueAnalysisWorkflow: WorkflowDefinition = {
   name: 'IssueAnalysis',
   description: 'Issue影響分析',
   triggers: {
@@ -107,7 +107,7 @@ const issueAnalysisWorkflow: ExtendedWorkflowDefinition = {
 /**
  * デモ実行
  */
-export async function runExtendedWorkflowDemo(): Promise<void> {
+export async function runWorkflowDemo(): Promise<void> {
   console.log('=== 拡張ワークフローシステムデモ ===\n');
 
   // レジストリとリゾルバーを作成
@@ -228,5 +228,5 @@ export async function runExtendedWorkflowDemo(): Promise<void> {
 
 // 直接実行された場合
 if (import.meta.url === `file://${process.argv[1]}`) {
-  runExtendedWorkflowDemo().catch(console.error);
+  runWorkflowDemo().catch(console.error);
 }

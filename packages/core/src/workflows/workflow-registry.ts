@@ -3,16 +3,16 @@
  * 1イベント対nワークフローをサポート
  */
 
-import type { ExtendedWorkflowDefinition, IWorkflowRegistry } from './workflow-types.js';
+import type { WorkflowDefinition, IWorkflowRegistry } from './workflow-types.js';
 
 export class WorkflowRegistry implements IWorkflowRegistry {
-  private workflows: Map<string, ExtendedWorkflowDefinition> = new Map();
+  private workflows: Map<string, WorkflowDefinition> = new Map();
   private eventTypeIndex: Map<string, Set<string>> = new Map();
 
   /**
    * ワークフローを登録
    */
-  register(workflow: ExtendedWorkflowDefinition): void {
+  register(workflow: WorkflowDefinition): void {
     // 名前で登録
     this.workflows.set(workflow.name, workflow);
 
@@ -32,27 +32,27 @@ export class WorkflowRegistry implements IWorkflowRegistry {
   /**
    * 全ワークフローを取得
    */
-  getAll(): ExtendedWorkflowDefinition[] {
+  getAll(): WorkflowDefinition[] {
     return Array.from(this.workflows.values());
   }
 
   /**
    * 名前でワークフローを取得
    */
-  getByName(name: string): ExtendedWorkflowDefinition | undefined {
+  getByName(name: string): WorkflowDefinition | undefined {
     return this.workflows.get(name);
   }
 
   /**
    * イベントタイプでワークフローを検索
    */
-  findByEventType(eventType: string): ExtendedWorkflowDefinition[] {
+  findByEventType(eventType: string): WorkflowDefinition[] {
     const workflowNames = this.eventTypeIndex.get(eventType);
     if (!workflowNames) {
       return [];
     }
 
-    const workflows: ExtendedWorkflowDefinition[] = [];
+    const workflows: WorkflowDefinition[] = [];
     for (const name of workflowNames) {
       const workflow = this.workflows.get(name);
       if (workflow) {

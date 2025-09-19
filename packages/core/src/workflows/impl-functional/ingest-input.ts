@@ -1,7 +1,7 @@
 import type { AgentEvent } from '../../index.js';
 import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
 import type { WorkflowResult } from '../functional-types.js';
-import type { ExtendedWorkflowDefinition } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
 
 /**
  * 入力内容から影響分析が必要かを判定
@@ -84,7 +84,7 @@ async function executeIngestInput(
 /**
  * INGEST_INPUT ワークフロー定義
  */
-export const ingestInputWorkflow: ExtendedWorkflowDefinition = {
+export const ingestInputWorkflow: WorkflowDefinition = {
   name: 'IngestInput',
   description: '入力データをPondに取り込み、エラーキーワードを検出して必要に応じて分析を起動する',
   triggers: {
