@@ -6,13 +6,13 @@
 import type { AgentEvent } from '../index.js';
 import type {
   WorkflowDefinition,
-  IWorkflowRegistry,
-  IWorkflowResolver,
+  WorkflowRegistryInterface,
+  WorkflowResolverInterface,
   WorkflowResolution,
 } from './workflow-types.js';
 
-export class WorkflowResolver implements IWorkflowResolver {
-  constructor(private registry: IWorkflowRegistry) {}
+export class WorkflowResolver implements WorkflowResolverInterface {
+  constructor(private registry: WorkflowRegistryInterface) {}
 
   /**
    * イベントにマッチするワークフローを解決

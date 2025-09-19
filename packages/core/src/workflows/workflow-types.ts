@@ -104,7 +104,7 @@ export interface WorkflowResolution {
 /**
  * ワークフローレジストリインターフェース
  */
-export interface IWorkflowRegistry {
+export interface WorkflowRegistryInterface {
   /** ワークフローを登録 */
   register(workflow: WorkflowDefinition): void;
 
@@ -124,7 +124,7 @@ export interface IWorkflowRegistry {
 /**
  * ワークフロー解決器インターフェース
  */
-export interface IWorkflowResolver {
+export interface WorkflowResolverInterface {
   /** イベントにマッチするワークフローを解決 */
   resolve(event: AgentEvent): WorkflowResolution;
 
@@ -135,7 +135,7 @@ export interface IWorkflowResolver {
 /**
  * ワークフローキューインターフェース
  */
-export interface IWorkflowQueue {
+export interface WorkflowQueueInterface {
   /** アイテムをキューに追加 */
   enqueue(item: WorkflowQueueItem): void;
 

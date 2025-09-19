@@ -178,7 +178,6 @@ Available commands:
   }
 
   private showQueue(): void {
-    // EventQueueが削除されたため、この機能は現在利用できません
     console.log('Queue inspection is not available in the new WorkflowQueue architecture');
   }
 

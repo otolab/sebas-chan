@@ -22,7 +22,7 @@ import {
   WorkflowResolver,
 } from '@sebas-chan/core';
 import { WorkflowQueue } from './workflow-queue.js';
-import type { IWorkflowRegistry } from '@sebas-chan/core';
+import type { WorkflowRegistryInterface } from '@sebas-chan/core';
 import { registerDefaultWorkflows, WorkflowRegistry } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
@@ -51,7 +51,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private lastError?: string;
   private driverRegistry: DriverRegistry;
   private workflowQueue: WorkflowQueue;
-  private workflowRegistry: IWorkflowRegistry;
+  private workflowRegistry: WorkflowRegistryInterface;
   private workflowResolver: WorkflowResolver;
 
   constructor(coreAgent?: CoreAgent) {
@@ -516,7 +516,12 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       `Resolved ${resolution.workflows.length} workflows for event ${event.type} in ${resolution.resolutionTime}ms`
     );
 
-    // 優先度を数値に変換するヘルパー
+    /**
+     * 優先度を数値に変換
+     * - high: 100 (最高優先度)
+     * - normal: 50 (通常優先度)
+     * - low: 10 (低優先度)
+     */
     const priorityToNumber = (priority: 'high' | 'normal' | 'low'): number => {
       switch (priority) {
         case 'high':
@@ -530,7 +535,13 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       }
     };
 
-    // 各ワークフローをキューに追加
+    /**
+     * 各ワークフローをキューに追加
+     * 優先度の決定ロジック:
+     * 1. ワークフロー定義に優先度が指定されている場合はそれを使用
+     * 2. 指定されていない場合はイベントの優先度を数値に変換して使用
+     * 3. WorkflowQueue内では数値が大きいほど高優先度として処理される
+     */
     for (const workflow of resolution.workflows) {
       this.workflowQueue.enqueue({
         workflow,

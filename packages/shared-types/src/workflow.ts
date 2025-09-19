@@ -3,6 +3,7 @@
  */
 
 import type { AIDriver } from '@moduler-prompt/driver';
+import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 import {
   Issue,
   Flow,
@@ -13,6 +14,9 @@ import {
   PondSearchResponse,
 } from './index.js';
 import { Event, WorkflowType } from './events.js';
+
+// @moduler-prompt/utilsからDriverSelectionCriteriaをre-export
+export type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 
 /**
  * Core APIインターフェース
@@ -51,15 +55,6 @@ export interface CoreAPI {
 
   // イベント発行
   emitEvent(event: Omit<Event, 'id' | 'timestamp'>): void;
-}
-
-/**
- * ドライバー選択基準
- */
-export interface DriverSelectionCriteria {
-  task?: string;
-  model?: string;
-  capabilities?: string[];
 }
 
 /**

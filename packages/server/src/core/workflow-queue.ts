@@ -3,9 +3,9 @@
  * 実行待ちのワークフローを管理
  */
 
-import type { WorkflowQueueItem, IWorkflowQueue } from '@sebas-chan/core';
+import type { WorkflowQueueItem, WorkflowQueueInterface } from '@sebas-chan/core';
 
-export class WorkflowQueue implements IWorkflowQueue {
+export class WorkflowQueue implements WorkflowQueueInterface {
   private queue: WorkflowQueueItem[] = [];
   private running: Map<string, WorkflowQueueItem> = new Map();
   private idCounter = 0;
@@ -139,18 +139,6 @@ export class WorkflowQueue implements IWorkflowQueue {
   getPending(): WorkflowQueueItem[] {
     return [...this.queue];
   }
-
-  /**
-   * 特定のイベントに関連するワークフローを取得
-   */
-  /**
-   * 特定のイベントに関連するワークフローを取得
-   * 注: AgentEventにはidフィールドがないため、このメソッドは現在使用できません
-   */
-  // findByEventId(eventId: string): WorkflowQueueItem[] {
-  //   // AgentEventにidがないため、実装保留
-  //   return [];
-  // }
 
   /**
    * キューの統計情報を取得
