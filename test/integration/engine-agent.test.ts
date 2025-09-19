@@ -522,6 +522,6 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       expect(highPriorityWorkflow.executor).toHaveBeenCalledTimes(1);
       expect(normalPriorityWorkflow.executor).toHaveBeenCalledTimes(1);
       expect(lowPriorityWorkflow.executor).toHaveBeenCalledTimes(1);
-    }););
+    });
   });
 });
