@@ -39,15 +39,9 @@
 | [TEST_SPECIFICATIONS.md](TEST_SPECIFICATIONS.md) | テスト仕様書 | 正式 | 維持 |
 | [TEST_ANALYSIS.md](TEST_ANALYSIS.md) | テスト分析レポート | 正式 | 維持 |
 
-### 6. 開発計画・作業メモ
-| ファイル | 内容 | 種別 | 状態 |
-|---------|------|------|------|
-| [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) | 実装計画書 | 計画 | 古い |
-| [ideas/1.設計仕様書.md](ideas/1.設計仕様書.md) | 初期設計メモ | メモ | アーカイブ |
-| [ideas/2.実装メモ.md](ideas/2.実装メモ.md) | 実装時のメモ | メモ | アーカイブ |
-| [ideas/3.実装に向けた設計方針.md](ideas/3.実装に向けた設計方針.md) | 実装方針メモ | メモ | アーカイブ |
+### 6. フェーズ別作業記録
 
-### 7. フェーズ別作業記録
+###
 | ファイル | 内容 | 種別 | 状態 |
 |---------|------|------|------|
 | [phases/README.md](phases/README.md) | フェーズ別作業記録の概要 | インデックス | 維持 |
@@ -55,15 +49,11 @@
 | [phases/PHASE_002_REPORTER_SDK_DEVELOPMENT.md](phases/PHASE_002_REPORTER_SDK_DEVELOPMENT.md) | Phase 2作業記録 | 記録 | 完了 |
 | [phases/PHASE_003_WORKFLOW_IMPLEMENTATION.md](phases/PHASE_003_WORKFLOW_IMPLEMENTATION.md) | Phase 3作業記録 | 記録 | 進行中 |
 
-### 8. Phase 3作業メモ
+### 7. Phase 3アーカイブ
 | ファイル | 内容 | 種別 | 状態 |
 |---------|------|------|------|
-| [phases/phase3/README.md](phases/phase3/README.md) | Phase 3作業の概要 | メモ | 作業中 |
-| [phases/phase3/design-decisions.md](phases/phase3/design-decisions.md) | 設計決定事項 | メモ | 作業中 |
-| [phases/phase3/event-to-workflow-design.md](phases/phase3/event-to-workflow-design.md) | イベント→ワークフロー設計 | メモ | 作業中 |
-| [phases/phase3/implementation-status.md](phases/phase3/implementation-status.md) | Phase 3実装状況詳細 | メモ | 作業中 |
-| [phases/phase3/workflow-catalog-issue.md](phases/phase3/workflow-catalog-issue.md) | ワークフローカタログ課題 | メモ | 作業中 |
-| [phases/phase3/workflow-improvement-plan.md](phases/phase3/workflow-improvement-plan.md) | ワークフロー改善計画 | メモ | 作業中 |
+| [phases/phase3/archive/](phases/phase3/archive/) | Phase 3作業メモアーカイブ | メモ | アーカイブ |
+| [phases/phase3/README.md](phases/phase3/README.md) | Phase 3作業の概要 | メモ | 完了 |
 
 ## ドキュメント種別
 
@@ -84,23 +74,21 @@
 - **完了**: 完了したフェーズの記録
 - **進行中**: 進行中のフェーズの記録
 
-## 重複・整理が必要な項目
+## 統廃合完了項目（2025-09-19）
 
-1. **ワークフロー関連**
-   - `WORKFLOW_ARCHITECTURE.md`と`workflows/SPECIFICATION.md`に一部重複
-   - 統合または役割分担の明確化が必要
+1. **削除済み**
+   - `IMPLEMENTATION_PLAN.md` - ROADMAPに統合
+   - `ideas/` ディレクトリ全体 - アーカイブ済み初期メモ
+   - `phases/phase3/implementation-status.md` - IMPLEMENTATION_STATUS.mdに統合
 
-2. **設計関連**
-   - `SYSTEM_DESIGN.md`と`ARCHITECTURE.md`の役割分担
-   - `ideas/`以下の内容の一部が正式ドキュメントと重複
+2. **アーカイブ済み**
+   - Phase 3作業メモ → `phases/phase3/archive/`へ移動
 
-3. **実装状況**
-   - `IMPLEMENTATION_STATUS.md`と`phases/phase3/implementation-status.md`の重複
-   - フェーズ別記録との整合性確認が必要
+3. **整理済み**
+   - ワークフロー関連ドキュメントの役割分担を明確化
 
-## 推奨アクション
+## ドキュメント数の変化
 
-1. **作業メモの整理**: `ideas/`と`phases/phase3/`の作業メモを整理
-2. **重複内容の統合**: ワークフロー関連ドキュメントの整理
-3. **古いドキュメントのアーカイブ**: `IMPLEMENTATION_PLAN.md`など
-4. **インデックスの作成**: `docs/README.md`で全体像を提供
+- 統廃合前: 31ファイル
+- 統廃合後: 約20ファイル（主要ドキュメント）
+- 削減効果: 重複排除により保守性が向上
