@@ -22,7 +22,6 @@ import {
   WorkflowResolver,
 } from '@sebas-chan/core';
 import { WorkflowQueue } from './workflow-queue.js';
-import type { WorkflowRegistryInterface } from '@sebas-chan/core';
 import { registerDefaultWorkflows, WorkflowRegistry } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
@@ -51,7 +50,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private lastError?: string;
   private driverRegistry: DriverRegistry;
   private workflowQueue: WorkflowQueue;
-  private workflowRegistry: WorkflowRegistryInterface;
+  private workflowRegistry: WorkflowRegistry;
   private workflowResolver: WorkflowResolver;
 
   constructor(coreAgent?: CoreAgent) {

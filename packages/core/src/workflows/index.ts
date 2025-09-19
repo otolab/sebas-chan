@@ -8,10 +8,6 @@ export { WorkflowRegistry as FunctionalWorkflowRegistry } from './functional-reg
 export {
   type WorkflowTrigger,
   type WorkflowDefinition,
-  type WorkflowRegistryInterface,
-  type WorkflowResolverInterface,
-  type WorkflowQueueInterface,
-  type WorkflowQueueItem,
   type WorkflowResolution,
 } from './workflow-types.js';
 export { WorkflowRegistry } from './workflow-registry.js';

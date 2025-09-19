@@ -57,32 +57,6 @@ export interface WorkflowDefinition {
 }
 
 /**
- * ワークフローキューのアイテム
- */
-export interface WorkflowQueueItem {
-  /** ユニークID */
-  id: string;
-
-  /** 実行するワークフロー */
-  workflow: WorkflowDefinition;
-
-  /** トリガーとなったイベント */
-  event: AgentEvent;
-
-  /** 実行優先度 */
-  priority: number;
-
-  /** キュー追加時刻 */
-  timestamp: Date;
-
-  /** 実行状態 */
-  status: 'pending' | 'running' | 'completed' | 'failed';
-
-  /** リトライ回数 */
-  retryCount?: number;
-}
-
-/**
  * ワークフロー解決結果
  */
 export interface WorkflowResolution {
@@ -99,58 +73,4 @@ export interface WorkflowResolution {
     filteredByType: number;
     filteredByCondition: number;
   };
-}
-
-/**
- * ワークフローレジストリインターフェース
- */
-export interface WorkflowRegistryInterface {
-  /** ワークフローを登録 */
-  register(workflow: WorkflowDefinition): void;
-
-  /** 全ワークフローを取得 */
-  getAll(): WorkflowDefinition[];
-
-  /** 名前でワークフローを取得 */
-  getByName(name: string): WorkflowDefinition | undefined;
-
-  /** イベントタイプでワークフローを検索 */
-  findByEventType(eventType: string): WorkflowDefinition[];
-
-  /** ワークフローをクリア */
-  clear(): void;
-}
-
-/**
- * ワークフロー解決器インターフェース
- */
-export interface WorkflowResolverInterface {
-  /** イベントにマッチするワークフローを解決 */
-  resolve(event: AgentEvent): WorkflowResolution;
-
-  /** 解決ルールを検証 */
-  validate(): boolean;
-}
-
-/**
- * ワークフローキューインターフェース
- */
-export interface WorkflowQueueInterface {
-  /** アイテムをキューに追加 */
-  enqueue(item: WorkflowQueueItem): void;
-
-  /** 次のアイテムを取得 */
-  dequeue(): WorkflowQueueItem | undefined;
-
-  /** キューのサイズ */
-  size(): number;
-
-  /** キューをクリア */
-  clear(): void;
-
-  /** 実行中のワークフローを取得 */
-  getRunning(): WorkflowQueueItem[];
-
-  /** 保留中のワークフローを取得 */
-  getPending(): WorkflowQueueItem[];
 }

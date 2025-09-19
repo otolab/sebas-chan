@@ -3,9 +3,9 @@
  * 実行待ちのワークフローを管理
  */
 
-import type { WorkflowQueueItem, WorkflowQueueInterface } from '@sebas-chan/core';
+import type { WorkflowQueueItem } from './workflow-queue-types.js';
 
-export class WorkflowQueue implements WorkflowQueueInterface {
+export class WorkflowQueue {
   private queue: WorkflowQueueItem[] = [];
   private running: Map<string, WorkflowQueueItem> = new Map();
   private idCounter = 0;

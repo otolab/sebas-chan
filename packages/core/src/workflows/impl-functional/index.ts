@@ -2,7 +2,8 @@
  * デフォルトワークフローコレクション
  */
 
-import type { WorkflowDefinition, WorkflowRegistryInterface } from '../workflow-types.js';
+import type { WorkflowDefinition } from '../workflow-types.js';
+import type { WorkflowRegistry } from '../workflow-registry.js';
 import { LogType } from '../logger.js';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { processUserRequestWorkflow } from './process-user-request.js';
@@ -28,7 +29,7 @@ export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
 /**
  * デフォルトワークフローを登録するヘルパー関数
  */
-export function registerDefaultWorkflows(registry: WorkflowRegistryInterface): void {
+export function registerDefaultWorkflows(registry: WorkflowRegistry): void {
   for (const workflow of DEFAULT_WORKFLOWS) {
     registry.register(workflow);
   }

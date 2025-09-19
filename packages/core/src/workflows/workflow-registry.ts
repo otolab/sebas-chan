@@ -3,9 +3,9 @@
  * 1イベント対nワークフローをサポート
  */
 
-import type { WorkflowDefinition, WorkflowRegistryInterface } from './workflow-types.js';
+import type { WorkflowDefinition } from './workflow-types.js';
 
-export class WorkflowRegistry implements WorkflowRegistryInterface {
+export class WorkflowRegistry {
   private workflows: Map<string, WorkflowDefinition> = new Map();
   private eventTypeIndex: Map<string, Set<string>> = new Map();
 
