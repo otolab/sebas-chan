@@ -23,7 +23,7 @@ export type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Pr
  * ワークフローが動作する環境のインターフェース
  * Engineが実装を提供する
  */
-export interface WorkflowContext {
+export interface WorkflowContextInterface {
   /**
    * 現在のState
    * StateMachineのState
@@ -33,7 +33,7 @@ export interface WorkflowContext {
   /**
    * データストレージへのアクセス
    */
-  storage: WorkflowStorage;
+  storage: WorkflowStorageInterface;
 
   /**
    * AIドライバーファクトリ
@@ -60,7 +60,7 @@ export interface WorkflowContext {
 /**
  * データストレージインターフェース
  */
-export interface WorkflowStorage {
+export interface WorkflowStorageInterface {
   // Issue操作
   getIssue(id: string): Promise<Issue | null>;
   searchIssues(query: string): Promise<Issue[]>;
@@ -87,7 +87,7 @@ export interface WorkflowConfig {}
 /**
  * イベントエミッター（次のワークフロー起動用）
  */
-export interface WorkflowEventEmitter {
+export interface WorkflowEventEmitterInterface {
   /**
    * 次のイベントを発行
    */

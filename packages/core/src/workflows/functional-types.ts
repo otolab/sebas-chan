@@ -1,12 +1,12 @@
 import type { AgentEvent } from '../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from './context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './context.js';
 
 /**
  * ワークフローの実行結果
  */
 export interface WorkflowResult<T = unknown> {
   success: boolean;
-  context: WorkflowContext; // 更新されたcontext（state含む）
+  context: WorkflowContextInterface; // 更新されたcontext（state含む）
   output?: T;
   error?: Error;
 }
@@ -16,8 +16,8 @@ export interface WorkflowResult<T = unknown> {
  */
 export type WorkflowExecutor = (
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ) => Promise<WorkflowResult>;
 
 /**
@@ -36,8 +36,8 @@ export interface WorkflowDefinition {
 export async function executeWorkflow(
   workflow: WorkflowDefinition,
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   try {
     // ワークフロー実行

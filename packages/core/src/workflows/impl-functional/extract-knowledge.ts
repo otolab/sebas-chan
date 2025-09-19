@@ -1,5 +1,5 @@
 import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../functional-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Knowledge, KnowledgeSource } from '@sebas-chan/shared-types';
@@ -77,8 +77,8 @@ function createKnowledgeSources(payload: ExtractKnowledgePayload): KnowledgeSour
  */
 async function executeExtractKnowledge(
   event: AgentEvent,
-  context: WorkflowContext,
-  _emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  _emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage, createDriver } = context;
   const payload = event.payload as unknown as ExtractKnowledgePayload;

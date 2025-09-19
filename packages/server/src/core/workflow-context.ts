@@ -1,7 +1,7 @@
 import type {
-  WorkflowContext,
-  WorkflowStorage,
-  WorkflowEventEmitter,
+  WorkflowContextInterface,
+  WorkflowStorageInterface,
+  WorkflowEventEmitterInterface,
   WorkflowConfig,
   WorkflowLogger,
   DriverFactory,
@@ -20,7 +20,7 @@ import type { CoreEngine } from './engine.js';
 /**
  * WorkflowStorageのEngine実装
  */
-export class EngineWorkflowStorage implements WorkflowStorage {
+export class EngineWorkflowStorage implements WorkflowStorageInterface {
   constructor(
     private db: DBClient,
     private engine: CoreEngine
@@ -118,7 +118,7 @@ export class EngineWorkflowStorage implements WorkflowStorage {
 /**
  * WorkflowEventEmitterのEngine実装
  */
-export class EngineWorkflowEventEmitter implements WorkflowEventEmitter {
+export class EngineWorkflowEventEmitter implements WorkflowEventEmitterInterface {
   constructor(private engine: CoreEngine) {}
 
   emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void {
@@ -134,8 +134,8 @@ export class EngineWorkflowEventEmitter implements WorkflowEventEmitter {
 /**
  * WorkflowContextのEngine実装
  */
-export class EngineWorkflowContext implements WorkflowContext {
-  public readonly storage: WorkflowStorage;
+export class EngineWorkflowContext implements WorkflowContextInterface {
+  public readonly storage: WorkflowStorageInterface;
   public state: string;
 
   constructor(
@@ -178,6 +178,6 @@ export function createWorkflowContext(
 /**
  * WorkflowEventEmitter作成ヘルパー
  */
-export function createWorkflowEventEmitter(engine: CoreEngine): WorkflowEventEmitter {
+export function createWorkflowEventEmitter(engine: CoreEngine): WorkflowEventEmitterInterface {
   return new EngineWorkflowEventEmitter(engine);
 }

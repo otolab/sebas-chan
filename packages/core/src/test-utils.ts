@@ -1,12 +1,12 @@
-import type { WorkflowContext, WorkflowStorage, DriverFactory } from './workflows/context.js';
+import type { WorkflowContextInterface, WorkflowStorageInterface, DriverFactory } from './workflows/context.js';
 import { WorkflowLogger } from './workflows/logger.js';
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 
 /**
  * テスト用のモックWorkflowContextを作成
  */
-export function createMockWorkflowContext(): WorkflowContext {
-  const mockStorage: WorkflowStorage = {
+export function createMockWorkflowContext(): WorkflowContextInterface {
+  const mockStorage: WorkflowStorageInterface = {
     // Issue操作
     getIssue: async (id: string): Promise<Issue | null> => null,
     searchIssues: async (query: string): Promise<Issue[]> => [],

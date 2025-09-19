@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent, WorkflowLogger, generateWorkflowRegistry } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
-import { WorkflowEventEmitter } from './workflows/context.js';
+import { WorkflowEventEmitterInterface } from './workflows/context.js';
 import { WorkflowDefinition } from './workflows/functional-types.js';
 
 describe('CoreAgent - Comprehensive Tests', () => {
@@ -45,7 +45,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const lowPriorityWorkflow = createWorkflow('low-priority');
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -106,7 +106,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -155,7 +155,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -220,7 +220,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -256,7 +256,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -291,7 +291,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -326,7 +326,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -345,7 +345,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
   describe('Event Emitter Integration', () => {
     it('should trigger new events from workflows', async () => {
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -394,7 +394,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
     });
 
     it('should handle multiple event emissions', async () => {
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -533,7 +533,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         timestamp: new Date(),
       };
 
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -564,7 +564,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -606,7 +606,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       const mockContext = createMockWorkflowContext();
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 

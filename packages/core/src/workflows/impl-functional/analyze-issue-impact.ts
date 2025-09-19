@@ -1,5 +1,5 @@
 import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../functional-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
@@ -51,8 +51,8 @@ function shouldCreateNewIssue(existingIssues: Issue[], _content: string): boolea
  */
 async function executeAnalyzeIssueImpact(
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage, createDriver } = context;
   // event.payloadの型を明示的に定義

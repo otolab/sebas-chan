@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { executeWorkflow } from '../functional-types.js';
 import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
 import { LogType, WorkflowLogger } from '../logger.js';
 
 describe('IngestInput Workflow (Functional)', () => {
-  let mockContext: WorkflowContext;
-  let mockEmitter: WorkflowEventEmitter;
+  let mockContext: WorkflowContextInterface;
+  let mockEmitter: WorkflowEventEmitterInterface;
   let mockEvent: AgentEvent;
 
   beforeEach(() => {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent, WorkflowLogger } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
-import { WorkflowEventEmitter } from './workflows/context.js';
+import { WorkflowEventEmitterInterface } from './workflows/context.js';
 import { WorkflowDefinition } from './workflows/functional-types.js';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
@@ -43,7 +43,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -83,7 +83,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -124,7 +124,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -181,7 +181,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -218,7 +218,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -272,7 +272,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -311,7 +311,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -349,7 +349,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -387,7 +387,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -429,7 +429,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -493,7 +493,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 
@@ -532,7 +532,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
-      const mockEmitter: WorkflowEventEmitter = {
+      const mockEmitter: WorkflowEventEmitterInterface = {
         emit: vi.fn(),
       };
 

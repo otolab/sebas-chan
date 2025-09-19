@@ -4,7 +4,7 @@
  */
 
 import type { AgentEvent } from '../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from './context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './context.js';
 
 /**
  * ワークフローのトリガー条件
@@ -25,7 +25,7 @@ export interface WorkflowTrigger {
  */
 export interface WorkflowResult {
   success: boolean;
-  context: WorkflowContext;
+  context: WorkflowContextInterface;
   output?: any;
   error?: Error;
 }
@@ -35,8 +35,8 @@ export interface WorkflowResult {
  */
 export type WorkflowExecutor = (
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ) => Promise<WorkflowResult>;
 
 /**

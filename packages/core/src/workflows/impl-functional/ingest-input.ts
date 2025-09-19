@@ -1,5 +1,5 @@
 import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../functional-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 
@@ -34,8 +34,8 @@ function updateState(currentState: string, input: any, pondEntryId: string): str
  */
 async function executeIngestInput(
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage } = context;
   const { input } = event.payload as { input: any };

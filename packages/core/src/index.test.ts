@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent, generateWorkflowRegistry, WorkflowLogger } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
-import { WorkflowEventEmitter } from './workflows/context.js';
+import { WorkflowEventEmitterInterface } from './workflows/context.js';
 
 describe('CoreAgent', () => {
   let agent: CoreAgent;
@@ -37,7 +37,7 @@ describe('CoreAgent', () => {
     };
 
     const mockContext = createMockWorkflowContext();
-    const mockEmitter: WorkflowEventEmitter = {
+    const mockEmitter: WorkflowEventEmitterInterface = {
       emit: vi.fn(),
     };
 
@@ -69,7 +69,7 @@ describe('CoreAgent', () => {
     };
 
     const mockContext = createMockWorkflowContext();
-    const mockEmitter: WorkflowEventEmitter = {
+    const mockEmitter: WorkflowEventEmitterInterface = {
       emit: vi.fn(),
     };
 

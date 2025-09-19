@@ -1,5 +1,5 @@
 import type { AgentEvent } from '../../index.js';
-import type { WorkflowContext, WorkflowEventEmitter } from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../functional-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import { compile } from '@moduler-prompt/core';
@@ -98,8 +98,8 @@ function classifyRequest(content: string): string {
  */
 async function executeProcessUserRequest(
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
   const { storage, createDriver } = context;
   interface ProcessUserRequestPayload {
