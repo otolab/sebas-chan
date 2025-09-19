@@ -91,8 +91,5 @@ export interface WorkflowEventEmitterInterface {
   /**
    * 次のイベントを発行
    */
-  emit(event: {
-    type: WorkflowEventType;
-    payload: unknown;
-  }): void;
+  emit(event: { type: WorkflowEventType; payload: unknown }): void;
 }
