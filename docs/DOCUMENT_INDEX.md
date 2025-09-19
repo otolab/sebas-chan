@@ -6,7 +6,7 @@
 | ファイル | 内容 | 種別 | 状態 |
 |---------|------|------|------|
 | [CONCEPT.md](CONCEPT.md) | プロジェクトの基本コンセプトと目的 | 正式 | 維持 |
-| [ROADMAP.md](ROADMAP.md) | 開発ロードマップとマイルストーン | 正式 | 更新要 |
+| [ROADMAP.md](ROADMAP.md) | 開発ロードマップとマイルストーン | 正式 | 最新 |
 | [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) | 各フェーズの実装状況 | 正式 | 最新 |
 
 ### 2. アーキテクチャ・設計
