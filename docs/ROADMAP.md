@@ -2,7 +2,7 @@
 
 ## 現在のステータス
 
-**フェーズ**: Phase 2（基本機能実装）進行中
+**フェーズ**: Phase 3（ワークフロー実装）完了
 
 ### 完了項目
 
@@ -24,11 +24,24 @@
   - TypeScriptラッパー作成
   - 日本語向けベクトル埋め込みモデル（Ruri）統合
   - 包括的なテストスイート（23テスト全て成功）
+- [x] Reporter SDK実装完了
+- [x] Web UI実装（SvelteKit）
+  - State表示ページ
+  - Knowledge一覧ページ
+  - Issue詳細ページ
+  - ログ表示（一覧・詳細）
+  - Pond検索機能
 
-### 進行中のタスク
-- [ ] Reporter SDK（TypeScript）の作成
-- [ ] Manual Input Reporter（最初のReporter）
-- [ ] 簡易Web UI（SvelteKit、読み取り専用）
+#### Phase 3（ワークフロー実装）
+- [x] 関数ベースワークフローアーキテクチャ実装
+- [x] 基本ワークフロー実装（A-0〜A-3）
+- [x] WorkflowRegistry/Logger実装
+- [x] ワークフロー仕様書作成
+- [x] 開発者ガイド作成
+- [x] REST API拡張（state, knowledge, issues, logs）
+
+### 次のフェーズ
+Phase 4: MCP統合と高度なワークフロー
 
 ## 実装フェーズ概要
 
@@ -75,7 +88,17 @@
 - Reporter SDKによる情報収集の基盤
 - 基本的な情報管理サイクルの動作
 
-### Phase 3: MCP統合とワークフロー拡充
+### Phase 3: ワークフロー基盤実装 【完了】
+**目標**: ワークフローアーキテクチャの確立と基本ワークフローの実装
+
+**実装内容**:
+- 関数ベースワークフローアーキテクチャ
+- WorkflowDefinition型定義
+- WorkflowRegistry/Logger実装
+- 基本ワークフロー（A-0〜A-3）
+- ワークフロー仕様書・開発者ガイド
+
+### Phase 4: MCP統合と高度なワークフロー
 **目標**: 外部AIエージェントとの連携とシステムの自律性向上
 
 **実装内容**:
@@ -101,7 +124,7 @@
 - システムが自律的に情報を整理・提案
 - PoCとしての完成度
 
-### Phase 4: 実用化準備
+### Phase 5: 実用化準備
 **目標**: プロダクション利用に向けた機能完成
 
 **実装内容**:
@@ -219,44 +242,40 @@ packages/
 ### Phase 2完了条件
 - [x] DB BridgeがLanceDBと通信可能
 - [x] State文書の永続化（DB Bridge経由）
-- [ ] Web UIでシステム状態を確認可能
-- [ ] ReporterからInputを投入し、Issueが作成される
-- [ ] Issue → Knowledgeの変換フローが動作
+- [x] Web UIでシステム状態を確認可能
+- [x] ReporterからInputを投入し、Issueが作成される
+- [x] Issue → Knowledgeの変換フローが動作
 
 ### Phase 3完了条件
-- [ ] MCPクライアントから接続・操作可能
-- [ ] 複数Issueの自動クラスタリングが動作
-- [ ] 優先度の自動調整が機能
+- [x] 関数ベースワークフローの実装
+- [x] ワークフロー仕様書の完成
+- [x] 基本ワークフロー（A系）の動作確認
+- [x] REST APIによるワークフロー管理
 
 ### Phase 4完了条件
 - [ ] 3種類以上のReporterが稼働
 - [ ] システムが自己調整パラメータを更新
 - [ ] 1週間以上の連続稼働テストをクリア
 
-## 次のアクション（Phase 2継続）
+## 次のアクション（Phase 4準備）
 
-1. **Reporter SDK作成** 【優先度: 高】
-   - REST APIクライアントライブラリ
-   - 標準化されたInput投入インターフェース
-   - 認証機構の実装
-   - エラーハンドリングとリトライ
-   - TypeScript型定義の提供
+1. **MCP Server実装** 【優先度: 高】
+   - stdio通信の実装
+   - REST APIクライアント機能
+   - MCP仕様準拠
 
-2. **Manual Input Reporter** 【優先度: 高】
-   - 最初のReporter実装として
-   - CLI経由での手動Input投入
-   - Reporter SDKを利用した参照実装
-   - テスト用データ投入の基盤
+2. **横断的ワークフロー（B系）** 【優先度: 高】
+   - B-1: CLUSTER_ISSUES（Issue群のクラスタリング）
+   - B-2: UPDATE_FLOW_RELATIONS（Flow関係更新）
+   - B-3: UPDATE_FLOW_PRIORITIES（優先度更新）
 
-3. **簡易Web UI（読み取り専用）** 【優先度: 中】
-   - SvelteKitフレームワーク使用
-   - システム状態の可視化
-   - Issue/Flow/Knowledgeの閲覧
-   - リアルタイム更新（WebSocket検討）
+3. **提案系ワークフロー（C系）** 【優先度: 中】
+   - C-1: SUGGEST_NEXT_FLOW（次のFlow提案）
+   - C-2: SUGGEST_NEXT_ACTION_FOR_ISSUE（Issue対応提案）
 
-4. **ワークフロー拡張** 【優先度: 中】
-   - A-1: INGEST_INPUT（Input取り込み）
-   - A-2: ANALYZE_ISSUE_IMPACT（Issue影響分析）
-   - A-3: EXTRACT_KNOWLEDGE（Knowledge抽出）
+4. **外部Reporter実装** 【優先度: 中】
+   - Gmail Reporter
+   - Slack Reporter
+   - Calendar Reporter
 
 この計画に従って、段階的かつ着実にsebas-chanシステムを構築していきます。

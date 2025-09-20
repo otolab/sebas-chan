@@ -3,17 +3,17 @@
 ## システム全体の通信アーキテクチャ
 
 ```
-[MCP Clients] ←stdio→ [MCP Server] ──┐
-                                     │ HTTP
-[Reporters] ─────────────────────────┼──→ [REST API] ←→ [Core API] ←→ [DB Bridge] ←→ [LanceDB]
-                                     │                        ↑
-[Web UI] ────────────────────────────┘                  [Core Agent]
+[Web UI] ────────────────────────────┐
+[Reporters] ─────────────────────────┼──→ [Core Engine] ←→ [Core Agent]
+[MCP Server(予定)] ──────────────────┘          ↓
+                                          [DB Bridge] ←→ [LanceDB]
 ```
 
-**重要な変更点**:
-- REST APIがすべての外部通信の統一入口
-- Core APIがCore Agentとデータ層の間に位置
-- MCPサーバーは独立コマンド（sebas-chanの外側）
+**現在の構成**:
+- Core Engine（@sebas-chan/server）がREST APIを提供
+- Core Agent（@sebas-chan/core）は思考エンジン
+- DB BridgeはPython/LanceDBとの通信層
+- MCP ServerはPhase 4で実装予定
 
 ## 1. Server インターフェース
 
@@ -194,25 +194,37 @@ interface EventQueue {
 
 ### ワークフロー実行インターフェース
 
+> **注**: 最新の仕様については[ワークフロー技術仕様書](workflows/SPECIFICATION.md)を参照してください。
+
 ```typescript
-interface Workflow {
+// ワークフロー定義
+interface WorkflowDefinition {
   name: string;
   description: string;
-  priority: 'high' | 'normal' | 'low';
-  execute(context: WorkflowContext): Promise<WorkflowResult>;
+  triggers: WorkflowTrigger;
+  executor: WorkflowExecutor;
 }
 
-interface WorkflowContext {
-  state: string;  // 現在のState文書
-  coreAPI: CoreAPI;  // Core API呼び出し
-  llm: LLMDriver;  // 生成AI呼び出しAPI
-  enqueue: (event: Event) => void;  // 新規イベント追加
+// トリガー条件
+interface WorkflowTrigger {
+  eventTypes: string[];
+  condition?: (event: AgentEvent) => boolean;
+  priority?: number;  // -100 ~ 100
 }
 
+// 実行関数
+type WorkflowExecutor = (
+  event: AgentEvent,
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
+) => Promise<WorkflowResult>;
+
+// 実行結果
 interface WorkflowResult {
   success: boolean;
-  stateUpdate?: string;  // State文書の更新内容
-  logs: LogEntry[];  // 実行ログ
+  context: WorkflowContextInterface;
+  output?: unknown;
+  error?: Error;
 }
 ```
 

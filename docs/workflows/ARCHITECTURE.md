@@ -1,8 +1,10 @@
-# ワークフローアーキテクチャ仕様書
+# ワークフローアーキテクチャ実装ガイド
 
 ## 概要
 
-sebas-chanのワークフローシステムは、関数ベースのアーキテクチャを採用しています。各ワークフローは純粋な関数として実装され、状態を持たずに実行されます。
+このドキュメントでは、sebas-chanで実装されているワークフローの具体例とパターンを説明します。
+
+> **注**: ワークフローの技術仕様とインターフェース定義については、[ワークフロー技術仕様書](workflows/SPECIFICATION.md)を参照してください。
 
 ## アーキテクチャ設計
 
@@ -13,86 +15,66 @@ sebas-chanのワークフローシステムは、関数ベースのアーキテ�
 3. **テスタブル**: 依存注入により単体テストが容易
 4. **再利用可能**: 共通処理はユーティリティ関数として分離
 
-### コア型定義
+### 型定義
+
+ワークフローシステムで使用される型定義の詳細は[ワークフロー技術仕様書](workflows/SPECIFICATION.md#2-コアインターフェース)を参照してください。
+
+## WorkflowContext実装パターン
+
+WorkflowContextは、ワークフローが実行される環境へのアクセスを提供します。詳細な仕様は[ワークフロー技術仕様書](workflows/SPECIFICATION.md#3-workflowcontext)を参照してください。
+
+### 実装例: Storageの使用
 
 ```typescript
-// ワークフロー実行関数の型
-type WorkflowExecutor = (
+// Issueの作成と更新
+async function processUserInput(
   event: AgentEvent,
-  context: WorkflowContext,
-  emitter: WorkflowEventEmitter
-) => Promise<WorkflowResult>;
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
+): Promise<WorkflowResult> {
+  // 新しいIssueを作成
+  const issue = await context.storage.createIssue({
+    title: event.payload.title,
+    description: event.payload.description,
+    status: 'open',
+    priority: 'medium'
+  });
 
-// ワークフロー定義
-interface WorkflowDefinition {
-  name: string;
-  executor: WorkflowExecutor;
-}
+  // 関連するIssueを検索
+  const relatedIssues = await context.storage.searchIssues(
+    `category:${issue.category}`
+  );
 
-// 実行結果
-interface WorkflowResult<T = any> {
-  success: boolean;
-  context: WorkflowContext;
-  output?: T;
-  error?: Error;
-}
-```
+  // ログ記録
+  context.logger.info('Issue created', {
+    issueId: issue.id,
+    relatedCount: relatedIssues.length
+  });
 
-## WorkflowContext
-
-ワークフローが実行される環境を表現：
-
-```typescript
-interface WorkflowContext {
-  state: string;                    // システムの現在状態
-  storage: WorkflowStorage;         // DB操作インターフェース
-  logger: WorkflowLogger;          // ログ記録
-  createDriver: DriverFactory;      // AIドライバーファクトリ
-  metadata?: Record<string, any>;  // 実行時メタデータ
-}
-
-// ドライバーファクトリの型
-// @moduler-prompt/utilsのDriverSelectionCriteriaを使用
-import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
-type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
-```
-
-### WorkflowStorage
-
-DB操作のインターフェース：
-
-```typescript
-interface WorkflowStorage {
-  // 検索操作
-  searchIssues(query: string): Promise<Issue[]>;
-  searchKnowledge(query: string): Promise<Knowledge[]>;
-  searchPond(query: string): Promise<PondEntry[]>;
-
-  // Issue操作
-  getIssue(id: string): Promise<Issue | null>;
-  createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
-  updateIssue(id: string, update: Partial<Issue>): Promise<Issue>;
-
-  // Pond操作
-  addPondEntry(entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry>;
-
-  // Knowledge操作
-  createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge>;
-  updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
+  return { success: true, context, output: issue };
 }
 ```
 
-### WorkflowEventEmitter
-
-次のワークフローを起動するためのイベント発行：
+### 実装例: AIドライバーの使用
 
 ```typescript
-interface WorkflowEventEmitter {
-  emit(event: {
-    type: string;
-    priority?: 'high' | 'normal' | 'low';
-    payload: unknown;
-  }): void;
+async function analyzeContent(
+  text: string,
+  context: WorkflowContextInterface
+): Promise<AnalysisResult> {
+  // AIドライバーを作成
+  const driver = await context.createDriver({
+    capabilities: ['text-generation'],
+    model: 'gpt-4'
+  });
+
+  // 分析実行
+  const response = await driver.generate({
+    prompt: `分析してください: ${text}`,
+    maxTokens: 500
+  });
+
+  return parseAnalysisResponse(response);
 }
 ```
 

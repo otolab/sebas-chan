@@ -161,6 +161,13 @@ git merge --no-ff feature/phase1-minimum-implementation
    - 関数ベースワークフローのテスト実装
    - モックヘルパー関数の提供
 
+6. **ワークフロー仕様確定 ✅** (Issue #22)
+   - ワークフロー技術仕様書作成 (`docs/workflows/SPECIFICATION.md`)
+   - ワークフロー開発者ガイド作成 (`docs/workflows/DEVELOPER_GUIDE.md`)
+   - WorkflowDefinitionインターフェースの完全仕様化
+   - エラーハンドリングとリトライ戦略の定義
+   - 優先度システムの仕様化（-100〜100の範囲）
+
 ### 技術的変更点
 
 1. **クラスベースから関数ベースへの移行**
