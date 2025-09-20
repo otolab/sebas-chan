@@ -3,17 +3,17 @@
 ## システム全体の通信アーキテクチャ
 
 ```
-[MCP Clients] ←stdio→ [MCP Server] ──┐
-                                     │ HTTP
-[Reporters] ─────────────────────────┼──→ [REST API] ←→ [Core API] ←→ [DB Bridge] ←→ [LanceDB]
-                                     │                        ↑
-[Web UI] ────────────────────────────┘                  [Core Agent]
+[Web UI] ────────────────────────────┐
+[Reporters] ─────────────────────────┼──→ [Core Engine] ←→ [Core Agent]
+[MCP Server(予定)] ──────────────────┘          ↓
+                                          [DB Bridge] ←→ [LanceDB]
 ```
 
-**重要な変更点**:
-- REST APIがすべての外部通信の統一入口
-- Core APIがCore Agentとデータ層の間に位置
-- MCPサーバーは独立コマンド（sebas-chanの外側）
+**現在の構成**:
+- Core Engine（@sebas-chan/server）がREST APIを提供
+- Core Agent（@sebas-chan/core）は思考エンジン
+- DB BridgeはPython/LanceDBとの通信層
+- MCP ServerはPhase 4で実装予定
 
 ## 1. Server インターフェース
 

@@ -136,21 +136,34 @@ await context.storage.updateIssue(issue.id, {
 });
 ```
 
-### Step 5: AI処理の統合
+### Step 5: AI処理の統合（Moduler Prompt）
+
+ワークフローでのAI処理には、Moduler Promptフレームワークを使用します。
+
+#### 基本的な使い方
 
 ```typescript
+import { compile } from '@moduler-prompt/core';
+import type { PromptModule } from '@moduler-prompt/core';
+
+// プロンプトモジュールを定義
+const analysisModule: PromptModule = {
+  objective: ['テキストを分析する'],
+  instructions: ['要点を抽出', '感情を判定'],
+  inputs: [event.payload.text]
+};
+
 // AIドライバーの作成
 const driver = await context.createDriver({
-  capabilities: ['text-generation'],
-  model: 'gpt-4'
+  capabilities: ['japanese', 'text-generation']
 });
 
-// プロンプト実行
-const response = await driver.generate({
-  prompt: `以下のテキストを分析してください: ${text}`,
-  maxTokens: 500
-});
+// コンパイルして実行
+const compiled = compile(analysisModule, {});
+const response = await driver.query(compiled);
 ```
+
+詳細な使い方については [Moduler Prompt利用ガイド](MODULER_PROMPT_GUIDE.md) を参照してください。
 
 ## 4. ベストプラクティス
 
@@ -233,75 +246,37 @@ triggers: {
 
 ## 5. テスト
 
-### 5.1 単体テスト
+### ワークフロー固有のテスト例
 
 ```typescript
 import { describe, it, expect, vi } from 'vitest';
 import { myWorkflow } from './my-workflow';
 
 describe('MyWorkflow', () => {
-  it('should process user input successfully', async () => {
-    // モックコンテキストの作成
-    const mockContext = {
-      state: 'idle',
-      storage: {
-        createIssue: vi.fn().mockResolvedValue({
-          id: 'issue-1',
-          title: 'Test Issue'
-        })
-      },
-      logger: {
-        info: vi.fn(),
-        error: vi.fn()
-      }
-    };
-
-    const mockEmitter = {
-      emit: vi.fn()
-    };
-
-    // ワークフロー実行
+  it('should handle specific business logic', async () => {
+    // ワークフロー固有のビジネスロジックをテスト
     const result = await myWorkflow.executor(
       { type: 'USER_INPUT', payload: { text: 'test' } },
       mockContext,
       mockEmitter
     );
 
-    // アサーション
-    expect(result.success).toBe(true);
-    expect(mockContext.storage.createIssue).toHaveBeenCalled();
+    expect(result.output.category).toBe('urgent');
   });
 });
 ```
 
-### 5.2 統合テスト
+### テスト戦略の詳細
 
-```typescript
-import { CoreEngine } from '@sebas-chan/core';
-import { myWorkflow } from './my-workflow';
+包括的なテスト戦略については以下を参照してください：
 
-describe('Workflow Integration', () => {
-  let engine: CoreEngine;
+- **テスト戦略と分類**: [../testing/STRATEGY.md](../testing/STRATEGY.md)
+  - ユニットテスト、統合テスト、E2Eテストの定義と実装方針
+  - 共通セットアップとCI/CDでの実行順序
 
-  beforeEach(() => {
-    engine = new CoreEngine();
-    engine.registerWorkflow(myWorkflow);
-  });
-
-  it('should trigger on USER_INPUT event', async () => {
-    const event = {
-      type: 'USER_INPUT',
-      payload: { text: 'integration test' }
-    };
-
-    const results = await engine.processEvent(event);
-
-    expect(results).toHaveLength(1);
-    expect(results[0].workflow).toBe('my-workflow');
-    expect(results[0].success).toBe(true);
-  });
-});
-```
+- **テスト仕様**: [../testing/SPECIFICATIONS.md](../testing/SPECIFICATIONS.md)
+  - 各モジュールのテストケース詳細
+  - エッジケースとエラーハンドリングのテスト
 
 ## 6. デバッグ
 
@@ -400,7 +375,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 8. トラブルシューティング
+## 8. 一般的な問題と対処法
 
 ### 問題: ワークフローがトリガーされない
 
@@ -421,35 +396,10 @@ triggers: {
 }
 ```
 
-### 問題: タイムアウトが発生する
-
-**解決策:**
-```typescript
-// タイムアウトを明示的に設定
-const withTimeout = async (promise: Promise<any>, ms: number) => {
-  const timeout = new Promise((_, reject) =>
-    setTimeout(() => reject(new Error('Timeout')), ms)
-  );
-  return Promise.race([promise, timeout]);
-};
-
-executor: async (event, context, emitter) => {
-  try {
-    const result = await withTimeout(
-      heavyOperation(event.payload),
-      10000 // 10秒
-    );
-    return { success: true, context, output: result };
-  } catch (error) {
-    if (error.message === 'Timeout') {
-      context.logger.error('Operation timed out');
-    }
-    return { success: false, context, error };
-  }
+**注**: 運用実績が蓄積されたら、より具体的なトラブルシューティングガイドを作成予定です。
 }
 ```
 
-### 問題: メモリ使用量が多い
 
 **解決策:**
 ```typescript
