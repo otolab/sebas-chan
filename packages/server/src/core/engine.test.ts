@@ -13,28 +13,28 @@ vi.mock('@sebas-chan/core', async () => {
       getBuffer: vi.fn().mockReturnValue([]),
     })),
     RecordType: actual.RecordType,
-  WorkflowRegistry: vi.fn().mockImplementation(() => ({
-    register: vi.fn(),
-    get: vi.fn(),
-    list: vi.fn().mockReturnValue([]),
-    getByEventType: vi.fn().mockReturnValue([]),
-  })),
-  WorkflowResolver: vi.fn().mockImplementation(() => ({
-    resolve: vi.fn().mockReturnValue({
-      workflows: [
-        {
-          name: 'MockWorkflow',
-          description: 'Test workflow',
-          triggers: {
-            eventTypes: ['PROCESS_USER_REQUEST', 'INGEST_INPUT'],
-            priority: 10,
+    WorkflowRegistry: vi.fn().mockImplementation(() => ({
+      register: vi.fn(),
+      get: vi.fn(),
+      list: vi.fn().mockReturnValue([]),
+      getByEventType: vi.fn().mockReturnValue([]),
+    })),
+    WorkflowResolver: vi.fn().mockImplementation(() => ({
+      resolve: vi.fn().mockReturnValue({
+        workflows: [
+          {
+            name: 'MockWorkflow',
+            description: 'Test workflow',
+            triggers: {
+              eventTypes: ['PROCESS_USER_REQUEST', 'INGEST_INPUT'],
+              priority: 10,
+            },
+            executor: vi.fn(),
           },
-          executor: vi.fn(),
-        },
-      ],
-      resolutionTime: 1,
-    }),
-  })),
+        ],
+        resolutionTime: 1,
+      }),
+    })),
     registerDefaultWorkflows: vi.fn(),
   };
 });
