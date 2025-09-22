@@ -3,7 +3,7 @@ import { ingestInputWorkflow } from './ingest-input.js';
 import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
-import { LogType, WorkflowLogger } from '../logger.js';
+import { LogType, WorkflowRecorder } from '../recorder.js';
 
 describe('IngestInput Workflow (Functional)', () => {
   let mockContext: WorkflowContextInterface;
@@ -27,7 +27,7 @@ describe('IngestInput Workflow (Functional)', () => {
         updateKnowledge: vi.fn(),
       },
       createDriver: async () => new TestDriver({ responses: ['AI response for testing'] }),
-      logger: new WorkflowLogger('test'),
+      recorder: new WorkflowRecorder('test'),
       metadata: {},
     };
 
@@ -51,8 +51,8 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should successfully ingest input to pond', async () => {
-    const mockLogger = new WorkflowLogger('test-workflow');
-    vi.spyOn(mockLogger, 'log');
+    const mockRecorder = new WorkflowRecorder('test-workflow');
+    vi.spyOn(mockRecorder, 'record');
 
     const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 

@@ -4,7 +4,7 @@
 
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { WorkflowRegistry } from '../workflow-registry.js';
-import { LogType } from '../logger.js';
+import { LogType } from '../recorder.js';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { processUserRequestWorkflow } from './process-user-request.js';
 import { analyzeIssueImpactWorkflow } from './analyze-issue-impact.js';
