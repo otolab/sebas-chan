@@ -1,6 +1,6 @@
 // ワークフロー関連の型と実装をエクスポート
 export * from './context.js';
-export * from './logger.js';
+export * from './recorder.js';
 
 // ワークフローシステム
 export {

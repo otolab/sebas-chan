@@ -3,7 +3,7 @@ import type {
   WorkflowStorageInterface,
   WorkflowEventEmitterInterface,
   WorkflowConfig,
-  WorkflowLogger,
+  WorkflowRecorder,
   DriverFactory,
 } from '@sebas-chan/core';
 import type {
@@ -142,7 +142,7 @@ export class EngineWorkflowContext implements WorkflowContextInterface {
     private db: DBClient,
     private engine: CoreEngine,
     public readonly createDriver: DriverFactory,
-    public readonly logger: WorkflowLogger,
+    public readonly recorder: WorkflowRecorder,
     public readonly config?: WorkflowConfig,
     public readonly metadata?: Record<string, unknown>
   ) {
@@ -159,7 +159,7 @@ export function createWorkflowContext(
   stateManager: StateManager,
   db: DBClient,
   createDriver: DriverFactory,
-  logger: WorkflowLogger,
+  recorder: WorkflowRecorder,
   config?: WorkflowConfig,
   metadata?: Record<string, unknown>
 ): EngineWorkflowContext {
@@ -168,7 +168,7 @@ export function createWorkflowContext(
     db,
     engine,
     createDriver,
-    logger,
+    recorder,
     config,
     metadata
   );

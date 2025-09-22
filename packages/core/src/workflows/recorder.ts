@@ -26,7 +26,7 @@ export enum LogType {
   WARN = 'warn',
 }
 
-export interface WorkflowLoggerOptions {
+export interface WorkflowRecorderOptions {
   executionId?: string;
   consoleOutput?: boolean;
 }
@@ -35,14 +35,14 @@ export interface WorkflowLoggerOptions {
  * 簡素化されたワークフローロガー
  * サブワークフロー機能なし、シンプルなログ記録のみ
  */
-export class WorkflowLogger {
+export class WorkflowRecorder {
   public readonly executionId: string;
   public readonly workflowName: string;
 
   private consoleOutput: boolean;
-  private logBuffer: WorkflowLog[] = [];
+  private recordBuffer: WorkflowLog[] = [];
 
-  constructor(workflowName: string, options: WorkflowLoggerOptions = {}) {
+  constructor(workflowName: string, options: WorkflowRecorderOptions = {}) {
     this.executionId = options.executionId || this.generateExecutionId();
     this.workflowName = workflowName;
     this.consoleOutput = options.consoleOutput ?? false;
@@ -53,9 +53,9 @@ export class WorkflowLogger {
   }
 
   /**
-   * ログを記録
+   * 実行記録を記録
    */
-  public log(type: LogType, data: unknown): void {
+  public record(type: LogType, data: unknown): void {
     const entry: WorkflowLog = {
       executionId: this.executionId,
       workflowName: this.workflowName,
@@ -65,7 +65,7 @@ export class WorkflowLogger {
     };
 
     // メモリバッファに追加（DBストレージはEngine側で実装）
-    this.logBuffer.push(entry);
+    this.recordBuffer.push(entry);
 
     if (this.consoleOutput) {
       console.log(this.formatLogEntry(entry));
@@ -86,21 +86,21 @@ export class WorkflowLogger {
    * バッファをクリア
    */
   public clearBuffer(): WorkflowLog[] {
-    return this.logBuffer.splice(0);
+    return this.recordBuffer.splice(0);
   }
 
   /**
-   * ロガーを終了
+   * レコーダーを終了
    */
   public close(): void {
     // DBベースのログではフラッシュ不要
-    this.logBuffer = [];
+    this.recordBuffer = [];
   }
 
   /**
    * ログレコードを取得（テスト用）
    */
   public getLogRecords(): WorkflowLog[] {
-    return [...this.logBuffer];
+    return [...this.recordBuffer];
   }
 }

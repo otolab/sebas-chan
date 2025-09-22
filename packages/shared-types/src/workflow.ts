@@ -75,8 +75,7 @@ export interface WorkflowContext {
     updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
   };
   createDriver: (criteria: DriverSelectionCriteria) => Promise<AIDriver>; // AIドライバーファクトリ
-  logger: Logger; // ログ出力
-  metadata?: Record<string, unknown>; // 実行時メタデータ
+  recorder: Recorder; // ログ出力
 }
 
 /**
@@ -114,4 +113,11 @@ export interface LogEntry {
   message: string;
   timestamp: Date;
   data?: unknown;
+}
+
+/**
+ * ワークフロー実行記録インターフェース
+ */
+export interface Recorder {
+  record(type: string, data: unknown): void;
 }

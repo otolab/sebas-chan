@@ -1,5 +1,5 @@
 import type { WorkflowContextInterface, WorkflowStorageInterface, DriverFactory } from './workflows/context.js';
-import { WorkflowLogger } from './workflows/logger.js';
+import { WorkflowRecorder } from './workflows/recorder.js';
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 
 /**
@@ -69,7 +69,7 @@ export function createMockWorkflowContext(): WorkflowContextInterface {
     state: 'test-state',
     storage: mockStorage,
     createDriver: mockDriverFactory,
-    logger: new WorkflowLogger('test'),
+    recorder: new WorkflowRecorder('test'),
     config: {},
     metadata: {},
   };
