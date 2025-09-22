@@ -305,7 +305,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       expect(pondEntry.id).toBeDefined();
     });
 
-    it('TEST-CONTEXT-002: WorkflowContextにloggerが正しく提供される', async () => {
+    it('TEST-CONTEXT-002: WorkflowContextにrecorderが正しく提供される', async () => {
       // Arrange
       await engine.start();
 
@@ -322,9 +322,9 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
         expect(capturedContext).toBeDefined();
       });
 
-      expect(capturedContext.logger).toBeDefined();
-      expect(capturedContext.logger.log).toBeDefined();
-      expect(typeof capturedContext.logger.log).toBe('function');
+      expect(capturedContext.recorder).toBeDefined();
+      expect(capturedContext.recorder.record).toBeDefined();
+      expect(typeof capturedContext.recorder.record).toBe('function');
     });
 
     it('TEST-CONTEXT-003: WorkflowContextにstate管理機能が提供される', async () => {

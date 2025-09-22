@@ -568,8 +568,8 @@ describe('Input処理フローのE2Eテスト', () => {
           processCount++;
           const currentCount = processCount;
 
-          // WorkflowLoggerインスタンスを保存
-          workflowLoggers.push(context.logger);
+          // WorkflowRecorderインスタンスを保存
+          workflowLoggers.push(context.recorder);
 
           // 偶数番目は失敗
           if (currentCount % 2 === 0) {
@@ -626,15 +626,15 @@ describe('Input処理フローのE2Eテスト', () => {
       const mockCalls = partialFailureWorkflow.executor.mock.calls;
       expect(mockCalls).toHaveLength(4);
 
-      // WorkflowLoggerインスタンスが4つ作成されている
+      // WorkflowRecorderインスタンスが4つ作成されている
       expect(workflowLoggers).toHaveLength(4);
 
       // 各実行のログを確認
       let successCount = 0;
       let failureCount = 0;
 
-      workflowLoggers.forEach((logger, index) => {
-        const logs = logger.getLogRecords();
+      workflowLoggers.forEach((recorder, index) => {
+        const logs = recorder.getBuffer();
 
         // INPUTログは必ず記録される（CoreAgent側で）
         const hasInput = logs.some(log => log.type === 'input');
