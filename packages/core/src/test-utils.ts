@@ -1,4 +1,8 @@
-import type { WorkflowContextInterface, WorkflowStorageInterface, DriverFactory } from './workflows/context.js';
+import type {
+  WorkflowContextInterface,
+  WorkflowStorageInterface,
+  DriverFactory,
+} from './workflows/context.js';
 import { WorkflowRecorder } from './workflows/recorder.js';
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 
@@ -8,8 +12,8 @@ import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 export function createMockWorkflowContext(): WorkflowContextInterface {
   const mockStorage: WorkflowStorageInterface = {
     // Issue操作
-    getIssue: async (id: string): Promise<Issue | null> => null,
-    searchIssues: async (query: string): Promise<Issue[]> => [],
+    getIssue: async (_id: string): Promise<Issue | null> => null,
+    searchIssues: async (_query: string): Promise<Issue[]> => [],
     createIssue: async (issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue> => {
       return {
         ...issue,
@@ -28,7 +32,7 @@ export function createMockWorkflowContext(): WorkflowContextInterface {
     },
 
     // Pond操作
-    searchPond: async (query: string): Promise<PondEntry[]> => [],
+    searchPond: async (_query: string): Promise<PondEntry[]> => [],
     addPondEntry: async (entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry> => {
       return {
         ...entry,
@@ -38,8 +42,8 @@ export function createMockWorkflowContext(): WorkflowContextInterface {
     },
 
     // Knowledge操作
-    getKnowledge: async (id: string): Promise<Knowledge | null> => null,
-    searchKnowledge: async (query: string): Promise<Knowledge[]> => [],
+    getKnowledge: async (_id: string): Promise<Knowledge | null> => null,
+    searchKnowledge: async (_query: string): Promise<Knowledge[]> => [],
     createKnowledge: async (knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge> => {
       return {
         ...knowledge,
@@ -56,10 +60,10 @@ export function createMockWorkflowContext(): WorkflowContextInterface {
     },
   };
 
-  const mockDriverFactory: DriverFactory = async (criteria) => {
+  const mockDriverFactory: DriverFactory = async (_criteria) => {
     // テスト用のモックドライバーを返す
     return {
-      query: async (prompt: string) => {
+      query: async (_prompt: string) => {
         return { response: 'mock response' };
       },
     } as any;

@@ -3,7 +3,7 @@ import { ingestInputWorkflow } from './ingest-input.js';
 import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
-import { RecordType, WorkflowRecorder } from '../recorder.js';
+import { WorkflowRecorder } from '../recorder.js';
 
 describe('IngestInput Workflow (Functional)', () => {
   let mockContext: WorkflowContextInterface;

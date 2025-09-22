@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent, generateWorkflowRegistry, WorkflowRecorder } from './index.js';
+import { CoreAgent, AgentEvent, generateWorkflowRegistry } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 
@@ -8,13 +8,11 @@ describe('CoreAgent', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleLogSpy: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let consoleWarnSpy: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleErrorSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
@@ -47,12 +45,7 @@ describe('CoreAgent', () => {
       throw new Error('Workflow not found');
     }
 
-    const result = await agent.executeWorkflow(
-      workflow,
-      event,
-      mockContext,
-      mockEmitter
-    );
+    const result = await agent.executeWorkflow(workflow, event, mockContext, mockEmitter);
 
     expect(result).toBeDefined();
     expect(result.success).toBeDefined();
@@ -87,12 +80,7 @@ describe('CoreAgent', () => {
     const registry = agent.getWorkflowRegistry();
     registry.register(errorWorkflow);
 
-    const result = await agent.executeWorkflow(
-      errorWorkflow,
-      event,
-      mockContext,
-      mockEmitter
-    );
+    const result = await agent.executeWorkflow(errorWorkflow, event, mockContext, mockEmitter);
 
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();

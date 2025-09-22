@@ -1,10 +1,6 @@
-import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
-import type { AgentEvent, AgentEventPayload } from './types.js';
-import type { AIDriver } from '@moduler-prompt/driver';
-import { WorkflowRecorder, RecordType } from './workflows/recorder.js';
+import { RecordType } from './workflows/recorder.js';
 import { WorkflowRegistry } from './workflows/workflow-registry.js';
-import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface, DriverFactory } from './workflows/context.js';
+import type { WorkflowDefinition } from './workflows/workflow-types.js';
 import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
@@ -27,10 +23,7 @@ class CoreAgent {
    * @param context 実行コンテキスト（recorderを含む）
    * @param emitter イベントエミッター
    */
-  public async executeWorkflow(
-    event: Event,
-    context: WorkflowContext,
-  ): Promise<AgentOutput> {
+  public async executeWorkflow(event: Event, context: WorkflowContext): Promise<AgentOutput> {
     context.recorder.record(RecordType.INPUT, { event });
 
     try {
@@ -72,7 +65,6 @@ export type { AgentEvent, AgentEventPayload } from './types.js';
 
 // ワークフロー関連のエクスポート
 export * from './workflows/index.js';
-
 
 // デフォルトワークフロー登録関数
 export { registerDefaultWorkflows } from './workflows/impl-functional/index.js';
