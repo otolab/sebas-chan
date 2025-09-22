@@ -56,10 +56,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       expect(result.success).toBe(false);
       expect(result.error).toBeDefined();
       expect(result.error?.message).toBe('Synchronous error in workflow');
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'Error executing workflow error-workflow:',
-        expect.any(Error)
-      );
+      // エラーはrecorderで記録されるため、console.errorの検証は削除
     });
 
     it('should recover from asynchronous errors in workflow execution', async () => {

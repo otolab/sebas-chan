@@ -49,7 +49,7 @@ describe('CoreAgent', () => {
 
     expect(result).toBeDefined();
     expect(result.success).toBeDefined();
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Executing workflow:'));
+    // ログ出力の検証は削除（recorderを使用するように変更されたため）
   });
 
   it('should handle workflow errors', async () => {
@@ -84,10 +84,8 @@ describe('CoreAgent', () => {
 
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Error executing workflow'),
-      expect.any(Error)
-    );
+    expect(result.error?.message).toBe('Test error');
+    // エラーログの検証は削除（recorderを使用するように変更されたため）
   });
 
   it('should register and get workflows', () => {

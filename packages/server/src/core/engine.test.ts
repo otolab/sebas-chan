@@ -6,10 +6,20 @@ import { Event } from '@sebas-chan/shared-types';
 
 vi.mock('@sebas-chan/core', () => ({
   CoreAgent: vi.fn(),
-  WorkflowLogger: vi.fn().mockImplementation(() => ({
-    log: vi.fn(),
-    child: vi.fn().mockReturnThis(),
+  WorkflowRecorder: vi.fn().mockImplementation(() => ({
+    record: vi.fn(),
+    getBuffer: vi.fn().mockReturnValue([]),
   })),
+  RecordType: {
+    INPUT: 'input',
+    OUTPUT: 'output',
+    ERROR: 'error',
+    DB_QUERY: 'db_query',
+    AI_CALL: 'ai_call',
+    INFO: 'info',
+    DEBUG: 'debug',
+    WARN: 'warn',
+  },
   WorkflowRegistry: vi.fn().mockImplementation(() => ({
     register: vi.fn(),
     get: vi.fn(),

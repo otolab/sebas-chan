@@ -68,6 +68,15 @@ async function executeAnalyzeIssueImpact(
   }
   const { issue } = event.payload as unknown as AnalyzeIssueImpactPayload;
 
+  // issueが存在しない場合はエラー
+  if (!issue) {
+    return {
+      success: false,
+      context,
+      error: new Error('Issue not found in payload'),
+    };
+  }
+
   // 1. 関連するIssueを検索
   const relatedIssues = await storage.searchIssues(issue.content || issue.description || '');
 

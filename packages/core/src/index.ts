@@ -47,7 +47,11 @@ class CoreAgent {
       return result;
     } catch (error) {
       context.recorder.record(RecordType.ERROR, { error });
-      throw error;
+      return {
+        success: false,
+        context,
+        error: error instanceof Error ? error : new Error(String(error))
+      };
     }
   }
 
