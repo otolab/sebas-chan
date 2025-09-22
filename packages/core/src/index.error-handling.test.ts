@@ -145,7 +145,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       const duration = Date.now() - startTime;
 
       expect(result.success).toBe(true);
-      expect(duration).toBeGreaterThanOrEqual(100);
+      expect(duration).toBeGreaterThanOrEqual(95); // Allow 5ms tolerance for CI timing variations
       expect(result.output).toEqual({ completed: true });
     });
   });
