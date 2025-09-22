@@ -42,27 +42,43 @@ npm run lint
 ## ドキュメント
 
 ### 設計・アーキテクチャ
-- [設計仕様書](docs/ideas/1.設計仕様書.md) - システム全体の設計思想
-- [実装に向けた設計方針](docs/ideas/3.実装に向けた設計方針.md) - 実装方針と詳細設計
-- [アーキテクチャ詳細](docs/ARCHITECTURE.md) - エージェント構成と通信仕様
-- [インターフェース仕様](docs/INTERFACES.md) - モジュール間の詳細な接続仕様
+- [アーキテクチャ詳細](docs/architecture/ARCHITECTURE.md) - エージェント構成と通信仕様
+- [インターフェース仕様](docs/architecture/INTERFACES.md) - モジュール間の詳細な接続仕様
+- [情報モデル](docs/architecture/INFORMATION_MODEL.md) - データモデル定義
 
 ### 開発ガイド
 - [README](README.md) - プロジェクト概要と開発環境
 - [実装状況](docs/IMPLEMENTATION_STATUS.md) - 各フェーズの進捗状況
 
 ### 作業指針
-- [ドキュメント同期管理](prompts/DOCUMENT_CODE_SYNC.md) - ドキュメントとコードの整合性管理
+- [ドキュメント・コード・テスト同期管理](prompts/DOCUMENT_CODE_TEST_SYNC.md) - 三位一体の同期管理
 
 ## 主要コンポーネント
 
-- **Core Agent**: イベントキュー型思考エンジン
-- **Reporters**: 情報収集モジュール群
-- **MCP Server**: 標準化された通信インターフェース
-- **Web UI**: ユーザー向けインターフェース（Pond検索機能実装済み）
-- **Pond**: ベクトルDB（LanceDB）による知識ベース
+### コアシステム
+- **Core Agent**: イベントキュー型思考エンジン（@sebas-chan/core）
+- **Core Engine**: CoreAgentのラッパー、REST API提供、ワークフロー実行管理（@sebas-chan/server）
+
+### データ層
+- **Pond (LanceDB)**: ベクトルDB、イベントストア
   - 日本語対応ベクトル検索（ruri-v3モデル、256次元）
   - DataFusion SQLクエリサポート
+  - 全イベント・入力の永続化
+- **DB Bridge**: Python/TypeScript間のブリッジ層
+- **WorkflowContext**: DB操作の統一インターフェース
+
+### 情報収集・連携
+- **Reporters**: 情報収集モジュール群
+- **Reporter SDK**: レポーター開発用SDK
+- **MCP Server**: 標準化された通信インターフェース（MCP）
+
+### ユーザーインターフェース
+- **Web UI**: SvelteKit実装（Pond検索機能実装済み）
+- **REST API Server**: エンドポイント提供（ポート3001）
+
+### 共通基盤
+- **shared-types**: 共通型定義パッケージ
+- **Event System**: 非同期メッセージング基盤
 
 ## アクセスURL
 
@@ -75,7 +91,12 @@ npm run lint
 
 ## 現在の状態
 
-Phase 2: DBブリッジとReporter SDK実装（進行中）
+Phase 3: ワークフロー実装（完了）
+- 関数ベースワークフローアーキテクチャ実装
+- 基本ワークフロー実装（A-0〜A-3）
+- ワークフロー仕様書・開発者ガイド作成完了
+
+次フェーズ: Phase 4（MCP統合と高度なワークフロー）
 
 ## 実装計画
 
