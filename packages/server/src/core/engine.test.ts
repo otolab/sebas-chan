@@ -4,36 +4,40 @@ import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 import { Event } from '@sebas-chan/shared-types';
 
-vi.mock('@sebas-chan/core', () => ({
-  CoreAgent: vi.fn(),
-  WorkflowLogger: vi.fn().mockImplementation(() => ({
-    log: vi.fn(),
-    child: vi.fn().mockReturnThis(),
-  })),
-  WorkflowRegistry: vi.fn().mockImplementation(() => ({
-    register: vi.fn(),
-    get: vi.fn(),
-    list: vi.fn().mockReturnValue([]),
-    getByEventType: vi.fn().mockReturnValue([]),
-  })),
-  WorkflowResolver: vi.fn().mockImplementation(() => ({
-    resolve: vi.fn().mockReturnValue({
-      workflows: [
-        {
-          name: 'MockWorkflow',
-          description: 'Test workflow',
-          triggers: {
-            eventTypes: ['PROCESS_USER_REQUEST', 'INGEST_INPUT'],
-            priority: 10,
+vi.mock('@sebas-chan/core', async () => {
+  const actual = await vi.importActual<typeof import('@sebas-chan/core')>('@sebas-chan/core');
+  return {
+    CoreAgent: vi.fn(),
+    WorkflowRecorder: vi.fn().mockImplementation(() => ({
+      record: vi.fn(),
+      getBuffer: vi.fn().mockReturnValue([]),
+    })),
+    RecordType: actual.RecordType,
+    WorkflowRegistry: vi.fn().mockImplementation(() => ({
+      register: vi.fn(),
+      get: vi.fn(),
+      list: vi.fn().mockReturnValue([]),
+      getByEventType: vi.fn().mockReturnValue([]),
+    })),
+    WorkflowResolver: vi.fn().mockImplementation(() => ({
+      resolve: vi.fn().mockReturnValue({
+        workflows: [
+          {
+            name: 'MockWorkflow',
+            description: 'Test workflow',
+            triggers: {
+              eventTypes: ['PROCESS_USER_REQUEST', 'INGEST_INPUT'],
+              priority: 10,
+            },
+            executor: vi.fn(),
           },
-          executor: vi.fn(),
-        },
-      ],
-      resolutionTime: 1,
-    }),
-  })),
-  registerDefaultWorkflows: vi.fn(),
-}));
+        ],
+        resolutionTime: 1,
+      }),
+    })),
+    registerDefaultWorkflows: vi.fn(),
+  };
+});
 vi.mock('@sebas-chan/db');
 
 describe('CoreEngine', () => {

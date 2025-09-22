@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent, generateWorkflowRegistry, WorkflowLogger } from './index.js';
+import { CoreAgent, AgentEvent, generateWorkflowRegistry } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 
@@ -8,13 +8,11 @@ describe('CoreAgent', () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleLogSpy: any;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let consoleWarnSpy: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleErrorSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
@@ -47,16 +45,11 @@ describe('CoreAgent', () => {
       throw new Error('Workflow not found');
     }
 
-    const result = await agent.executeWorkflow(
-      workflow,
-      event,
-      mockContext,
-      mockEmitter
-    );
+    const result = await agent.executeWorkflow(workflow, event, mockContext, mockEmitter);
 
     expect(result).toBeDefined();
     expect(result.success).toBeDefined();
-    expect(consoleLogSpy).toHaveBeenCalledWith(expect.stringContaining('Executing workflow:'));
+    // ログ出力の検証は削除（recorderを使用するように変更されたため）
   });
 
   it('should handle workflow errors', async () => {
@@ -87,19 +80,12 @@ describe('CoreAgent', () => {
     const registry = agent.getWorkflowRegistry();
     registry.register(errorWorkflow);
 
-    const result = await agent.executeWorkflow(
-      errorWorkflow,
-      event,
-      mockContext,
-      mockEmitter
-    );
+    const result = await agent.executeWorkflow(errorWorkflow, event, mockContext, mockEmitter);
 
     expect(result.success).toBe(false);
     expect(result.error).toBeDefined();
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Error executing workflow'),
-      expect.any(Error)
-    );
+    expect(result.error?.message).toBe('Test error');
+    // エラーログの検証は削除（recorderを使用するように変更されたため）
   });
 
   it('should register and get workflows', () => {

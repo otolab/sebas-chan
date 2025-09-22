@@ -68,6 +68,15 @@ async function executeAnalyzeIssueImpact(
   }
   const { issue } = event.payload as unknown as AnalyzeIssueImpactPayload;
 
+  // issueが存在しない場合はエラー
+  if (!issue) {
+    return {
+      success: false,
+      context,
+      error: new Error('Issue not found in payload'),
+    };
+  }
+
   // 1. 関連するIssueを検索
   const relatedIssues = await storage.searchIssues(issue.content || issue.description || '');
 
@@ -82,83 +91,80 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 影響範囲と優先度を日本語で説明してください。
 `;
 
-    // ドライバーを作成（分析タスク用）
-    const driver = await createDriver({
-      requiredCapabilities: ['reasoning'],
-      preferredCapabilities: ['japanese', 'structured'],
-    });
+  // ドライバーを作成（分析タスク用）
+  const driver = await createDriver({
+    requiredCapabilities: ['reasoning'],
+    preferredCapabilities: ['japanese', 'structured'],
+  });
 
-    const promptModule = { instructions: [prompt] };
-    const compiledPrompt = compile(promptModule);
-    const result = await driver.query(compiledPrompt, { temperature: 0.3 });
-    const impactAnalysis = result.content;
+  const promptModule = { instructions: [prompt] };
+  const compiledPrompt = compile(promptModule);
+  const result = await driver.query(compiledPrompt, { temperature: 0.3 });
+  const impactAnalysis = result.content;
 
-    // 3. 影響度スコアを計算
-    const impactScore = calculateImpactScore(
-      issue.content || issue.description || '',
-      relatedIssues
-    );
+  // 3. 影響度スコアを計算
+  const impactScore = calculateImpactScore(issue.content || issue.description || '', relatedIssues);
 
-    // 4. Issue作成または更新
-    let issueId: string;
-    const timestamp = new Date();
+  // 4. Issue作成または更新
+  let issueId: string;
+  const timestamp = new Date();
 
-    if (shouldCreateNewIssue(relatedIssues, issue.content || issue.description || '')) {
-      // 新規Issue作成
-      const newIssue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'> = {
-        title:
-          issue.title || `Issue: ${(issue.content || issue.description || '').substring(0, 50)}...`,
-        description: issue.content || issue.description || '',
-        status: 'open',
-        labels: impactScore > 0.7 ? ['high-priority'] : ['normal'],
-        updates: [
-          {
-            timestamp,
-            content: `AI分析結果: ${impactAnalysis}`,
-            author: 'ai' as const,
-          },
-        ],
-        relations: relatedIssues.slice(0, 3).map((relatedIssue) => ({
-          type: 'relates_to' as const,
-          targetIssueId: relatedIssue.id,
-        })),
-        sourceInputIds: issue.inputId ? [issue.inputId] : [],
-      };
-
-      const createdIssue = await storage.createIssue(newIssue);
-      issueId = createdIssue.id;
-    } else {
-      // 既存Issue更新
-      const targetIssue = relatedIssues[0];
-      issueId = targetIssue.id;
-
-      const update: IssueUpdate = {
-        timestamp,
-        content: `関連する報告: ${issue.content}\nAI分析: ${impactAnalysis}`,
-        author: 'ai' as const,
-      };
-
-      await storage.updateIssue(issueId, {
-        updates: [...targetIssue.updates, update],
-      });
-    }
-
-    // 5. 高影響度の場合は追加のワークフローを起動
-    if (impactScore > 0.8) {
-      emitter.emit({
-        type: 'EXTRACT_KNOWLEDGE',
-        payload: {
-          issueId,
-          impactAnalysis,
-          source: 'high_impact_issue',
+  if (shouldCreateNewIssue(relatedIssues, issue.content || issue.description || '')) {
+    // 新規Issue作成
+    const newIssue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'> = {
+      title:
+        issue.title || `Issue: ${(issue.content || issue.description || '').substring(0, 50)}...`,
+      description: issue.content || issue.description || '',
+      status: 'open',
+      labels: impactScore > 0.7 ? ['high-priority'] : ['normal'],
+      updates: [
+        {
+          timestamp,
+          content: `AI分析結果: ${impactAnalysis}`,
+          author: 'ai' as const,
         },
-      });
-    }
+      ],
+      relations: relatedIssues.slice(0, 3).map((relatedIssue) => ({
+        type: 'relates_to' as const,
+        targetIssueId: relatedIssue.id,
+      })),
+      sourceInputIds: issue.inputId ? [issue.inputId] : [],
+    };
 
-    // 6. State更新
-    const updatedState =
-      context.state +
-      `
+    const createdIssue = await storage.createIssue(newIssue);
+    issueId = createdIssue.id;
+  } else {
+    // 既存Issue更新
+    const targetIssue = relatedIssues[0];
+    issueId = targetIssue.id;
+
+    const update: IssueUpdate = {
+      timestamp,
+      content: `関連する報告: ${issue.content}\nAI分析: ${impactAnalysis}`,
+      author: 'ai' as const,
+    };
+
+    await storage.updateIssue(issueId, {
+      updates: [...targetIssue.updates, update],
+    });
+  }
+
+  // 5. 高影響度の場合は追加のワークフローを起動
+  if (impactScore > 0.8) {
+    emitter.emit({
+      type: 'EXTRACT_KNOWLEDGE',
+      payload: {
+        issueId,
+        impactAnalysis,
+        source: 'high_impact_issue',
+      },
+    });
+  }
+
+  // 6. State更新
+  const updatedState =
+    context.state +
+    `
 ## Issue影響分析 (${timestamp.toISOString()})
 - Issue ID: ${issueId}
 - Impact Score: ${impactScore.toFixed(2)}
@@ -166,19 +172,19 @@ ${relatedIssues.length > 0 ? `関連Issue: ${relatedIssues.map((i) => i.title).j
 - Analysis: ${impactAnalysis.substring(0, 200)}...
 `;
 
-    return {
-      success: true,
-      context: {
-        ...context,
-        state: updatedState,
-      },
-      output: {
-        issueId,
-        impactScore,
-        relatedIssues: relatedIssues.length,
-        analysis: impactAnalysis,
-      },
-    };
+  return {
+    success: true,
+    context: {
+      ...context,
+      state: updatedState,
+    },
+    output: {
+      issueId,
+      impactScore,
+      relatedIssues: relatedIssues.length,
+      analysis: impactAnalysis,
+    },
+  };
 }
 
 /**

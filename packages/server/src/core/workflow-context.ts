@@ -2,10 +2,9 @@ import type {
   WorkflowContextInterface,
   WorkflowStorageInterface,
   WorkflowEventEmitterInterface,
-  WorkflowConfig,
-  WorkflowLogger,
   DriverFactory,
 } from '@sebas-chan/core';
+import type { WorkflowRecorder } from '@sebas-chan/core';
 import type {
   Issue,
   Knowledge,
@@ -142,9 +141,7 @@ export class EngineWorkflowContext implements WorkflowContextInterface {
     private db: DBClient,
     private engine: CoreEngine,
     public readonly createDriver: DriverFactory,
-    public readonly logger: WorkflowLogger,
-    public readonly config?: WorkflowConfig,
-    public readonly metadata?: Record<string, unknown>
+    public readonly recorder: WorkflowRecorder
   ) {
     this.storage = new EngineWorkflowStorage(db, engine);
     this.state = stateManager.getState();
@@ -159,19 +156,9 @@ export function createWorkflowContext(
   stateManager: StateManager,
   db: DBClient,
   createDriver: DriverFactory,
-  logger: WorkflowLogger,
-  config?: WorkflowConfig,
-  metadata?: Record<string, unknown>
+  recorder: WorkflowRecorder
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(
-    stateManager,
-    db,
-    engine,
-    createDriver,
-    logger,
-    config,
-    metadata
-  );
+  return new EngineWorkflowContext(stateManager, db, engine, createDriver, recorder);
 }
 
 /**

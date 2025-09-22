@@ -1,22 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent, WorkflowLogger, generateWorkflowRegistry } from './index.js';
+import { CoreAgent, AgentEvent, WorkflowRecorder } from './index.js';
 import { createMockWorkflowContext } from './test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 import { WorkflowDefinition } from './workflows/workflow-types.js';
 
 describe('CoreAgent - Comprehensive Tests', () => {
   let agent: CoreAgent;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let consoleLogSpy: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let consoleWarnSpy: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let consoleErrorSpy: any;
 
   beforeEach(() => {
-    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
@@ -80,7 +74,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
               ? normalPriorityWorkflow
               : lowPriorityWorkflow;
 
-        const logger = new WorkflowLogger(workflow.name);
+        const _recorder = new WorkflowRecorder(workflow.name);
         await agent.executeWorkflow(workflow, event, mockContext, mockEmitter);
       }
 
@@ -122,7 +116,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           timestamp: new Date(),
         };
 
-        const logger = new WorkflowLogger('fifo-workflow');
+        const _recorder = new WorkflowRecorder('fifo-workflow');
         await agent.executeWorkflow(workflow, event, mockContext, mockEmitter);
       }
 
@@ -172,7 +166,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         timestamp: new Date(),
       };
 
-      const logger1 = new WorkflowLogger('state-workflow');
+      const _recorder1 = new WorkflowRecorder('state-workflow');
       await agent.executeWorkflow(stateWorkflow, event1, mockContext, mockEmitter);
 
       // 状態を変更
@@ -182,7 +176,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         timestamp: new Date(),
       };
 
-      const logger2 = new WorkflowLogger('state-workflow');
+      const _recorder2 = new WorkflowRecorder('state-workflow');
       await agent.executeWorkflow(stateWorkflow, event2, mockContext, mockEmitter);
 
       // 変更後の状態を確認
@@ -192,7 +186,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         timestamp: new Date(),
       };
 
-      const logger3 = new WorkflowLogger('state-workflow');
+      const _recorder3 = new WorkflowRecorder('state-workflow');
       await agent.executeWorkflow(stateWorkflow, event3, mockContext, mockEmitter);
 
       expect(stateTransitions.length).toBeGreaterThan(0);
@@ -230,7 +224,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        
+
         mockEmitter
       );
 
@@ -265,7 +259,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        
+
         mockEmitter
       );
 
@@ -299,7 +293,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        
+
         mockEmitter
       );
 
@@ -333,7 +327,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         workflow!,
         event,
         mockContext,
-        
+
         mockEmitter
       );
 
@@ -381,7 +375,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         cascadingWorkflow,
         event,
         mockContext,
-        
+
         mockEmitter
       );
 
@@ -435,7 +429,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         multiEmitWorkflow,
         event,
         mockContext,
-        
+
         mockEmitter
       );
 
@@ -519,10 +513,10 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context - override the log method
-      const originalLog = mockContext.logger.log;
-      mockContext.logger.log = vi.fn().mockImplementation((type, data) => {
+      const originalRecord = mockContext.recorder.record;
+      mockContext.recorder.record = vi.fn().mockImplementation((type, data) => {
         loggedEntries.push({ type, data });
-        return originalLog.call(mockContext.logger, type, data);
+        return originalRecord.call(mockContext.recorder, type, data);
       });
 
       const loggingWorkflow: WorkflowDefinition = {
@@ -550,7 +544,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       await agent.executeWorkflow(loggingWorkflow, event, mockContext, mockEmitter);
 
-      expect(mockContext.logger.log).toHaveBeenCalled();
+      expect(mockContext.recorder.record).toHaveBeenCalled();
       expect(loggedEntries.length).toBeGreaterThan(0);
     });
   });
@@ -590,7 +584,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           timestamp: new Date(),
         };
 
-        const logger = new WorkflowLogger('performance-workflow');
+        const _recorder = new WorkflowRecorder('performance-workflow');
         await agent.executeWorkflow(performanceWorkflow, event, mockContext, mockEmitter);
       }
 
@@ -637,10 +631,8 @@ describe('CoreAgent - Comprehensive Tests', () => {
           timestamp: new Date(),
         };
 
-        const logger = new WorkflowLogger('concurrent-perf-workflow');
-        promises.push(
-          agent.executeWorkflow(concurrentWorkflow, event, mockContext, mockEmitter)
-        );
+        const _recorder = new WorkflowRecorder('concurrent-perf-workflow');
+        promises.push(agent.executeWorkflow(concurrentWorkflow, event, mockContext, mockEmitter));
       }
 
       const results = await Promise.all(promises);

@@ -18,7 +18,7 @@ import {
   CoreAgent,
   AgentEvent,
   AgentEventPayload,
-  WorkflowLogger,
+  WorkflowRecorder,
   WorkflowResolver,
 } from '@sebas-chan/core';
 import { WorkflowQueue } from './workflow-queue.js';
@@ -215,10 +215,10 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     try {
       logger.debug(`Processing workflow ${workflow.name} for event ${event.type}`);
 
-      // 実行ごとに新しいloggerを作成
-      const workflowLogger = new WorkflowLogger(workflow.name);
+      // 実行ごとに新しいrecorderを作成
+      const workflowRecorder = new WorkflowRecorder(workflow.name);
 
-      // contextを作成（loggerを含む）
+      // contextを作成（recorderを含む）
       const context = createWorkflowContext(
         this,
         this.stateManager,
@@ -230,8 +230,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
           }
           return await this.driverRegistry.createDriver(result.driver);
         }) as DriverFactory,
-        workflowLogger,
-        {}
+        workflowRecorder
       );
 
       // emitterを作成

@@ -1,7 +1,7 @@
 import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
 import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
-import type { WorkflowLogger } from './logger.js';
+import type { WorkflowRecorder } from './recorder.js';
 
 // イベントタイプの定義
 export type WorkflowEventType =
@@ -42,19 +42,9 @@ export interface WorkflowContextInterface {
   createDriver: DriverFactory;
 
   /**
-   * ワークフローロガー
+   * ワークフローレコーダー
    */
-  logger: WorkflowLogger;
-
-  /**
-   * 実行時設定
-   */
-  config?: WorkflowConfig;
-
-  /**
-   * 実行時メタデータ
-   */
-  metadata?: Record<string, unknown>;
+  recorder: WorkflowRecorder;
 }
 
 /**

@@ -1,10 +1,8 @@
-import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
-import type { AgentEvent, AgentEventPayload } from './types.js';
-import type { AIDriver } from '@moduler-prompt/driver';
-import { WorkflowLogger, LogType } from './workflows/logger.js';
+import { RecordType } from './workflows/recorder.js';
 import { WorkflowRegistry } from './workflows/workflow-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface, DriverFactory } from './workflows/context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './workflows/context.js';
+import type { AgentEvent } from './types.js';
 import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
@@ -24,7 +22,7 @@ class CoreAgent {
    * ワークフローを実行
    * @param workflow 実行するワークフロー
    * @param event 処理するイベント
-   * @param context 実行コンテキスト（loggerを含む）
+   * @param context 実行コンテキスト（recorderを含む）
    * @param emitter イベントエミッター
    */
   public async executeWorkflow(
@@ -33,33 +31,26 @@ class CoreAgent {
     context: WorkflowContextInterface,
     emitter: WorkflowEventEmitterInterface
   ): Promise<WorkflowResult> {
-    console.log(`Executing workflow: ${workflow.name} for event: ${event.type}`);
+    context.recorder.record(RecordType.INPUT, { event });
 
     try {
-      // ログ記録（contextからloggerを取得）
-      context.logger.log(LogType.INPUT, { event });
-
-      // ワークフローを実行
       const result = await workflow.executor(event, context, emitter);
 
-      // 出力をログ
-      if (result.output) {
-        context.logger.log(LogType.OUTPUT, result.output);
+      if (result.success) {
+        context.recorder.record(RecordType.OUTPUT, result.output);
       }
 
-      if (!result.success) {
-        console.error(`Workflow ${workflow.name} failed:`, result.error);
-        context.logger.log(LogType.ERROR, { error: result.error });
+      if (result.error) {
+        context.recorder.record(RecordType.ERROR, { error: result.error });
       }
 
       return result;
     } catch (error) {
-      console.error(`Error executing workflow ${workflow.name}:`, error);
-      context.logger.log(LogType.ERROR, { error });
+      context.recorder.record(RecordType.ERROR, { error });
       return {
         success: false,
         context,
-        error: error as Error,
+        error: error instanceof Error ? error : new Error(String(error))
       };
     }
   }
@@ -81,10 +72,10 @@ class CoreAgent {
 
 // 型の再エクスポート
 export type { AgentEvent, AgentEventPayload } from './types.js';
+export { WorkflowRecorder, RecordType } from './workflows/recorder.js';
 
 // ワークフロー関連のエクスポート
 export * from './workflows/index.js';
-
 
 // デフォルトワークフロー登録関数
 export { registerDefaultWorkflows } from './workflows/impl-functional/index.js';

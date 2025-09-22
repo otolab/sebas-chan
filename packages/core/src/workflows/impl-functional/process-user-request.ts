@@ -100,7 +100,7 @@ async function executeProcessUserRequest(
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
-  const { storage, createDriver } = context;
+  const { createDriver } = context;
   interface ProcessUserRequestPayload {
     request: UserRequest;
   }

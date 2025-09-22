@@ -1,24 +1,24 @@
 import { vi } from 'vitest';
-import type { WorkflowLogger } from './logger.js';
+import type { WorkflowRecorder } from './recorder.js';
 
 /**
- * WorkflowLoggerのモック実装を作成
+ * WorkflowRecorderのモック実装を作成
  */
-export function createMockWorkflowLogger(): WorkflowLogger {
-  const logger = {
+export function createMockWorkflowRecorder(): WorkflowRecorder {
+  const recorder = {
     executionId: 'test-execution-id',
     workflowName: 'TestWorkflow',
 
-    // 基本ログメソッド
-    log: vi.fn(),
+    // 基本記録メソッド
+    record: vi.fn(),
 
     // バッファ管理
     clearBuffer: vi.fn().mockReturnValue([]),
-    getLogRecords: vi.fn().mockReturnValue([]),
+    getBuffer: vi.fn().mockReturnValue([]),
 
     // クローズ
     close: vi.fn(),
   };
 
-  return logger as unknown as WorkflowLogger;
+  return recorder as unknown as WorkflowRecorder;
 }

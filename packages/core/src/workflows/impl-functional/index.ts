@@ -4,7 +4,6 @@
 
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { WorkflowRegistry } from '../workflow-registry.js';
-import { LogType } from '../logger.js';
 import { ingestInputWorkflow } from './ingest-input.js';
 import { processUserRequestWorkflow } from './process-user-request.js';
 import { analyzeIssueImpactWorkflow } from './analyze-issue-impact.js';
@@ -35,4 +34,3 @@ export function registerDefaultWorkflows(registry: WorkflowRegistry): void {
   }
   console.log(`Registered ${DEFAULT_WORKFLOWS.length} default workflows`);
 }
-

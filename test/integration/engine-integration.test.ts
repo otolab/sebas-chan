@@ -256,7 +256,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       expect(typeof contextArg.state).toBe('string');
     });
 
-    it('should provide logger and createDriver', async () => {
+    it('should provide recorder and createDriver', async () => {
       await engine.initialize();
       await engine.start();
 
@@ -274,11 +274,11 @@ describe('CoreEngine - CoreAgent Integration', () => {
         return;
       }
 
-      // loggerが存在することを確認
-      expect(contextArg.logger).toBeDefined();
-      expect(contextArg.logger).toHaveProperty('log');
-      // WorkflowLoggerのインスタンスであることを確認
-      expect(contextArg.logger.constructor.name).toBe('WorkflowLogger');
+      // recorderが存在することを確認
+      expect(contextArg.recorder).toBeDefined();
+      expect(contextArg.recorder).toHaveProperty('record');
+      // WorkflowRecorderのインスタンスであることを確認
+      expect(contextArg.recorder.constructor.name).toBe('WorkflowRecorder');
 
       // createDriverが存在することを確認
       expect(contextArg.createDriver).toBeDefined();
