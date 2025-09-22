@@ -140,7 +140,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
     // 6. 既存知識の評価を更新（簡易版）
     knowledgeId = existingKnowledge[0].id;
 
-    await storage.updateKnowledge(knowledgeId, {
+    await storage.updateKnowledge(knowledgeId ?? '', {
       reputation: {
         upvotes: existingKnowledge[0].reputation.upvotes + 1,
         downvotes: existingKnowledge[0].reputation.downvotes,
