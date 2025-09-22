@@ -8,6 +8,8 @@ export default defineConfig({
     environment: 'node',
     setupFiles: [],
     testTimeout: 60000,
+    silent: true,
+    logLevel: 'error',
     // E2Eテストは順次実行
     pool: 'forks',
     poolOptions: {

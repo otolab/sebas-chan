@@ -7,6 +7,8 @@ export default defineConfig({
     environment: 'node',
     include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts'],
     exclude: ['node_modules', 'dist', 'packages/web-ui'],
+    silent: true, // テスト実行時のログを抑制
+    logLevel: 'error', // エラーレベル以上のみ表示
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
