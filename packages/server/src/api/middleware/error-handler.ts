@@ -9,7 +9,7 @@ export function errorHandler(
   error: HttpError,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   logger.error('API Error:', error);
 

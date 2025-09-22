@@ -158,13 +158,7 @@ export function createWorkflowContext(
   createDriver: DriverFactory,
   recorder: WorkflowRecorder
 ): EngineWorkflowContext {
-  return new EngineWorkflowContext(
-    stateManager,
-    db,
-    engine,
-    createDriver,
-    recorder
-  );
+  return new EngineWorkflowContext(stateManager, db, engine, createDriver, recorder);
 }
 
 /**

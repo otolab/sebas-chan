@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { CoreEngine } from '../../core/engine.js';
-import type { PondEntry } from '@sebas-chan/shared-types';
 
 export function createPondRouter(coreEngine: CoreEngine): Router {
   const router = Router();

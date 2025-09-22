@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { CoreEngine } from '../../core/engine.js';
 
-export function createLogsRouter(coreEngine: CoreEngine): Router {
+export function createLogsRouter(_coreEngine: CoreEngine): Router {
   const router = Router();
 
   // ログ検索のスキーマ
