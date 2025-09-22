@@ -4,22 +4,15 @@ import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 import { Event } from '@sebas-chan/shared-types';
 
-vi.mock('@sebas-chan/core', () => ({
-  CoreAgent: vi.fn(),
-  WorkflowRecorder: vi.fn().mockImplementation(() => ({
-    record: vi.fn(),
-    getBuffer: vi.fn().mockReturnValue([]),
-  })),
-  RecordType: {
-    INPUT: 'input',
-    OUTPUT: 'output',
-    ERROR: 'error',
-    DB_QUERY: 'db_query',
-    AI_CALL: 'ai_call',
-    INFO: 'info',
-    DEBUG: 'debug',
-    WARN: 'warn',
-  },
+vi.mock('@sebas-chan/core', async () => {
+  const actual = await vi.importActual<typeof import('@sebas-chan/core')>('@sebas-chan/core');
+  return {
+    CoreAgent: vi.fn(),
+    WorkflowRecorder: vi.fn().mockImplementation(() => ({
+      record: vi.fn(),
+      getBuffer: vi.fn().mockReturnValue([]),
+    })),
+    RecordType: actual.RecordType,
   WorkflowRegistry: vi.fn().mockImplementation(() => ({
     register: vi.fn(),
     get: vi.fn(),
@@ -42,8 +35,9 @@ vi.mock('@sebas-chan/core', () => ({
       resolutionTime: 1,
     }),
   })),
-  registerDefaultWorkflows: vi.fn(),
-}));
+    registerDefaultWorkflows: vi.fn(),
+  };
+});
 vi.mock('@sebas-chan/db');
 
 describe('CoreEngine', () => {
