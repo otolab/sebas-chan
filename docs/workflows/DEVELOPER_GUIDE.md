@@ -146,11 +146,22 @@ await context.storage.updateIssue(issue.id, {
 import { compile } from '@moduler-prompt/core';
 import type { PromptModule } from '@moduler-prompt/core';
 
-// プロンプトモジュールを定義
-const analysisModule: PromptModule = {
-  objective: ['テキストを分析する'],
+// コンテキストを使用したプロンプトモジュール定義
+interface AnalysisContext {
+  text: string;
+  priority: number;
+}
+
+const analysisModule: PromptModule<AnalysisContext> = {
+  createContext: () => ({
+    text: event.payload.text,
+    priority: event.payload.priority || 0
+  }),
+  objective: [(ctx) =>
+    ctx.priority > 50 ? '緊急分析を実施' : 'テキストを分析する'
+  ],
   instructions: ['要点を抽出', '感情を判定'],
-  inputs: [event.payload.text]
+  inputs: [(ctx) => ctx.text]
 };
 
 // AIドライバーの作成
@@ -158,8 +169,12 @@ const driver = await context.createDriver({
   capabilities: ['japanese', 'text-generation']
 });
 
-// コンパイルして実行
-const compiled = compile(analysisModule, {});
+// コンテキストを渡してコンパイルし、実行
+const moduleContext = {
+  text: event.payload.text,
+  priority: event.payload.priority || 0
+};
+const compiled = compile(analysisModule, moduleContext);
 const response = await driver.query(compiled);
 ```
 
@@ -207,11 +222,11 @@ executor: async (event, context, emitter) => {
 ### 4.2 ログ記録
 
 ```typescript
-// 構造化ログを使用
+// 構造化ログを使用（timestampは自動挿入）
 context.logger.info('処理開始', {
   workflowName: 'my-workflow',
-  eventType: event.type,
-  timestamp: new Date().toISOString()
+  eventType: event.type
+  // timestampはロガーが自動的に追加
 });
 
 // 重要なステップをログ
@@ -355,25 +370,6 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 7.3 バッチ処理
-
-```typescript
-executor: async (event, context, emitter) => {
-  const items = event.payload.items;
-  const results = [];
-
-  // 並列処理（最大5件）
-  const chunks = chunkArray(items, 5);
-  for (const chunk of chunks) {
-    const chunkResults = await Promise.all(
-      chunk.map(item => processItem(item, context))
-    );
-    results.push(...chunkResults);
-  }
-
-  return { success: true, context, output: results };
-}
-```
 
 ## 8. 一般的な問題と対処法
 
@@ -424,34 +420,9 @@ executor: async (event, context, emitter) => {
 
 ## 9. パフォーマンス最適化
 
-### 9.1 キャッシュの活用
+### 9.1 キャッシュについて
 
-```typescript
-const cache = new Map();
-
-executor: async (event, context, emitter) => {
-  const cacheKey = generateCacheKey(event.payload);
-
-  // キャッシュチェック
-  if (cache.has(cacheKey)) {
-    context.logger.debug('Cache hit', { key: cacheKey });
-    return {
-      success: true,
-      context,
-      output: cache.get(cacheKey)
-    };
-  }
-
-  // 処理実行
-  const result = await expensiveOperation(event.payload);
-
-  // キャッシュ保存（5分間）
-  cache.set(cacheKey, result);
-  setTimeout(() => cache.delete(cacheKey), 5 * 60 * 1000);
-
-  return { success: true, context, output: result };
-}
-```
+ワークフローはstatelessであるべきなので、現時点ではキャッシュ機能は実装しません。将来的にシステムレベルでのキャッシュ機構を導入する可能性がありますが、個別のワークフロー内ではキャッシュを保持しないようにしてください。
 
 ### 9.2 並列処理
 

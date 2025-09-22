@@ -58,6 +58,12 @@ interface WorkflowTrigger {
 
   /** 実行優先度（大きいほど優先、デフォルト: 0） */
   priority?: number;
+
+  /** スケジュール実行（オプション、将来実装） */
+  schedule?: {
+    cron?: string;  // Cron式
+    interval?: number;  // ミリ秒単位
+  };
 }
 ```
 
@@ -236,7 +242,7 @@ interface ErrorHandlingStrategy {
 
 1. **純粋関数性**: 副作用はcontext.storageとemitterのみを通じて実行
 2. **エラーハンドリング**: すべての例外をキャッチしWorkflowResultで返す
-3. **ログ記録**: 重要な処理はcontext.loggerで記録
+3. **ログ記録**: 検証可能性を確保しつつ最小限のログに留める
 4. **タイムアウト**: 長時間実行される処理は適切にタイムアウトを設定
 
 ### 5.2 推奨事項
@@ -256,17 +262,6 @@ interface ErrorHandlingStrategy {
 interface WorkflowResolution {
   /** マッチしたワークフロー（優先度順） */
   workflows: WorkflowDefinition[];
-
-  /** 解決にかかった時間（ms） */
-  resolutionTime: number;
-
-  /** デバッグ情報 */
-  debug?: {
-    totalWorkflows: number;
-    matchedCount: number;
-    filteredByType: number;
-    filteredByCondition: number;
-  };
 }
 ```
 

@@ -42,10 +42,12 @@ export const analyzeIssueWorkflow: WorkflowDefinition = {
         '- 影響範囲（全体/一部/個別）',
         '- 必要なアクション'
       ],
-      inputs: [
+      // contextを使って動的にデータを提供
+      createContext: () => ({ issue: event.payload.issue }),
+      inputs: [(ctx) =>
         JSON.stringify({
-          issue: event.payload.issue,
-          context: context.state
+          issue: ctx.issue,
+          contextState: context.state
         })
       ],
       output: ['JSON形式で出力：{ urgency, impact, actions }']
@@ -56,8 +58,9 @@ export const analyzeIssueWorkflow: WorkflowDefinition = {
       capabilities: ['japanese', 'json_mode']
     });
 
-    // 3. コンパイルして実行
-    const compiled = compile(analysisModule, {});
+    // 3. コンテキストを含めてコンパイルし、実行
+    const moduleContext = { issue: event.payload.issue };
+    const compiled = compile(analysisModule, moduleContext);
     const result = await driver.query(compiled);
 
     // 4. 結果を処理
@@ -116,14 +119,33 @@ const module: PromptModule<MyContext> = {
 };
 ```
 
-### JSONレスポンスの取得
+### JSONレスポンスの取得（output.schema使用）
 
 ```typescript
 const module: PromptModule = {
   objective: ['データを分析してJSON形式で返す'],
   instructions: ['構造化された分析結果を生成'],
   inputs: [JSON.stringify(data)],
-  output: ['JSON形式で出力']
+  output: {
+    schema: {
+      type: 'object',
+      properties: {
+        urgency: {
+          type: 'string',
+          enum: ['critical', 'high', 'normal', 'low']
+        },
+        impact: {
+          type: 'string',
+          enum: ['全体', '一部', '個別']
+        },
+        actions: {
+          type: 'array',
+          items: { type: 'string' }
+        }
+      },
+      required: ['urgency', 'impact', 'actions']
+    }
+  }
 };
 
 const driver = await context.createDriver({
@@ -142,6 +164,11 @@ try {
 
   if (!result.content) {
     throw new Error('Empty response from AI');
+  }
+
+  // finishReasonをチェック（正常終了か確認）
+  if (result.finishReason && result.finishReason !== 'stop') {
+    context.logger.warn('AI response finished with reason:', result.finishReason);
   }
 
   return { success: true, context, output: result };
