@@ -8,7 +8,7 @@
   ],
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
-    "build": "npm run build -w @sebas-chan/shared-types && npm run build --workspaces --if-present",
+    "build": "tsc --build --force --verbose",
     "test": "npm run test:unit",
     "test:unit": "npm run test --workspaces --if-present",
     "test:interface": "echo 'Interface tests not yet configured'",
@@ -20,7 +20,7 @@
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
-    "clean": "npm run clean --workspaces --if-present",
+    "clean": "tsc --build --clean && npm run clean --workspaces --if-present",
     "clean:all": "npm run clean && rm -rf node_modules",
     "clean:cache": "find . -name '*.tsbuildinfo' -delete",
     "server:dev": "npm run dev -w @sebas-chan/server",

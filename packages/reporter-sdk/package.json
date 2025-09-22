@@ -9,7 +9,7 @@
     "manual-reporter": "./dist/manual-reporter/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build --force --verbose",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",

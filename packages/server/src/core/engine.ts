@@ -230,8 +230,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
           }
           return await this.driverRegistry.createDriver(result.driver);
         }) as DriverFactory,
-        workflowRecorder,
-        {}
+        workflowRecorder
       );
 
       // emitterを作成

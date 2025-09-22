@@ -9,7 +9,7 @@
     "sebas-chan": "./dist/main.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --build --force --verbose",
     "dev": "tsc --build --watch & nodemon --watch dist --exec 'node dist/main.js'",
     "start": "node dist/main.js",
     "test": "vitest run",

@@ -28,7 +28,6 @@ describe('IngestInput Workflow (Functional)', () => {
       },
       createDriver: async () => new TestDriver({ responses: ['AI response for testing'] }),
       recorder: new WorkflowRecorder('test'),
-      metadata: {},
     };
 
     // モックイベントエミッター

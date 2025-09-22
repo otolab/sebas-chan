@@ -211,7 +211,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           eventTypes: ['ERROR_PRONE_WORKFLOW'],
         },
         executor: async (_event) => {
-          const payload = event.payload as { shouldError?: boolean };
+          const payload = _event.payload as { shouldError?: boolean };
           if (payload.shouldError) {
             errorCount++;
             throw new Error(`Error ${errorCount}`);
@@ -433,7 +433,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
             throw new Error('Random error during processing');
           }
 
-          const payload = event.payload as { index?: number };
+          const payload = _event.payload as { index?: number };
           return {
             success: true,
             context: createMockWorkflowContext(),

@@ -1,6 +1,8 @@
 import { RecordType } from './workflows/recorder.js';
 import { WorkflowRegistry } from './workflows/workflow-registry.js';
-import type { WorkflowDefinition } from './workflows/workflow-types.js';
+import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './workflows/context.js';
+import type { AgentEvent } from './types.js';
 import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
@@ -23,14 +25,18 @@ class CoreAgent {
    * @param context 実行コンテキスト（recorderを含む）
    * @param emitter イベントエミッター
    */
-  public async executeWorkflow(event: Event, context: WorkflowContext): Promise<AgentOutput> {
+  public async executeWorkflow(
+    workflow: WorkflowDefinition,
+    event: AgentEvent,
+    context: WorkflowContextInterface,
+    emitter: WorkflowEventEmitterInterface
+  ): Promise<WorkflowResult> {
     context.recorder.record(RecordType.INPUT, { event });
 
     try {
-      const input = { type: event.type, data: event.data } as EventInput;
-      const result = await this.processEventSync(input, context);
+      const result = await workflow.executor(event, context, emitter);
 
-      if (result.ok) {
+      if (result.success) {
         context.recorder.record(RecordType.OUTPUT, result.output);
       }
 
@@ -38,7 +44,7 @@ class CoreAgent {
         context.recorder.record(RecordType.ERROR, { error: result.error });
       }
 
-      return result.output;
+      return result;
     } catch (error) {
       context.recorder.record(RecordType.ERROR, { error });
       throw error;
@@ -62,6 +68,7 @@ class CoreAgent {
 
 // 型の再エクスポート
 export type { AgentEvent, AgentEventPayload } from './types.js';
+export { WorkflowRecorder, RecordType } from './workflows/recorder.js';
 
 // ワークフロー関連のエクスポート
 export * from './workflows/index.js';
