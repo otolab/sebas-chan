@@ -26,6 +26,31 @@ import type { WorkflowDefinition } from '@sebas-chan/core';
 import { compile } from '@moduler-prompt/core';
 import type { PromptModule } from '@moduler-prompt/core';
 
+// 1. プロンプトモジュールを静的に定義
+interface IssueAnalysisContext {
+  issue: any;
+  contextState: string;
+}
+
+const analysisModule: PromptModule<IssueAnalysisContext> = {
+  objective: ['Issueの緊急度と影響範囲を分析する'],
+  instructions: [
+    '以下の観点で評価してください：',
+    '- 緊急度（critical/high/normal/low）',
+    '- 影響範囲（全体/一部/個別）',
+    '- 必要なアクション'
+  ],
+  // contextを使って動的にデータを提供
+  createContext: () => ({ issue: null, contextState: '' }),
+  inputs: [(ctx) =>
+    JSON.stringify({
+      issue: ctx.issue,
+      contextState: ctx.contextState
+    })
+  ],
+  output: ['JSON形式で出力：{ urgency, impact, actions }']
+};
+
 export const analyzeIssueWorkflow: WorkflowDefinition = {
   name: 'analyze-issue',
   description: 'Issueを分析して優先度を判定',
@@ -33,33 +58,16 @@ export const analyzeIssueWorkflow: WorkflowDefinition = {
     eventTypes: ['ISSUE_CREATED']
   },
   executor: async (event, context, emitter) => {
-    // 1. プロンプトモジュールを定義
-    const analysisModule: PromptModule = {
-      objective: ['Issueの緊急度と影響範囲を分析する'],
-      instructions: [
-        '以下の観点で評価してください：',
-        '- 緊急度（critical/high/normal/low）',
-        '- 影響範囲（全体/一部/個別）',
-        '- 必要なアクション'
-      ],
-      // contextを使って動的にデータを提供
-      createContext: () => ({ issue: event.payload.issue }),
-      inputs: [(ctx) =>
-        JSON.stringify({
-          issue: ctx.issue,
-          contextState: context.state
-        })
-      ],
-      output: ['JSON形式で出力：{ urgency, impact, actions }']
-    };
-
     // 2. ドライバーを作成
     const driver = await context.createDriver({
       capabilities: ['japanese', 'json_mode']
     });
 
-    // 3. コンテキストを含めてコンパイルし、実行
-    const moduleContext = { issue: event.payload.issue };
+    // 3. 実行時のコンテキストを作成してコンパイル、実行
+    const moduleContext: IssueAnalysisContext = {
+      issue: event.payload.issue,
+      contextState: context.state
+    };
     const compiled = compile(analysisModule, moduleContext);
     const result = await driver.query(compiled);
 

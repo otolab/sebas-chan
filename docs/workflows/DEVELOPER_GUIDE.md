@@ -222,11 +222,10 @@ executor: async (event, context, emitter) => {
 ### 4.2 ログ記録
 
 ```typescript
-// 構造化ログを使用（timestampは自動挿入）
+// 構造化ログを使用（timestamp、workflowNameは自動挿入）
 context.logger.info('処理開始', {
-  workflowName: 'my-workflow',
   eventType: event.type
-  // timestampはロガーが自動的に追加
+  // timestamp、workflowNameはロガーが自動的に追加
 });
 
 // 重要なステップをログ
@@ -293,37 +292,47 @@ describe('MyWorkflow', () => {
   - 各モジュールのテストケース詳細
   - エッジケースとエラーハンドリングのテスト
 
-## 6. デバッグ
+## 6. ログと検証可能性
 
-### 6.1 ログレベルの活用
+### 6.1 ログの本質的な役割
 
-```typescript
-// 開発環境では詳細ログを有効化
-if (process.env.NODE_ENV === 'development') {
-  context.logger.debug('デバッグ情報', {
-    fullPayload: event.payload,
-    contextState: context.state
-  });
-}
-```
-
-### 6.2 実行トレース
+**context.loggerは単なるデバッグツールではありません。** これはワークフローシステムの検証可能性を保証する重要な機能です。
 
 ```typescript
-const trace = {
-  workflowName: 'my-workflow',
-  startTime: Date.now(),
-  steps: []
-};
-
-// 各ステップを記録
-trace.steps.push({
-  name: 'validation',
-  duration: Date.now() - stepStart
+// すべての重要な処理ステップを記録
+// これらのログはDBに永続化され、Webコンソールから検証可能
+context.logger.log('処理開始', {
+  eventType: event.type,
+  payload: event.payload
 });
 
-// 最後にトレースを出力
-context.logger.info('Workflow trace', trace);
+context.logger.log('Issue作成', {
+  issueId: result.issueId,
+  title: result.title
+});
+
+context.logger.log('処理完了', {
+  duration: Date.now() - startTime,
+  success: true
+});
+```
+
+**重要**: 暗黙的に実行されるワークフローの動作を追跡・検証するため、すべての重要なステップをログに記録します。これにより、問題の特定と正常動作の確認が可能になります。
+
+### 6.2 実行トレースの記録
+
+```typescript
+// context.loggerを使って直接トレースを記録
+context.logger.log('ステップ開始: validation', {
+  input: event.payload
+});
+
+const validationResult = await validate(event.payload);
+
+context.logger.log('ステップ完了: validation', {
+  result: validationResult,
+  duration: Date.now() - stepStart
+});
 ```
 
 ## 7. よくあるパターン
@@ -393,9 +402,8 @@ triggers: {
 ```
 
 **注**: 運用実績が蓄積されたら、より具体的なトラブルシューティングガイドを作成予定です。
-}
-```
 
+### 問題: メモリ使用量が増大する
 
 **解決策:**
 ```typescript

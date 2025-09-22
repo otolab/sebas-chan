@@ -112,18 +112,27 @@ npm run workflow:test -- --workflow=process-user-request
 1. A-0: process-user-request.tsの書き直し
 2. A-1: ingest-input.tsの書き直し
 3. 基本的なテストハーネスの構築
+4. **WorkflowTriggerのcondition機能実装**
+   - 条件関数の評価ロジック
+   - WorkflowResolverでの条件チェック統合
 
 ### 優先度2（基本機能確立後）
 1. A-2: analyze-issue-impact.tsの書き直し
 2. A-3: extract-knowledge.tsの書き直し
 3. B-1: cluster-issues.tsの新規作成
 4. 各ワークフローのテスト作成
+5. **ログレベル概念の削除とログシステム改善**
+   - すべてのログをDBに保存
+   - 検証可能性の向上
 
 ### 優先度3（拡張機能）
 1. B系の残りのワークフロー実装
 2. C系のワークフロー実装
 3. 統合テストの整備
 4. パフォーマンス最適化
+5. **WorkflowTriggerのschedule機能実装（将来）**
+   - Cron式サポート
+   - インターバル実行サポート
 
 ## 成功基準
 
