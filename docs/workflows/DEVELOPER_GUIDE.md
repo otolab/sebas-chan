@@ -18,7 +18,10 @@ export const myWorkflow: WorkflowDefinition = {
     eventTypes: ['USER_INPUT']
   },
   executor: async (event, context, emitter) => {
-    context.logger.info('ワークフロー実行開始', { eventType: event.type });
+    context.recorder.record(RecordType.INFO, {
+      message: 'ワークフロー実行開始',
+      eventType: event.type
+    });
 
     // 処理を実装
     const result = await processInput(event.payload);
@@ -102,7 +105,7 @@ executor: async (event, context, emitter) => {
 
   } catch (error) {
     // 5. エラーハンドリング
-    context.logger.error('処理エラー', { error });
+    context.recorder.record(RecordType.ERROR, { error });
     return {
       success: false,
       context,
@@ -203,10 +206,16 @@ executor: async (event, context, emitter) => {
   } catch (error) {
     // エラーの種類に応じた処理
     if (error instanceof ValidationError) {
-      context.logger.warn('Validation failed', { error });
+      context.recorder.record(RecordType.WARN, {
+        message: 'Validation failed',
+        error
+      });
       // リトライ不要
     } else if (error instanceof NetworkError) {
-      context.logger.error('Network error', { error });
+      context.recorder.record(RecordType.ERROR, {
+        message: 'Network error',
+        error
+      });
       // リトライ可能
     }
 
@@ -223,19 +232,21 @@ executor: async (event, context, emitter) => {
 
 ```typescript
 // 構造化ログを使用（timestamp、workflowNameは自動挿入）
-context.logger.info('処理開始', {
+context.recorder.record(RecordType.INFO, {
+  step: 'processing_start',
   eventType: event.type
   // timestamp、workflowNameはロガーが自動的に追加
 });
 
 // 重要なステップをログ
-context.logger.debug('Issue作成', {
+context.recorder.record(RecordType.DEBUG, {
+  operation: 'createIssue',
   issueId: issue.id,
   title: issue.title
 });
 
 // エラーは詳細に記録
-context.logger.error('処理失敗', {
+context.recorder.record(RecordType.ERROR, {
   error: error.message,
   stack: error.stack,
   eventPayload: event.payload
@@ -292,26 +303,29 @@ describe('MyWorkflow', () => {
   - 各モジュールのテストケース詳細
   - エッジケースとエラーハンドリングのテスト
 
-## 6. ログと検証可能性
+## 6. 記録と検証可能性
 
 ### 6.1 ログの本質的な役割
 
-**context.loggerは単なるデバッグツールではありません。** これはワークフローシステムの検証可能性を保証する重要な機能です。
+**context.recorderは単なるデバッグツールではありません。** これはワークフローシステムの検証可能性を保証する重要な機能です。
 
 ```typescript
 // すべての重要な処理ステップを記録
 // これらのログはDBに永続化され、Webコンソールから検証可能
-context.logger.log('処理開始', {
+context.recorder.record(RecordType.INFO, {
+  step: 'processing_start',
   eventType: event.type,
   payload: event.payload
 });
 
-context.logger.log('Issue作成', {
+context.recorder.record(RecordType.DB_QUERY, {
+  operation: 'createIssue',
   issueId: result.issueId,
   title: result.title
 });
 
-context.logger.log('処理完了', {
+context.recorder.record(RecordType.OUTPUT, {
+  step: 'processing_complete',
   duration: Date.now() - startTime,
   success: true
 });
@@ -322,14 +336,16 @@ context.logger.log('処理完了', {
 ### 6.2 実行トレースの記録
 
 ```typescript
-// context.loggerを使って直接トレースを記録
-context.logger.log('ステップ開始: validation', {
+// context.recorderを使って直接トレースを記録
+context.recorder.record(RecordType.INFO, {
+  step: 'validation_start',
   input: event.payload
 });
 
 const validationResult = await validate(event.payload);
 
-context.logger.log('ステップ完了: validation', {
+context.recorder.record(RecordType.INFO, {
+  step: 'validation_complete',
   result: validationResult,
   duration: Date.now() - stepStart
 });
@@ -491,7 +507,8 @@ executor: async (event, context, emitter) => {
     password: '[REDACTED]'
   };
 
-  context.logger.info('Processing request', {
+  context.recorder.record(RecordType.INFO, {
+    message: 'Processing request',
     payload: sanitizedPayload
   });
 

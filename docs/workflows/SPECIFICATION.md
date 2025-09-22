@@ -151,8 +151,8 @@ interface WorkflowContextInterface {
   /** AIドライバーファクトリ */
   createDriver: DriverFactory;
 
-  /** ワークフローロガー */
-  logger: WorkflowLogger;
+  /** ワークフローレコーダー */
+  recorder: WorkflowRecorder;
 
   /** 実行時設定 */
   config?: WorkflowConfig;
