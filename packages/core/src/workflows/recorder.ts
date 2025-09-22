@@ -1,21 +1,21 @@
-// DBベースのログ記録システム
+// DBベースの記録システム
 // ファイルシステムへの依存を削除
 
 /**
- * 簡素化されたワークフローログエントリ
+ * ワークフロー実行記録エントリ
  */
-export interface WorkflowLog {
+export interface WorkflowRecord {
   executionId: string; // 実行ID（UUID）
   workflowName: string; // ワークフロー名
-  type: LogType; // ログタイプ
+  type: RecordType; // 記録タイプ
   timestamp: Date; // タイムスタンプ（自動生成）
-  data: unknown; // ログデータ
+  data: unknown; // 記録データ
 }
 
 /**
- * ログタイプ
+ * 記録タイプ
  */
-export enum LogType {
+export enum RecordType {
   INPUT = 'input',
   OUTPUT = 'output',
   ERROR = 'error',
@@ -32,15 +32,15 @@ export interface WorkflowRecorderOptions {
 }
 
 /**
- * 簡素化されたワークフローロガー
- * サブワークフロー機能なし、シンプルなログ記録のみ
+ * ワークフロー実行レコーダー
+ * 実行の全記録を保持し、後で検証可能にする
  */
 export class WorkflowRecorder {
   public readonly executionId: string;
   public readonly workflowName: string;
 
   private consoleOutput: boolean;
-  private recordBuffer: WorkflowLog[] = [];
+  private recordBuffer: WorkflowRecord[] = [];
 
   constructor(workflowName: string, options: WorkflowRecorderOptions = {}) {
     this.executionId = options.executionId || this.generateExecutionId();
@@ -55,8 +55,8 @@ export class WorkflowRecorder {
   /**
    * 実行記録を記録
    */
-  public record(type: LogType, data: unknown): void {
-    const entry: WorkflowLog = {
+  public record(type: RecordType, data: unknown): void {
+    const entry: WorkflowRecord = {
       executionId: this.executionId,
       workflowName: this.workflowName,
       type,
@@ -68,14 +68,14 @@ export class WorkflowRecorder {
     this.recordBuffer.push(entry);
 
     if (this.consoleOutput) {
-      console.log(this.formatLogEntry(entry));
+      console.log(this.formatRecord(entry));
     }
   }
 
   /**
-   * ログエントリをフォーマット
+   * 記録エントリをフォーマット
    */
-  private formatLogEntry(entry: WorkflowLog): string {
+  private formatRecord(entry: WorkflowRecord): string {
     const timestamp = entry.timestamp.toISOString();
     const dataStr =
       typeof entry.data === 'string' ? entry.data : JSON.stringify(entry.data, null, 2);
@@ -85,7 +85,7 @@ export class WorkflowRecorder {
   /**
    * バッファをクリア
    */
-  public clearBuffer(): WorkflowLog[] {
+  public clearBuffer(): WorkflowRecord[] {
     return this.recordBuffer.splice(0);
   }
 
@@ -93,14 +93,14 @@ export class WorkflowRecorder {
    * レコーダーを終了
    */
   public close(): void {
-    // DBベースのログではフラッシュ不要
+    // DBベースの記録ではフラッシュ不要
     this.recordBuffer = [];
   }
 
   /**
-   * ログレコードを取得（テスト用）
+   * 記録バッファを取得（テスト用）
    */
-  public getLogRecords(): WorkflowLog[] {
+  public getBuffer(): WorkflowRecord[] {
     return [...this.recordBuffer];
   }
 }

@@ -1,7 +1,7 @@
 import { Issue, Knowledge, Input, PondEntry } from '@sebas-chan/shared-types';
 import type { AgentEvent, AgentEventPayload } from './types.js';
 import type { AIDriver } from '@moduler-prompt/driver';
-import { WorkflowRecorder, LogType } from './workflows/recorder.js';
+import { WorkflowRecorder, RecordType } from './workflows/recorder.js';
 import { WorkflowRegistry } from './workflows/workflow-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface, DriverFactory } from './workflows/context.js';
@@ -31,23 +31,23 @@ class CoreAgent {
     event: Event,
     context: WorkflowContext,
   ): Promise<AgentOutput> {
-    context.recorder.record(LogType.INPUT, { event });
+    context.recorder.record(RecordType.INPUT, { event });
 
     try {
       const input = { type: event.type, data: event.data } as EventInput;
       const result = await this.processEventSync(input, context);
 
       if (result.ok) {
-        context.recorder.record(LogType.OUTPUT, result.output);
+        context.recorder.record(RecordType.OUTPUT, result.output);
       }
 
       if (result.error) {
-        context.recorder.record(LogType.ERROR, { error: result.error });
+        context.recorder.record(RecordType.ERROR, { error: result.error });
       }
 
       return result.output;
     } catch (error) {
-      context.recorder.record(LogType.ERROR, { error });
+      context.recorder.record(RecordType.ERROR, { error });
       throw error;
     }
   }

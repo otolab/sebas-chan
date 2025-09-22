@@ -14,7 +14,7 @@ export function createMockWorkflowRecorder(): WorkflowRecorder {
 
     // バッファ管理
     clearBuffer: vi.fn().mockReturnValue([]),
-    getRecordBuffer: vi.fn().mockReturnValue([]),
+    getBuffer: vi.fn().mockReturnValue([]),
 
     // クローズ
     close: vi.fn(),
