@@ -467,9 +467,115 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 10. セキュリティ考慮事項
+## 10. スケジューラーの使用
 
-### 10.1 入力検証
+### 10.1 基本的な使い方
+
+ワークフロー内でIssueに関連するタスクをスケジュールできます。
+
+```typescript
+executor: async (event, context, emitter) => {
+  const issue = await context.storage.createIssue({
+    title: '重要なタスク',
+    priority: 85
+  });
+
+  // リマインダーを設定
+  const schedule = await context.scheduler.schedule(
+    issue.id,
+    "3日後の朝9時",
+    'reminder',
+    { timezone: 'Asia/Tokyo' }
+  );
+
+  context.recorder.record(RecordType.INFO, {
+    message: 'リマインダー設定',
+    scheduleId: schedule.scheduleId,
+    nextRun: schedule.nextRun
+  });
+
+  return { success: true, context, output: { issue, schedule } };
+}
+```
+
+### 10.2 スケジュールイベントの処理
+
+SCHEDULE_TRIGGEREDイベントを処理するワークフローの例：
+
+```typescript
+export const handleScheduledTask: WorkflowDefinition = {
+  name: 'handle-scheduled-task',
+  description: 'スケジュールされたタスクを処理',
+  triggers: {
+    eventTypes: ['SCHEDULE_TRIGGERED']
+  },
+  executor: async (event, context, emitter) => {
+    const { issueId, action, originalRequest } = event.payload;
+    const issue = await context.storage.getIssue(issueId);
+
+    switch (action) {
+      case 'reminder':
+        // リマインダー通知を送信
+        await sendReminder(issue, originalRequest);
+        break;
+
+      case 'escalate':
+        // 優先度を上げる
+        await context.storage.updateIssue(issueId, {
+          priority: Math.min(100, issue.priority + 10)
+        });
+        emitter.emit({
+          type: 'HIGH_PRIORITY_DETECTED',
+          payload: { issueId, priority: issue.priority + 10 }
+        });
+        break;
+
+      case 'auto_close':
+        // 自動クローズ
+        await context.storage.updateIssue(issueId, {
+          status: 'closed',
+          closedAt: new Date()
+        });
+        // スケジュールも自動でキャンセルされる
+        await context.scheduler.cancelByIssue(issueId);
+        break;
+    }
+
+    return { success: true, context };
+  }
+};
+```
+
+### 10.3 重複防止とキャンセル
+
+```typescript
+executor: async (event, context, emitter) => {
+  const issueId = event.payload.issueId;
+
+  // 同じIssue内で同じdedupeKeyを使うと古いものは自動キャンセル
+  await context.scheduler.schedule(
+    issueId,
+    "毎日午後3時",
+    'check_progress',
+    {
+      dedupeKey: 'daily-check',  // Issue ID + dedupeKeyでユニーク判定
+      maxOccurrences: 7           // 最大7回まで
+    }
+  );
+  // 注: 異なるIssueでは同じdedupeKeyを使用可能
+
+  // Issue closeと連動して自動キャンセル
+  if (event.payload.action === 'close') {
+    await context.scheduler.cancelByIssue(issueId);
+  }
+
+  return { success: true, context };
+}
+```
+
+## 11. セキュリティ考慮事項
+
+### 11.1 入力検証
 
 ```typescript
 import { z } from 'zod';
@@ -496,7 +602,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 10.2 機密情報の扱い
+### 11.2 機密情報の扱い
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -516,7 +622,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 11. まとめ
+## 12. まとめ
 
 ワークフロー開発の重要なポイント：
 

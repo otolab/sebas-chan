@@ -20,7 +20,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@moduler-prompt/driver": "^0.1.2",
+    "@moduler-prompt/driver": "^0.2.0",
     "@moduler-prompt/utils": "^0.1.1",
     "@sebas-chan/core": "*",
     "@sebas-chan/db": "*",
