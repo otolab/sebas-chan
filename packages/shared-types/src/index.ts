@@ -10,6 +10,7 @@ export interface Issue {
   title: string;
   description: string; // 自然言語での詳細。ベクトル化の対象
   status: 'open' | 'closed';
+  priority?: 'high' | 'medium' | 'low'; // 優先度（オプショナル）
   labels: string[];
   updates: IssueUpdate[]; // 履歴
   relations: IssueRelation[]; // 他のIssueとの関係性
@@ -125,3 +126,4 @@ export interface LogDetail {
 export type * from './events.js';
 export type * from './workflow.js';
 export type * from './api.js';
+export type * from './workflow-scheduler.js';
