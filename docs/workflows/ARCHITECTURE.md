@@ -45,8 +45,9 @@ async function processUserInput(
     `category:${issue.category}`
   );
 
-  // ログ記録
-  context.logger.info('Issue created', {
+  // ログ記録（RecordTypeはimportが必要）
+  // import { RecordType } from '@sebas-chan/core';
+  context.recorder.record(RecordType.INFO, 'Issue created', {
     issueId: issue.id,
     relatedCount: relatedIssues.length
   });
@@ -204,10 +205,11 @@ packages/core/src/workflows/
 import { TestDriver, EchoDriver } from '@moduler-prompt/driver';
 
 // テスト用のドライバーファクトリ
+// TestDriverはstructuredOutputフィールドをサポート（スキーマ指定時）
 function createTestDriverFactory(responses: string[]): DriverFactory {
   return (capabilities) => {
     return new TestDriver({
-      responses,
+      responses, // JSON.stringify()された文字列を期待
       delay: 0
     });
   };
@@ -222,6 +224,8 @@ function createEchoDriverFactory(): DriverFactory {
 ### テスト例
 
 ```typescript
+import { WorkflowRecorder } from '@sebas-chan/core';
+
 describe('IngestInput Workflow', () => {
   let mockContext: WorkflowContext;
 
@@ -229,7 +233,7 @@ describe('IngestInput Workflow', () => {
     mockContext = {
       state: 'Initial state',
       storage: createMockStorage(),
-      logger: createMockLogger(),
+      recorder: new WorkflowRecorder('test'),
       createDriver: createTestDriverFactory(['test response']),
       metadata: {}
     };
@@ -276,8 +280,9 @@ const myWorkflow: WorkflowDefinition = {
       payload: result
     });
 
-    // ログ記録
-    context.logger.log(LogType.OUTPUT, { result });
+    // ログ記録（RecordTypeはimportが必要）
+    // import { RecordType } from '@sebas-chan/core';
+    context.recorder.record(RecordType.OUTPUT, { result });
 
     return { success: true, context, output: result };
   }

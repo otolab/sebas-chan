@@ -10,6 +10,7 @@
 
 ```typescript
 import type { WorkflowDefinition } from '@sebas-chan/core';
+import { RecordType } from '@sebas-chan/core';
 
 export const myWorkflow: WorkflowDefinition = {
   name: 'my-workflow',
@@ -179,6 +180,10 @@ const moduleContext = {
 };
 const compiled = compile(analysisModule, moduleContext);
 const response = await driver.query(compiled);
+
+// driver.queryはQueryResult型を返します
+// structuredOutputフィールドで構造化データ取得可能
+const parsedResponse = response.structuredOutput || JSON.parse(response.content);
 ```
 
 詳細な使い方については [Moduler Prompt利用ガイド](MODULER_PROMPT_GUIDE.md) を参照してください。
