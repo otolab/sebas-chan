@@ -143,7 +143,7 @@ describe('Workflow Chain Integration Tests', () => {
         type: 'ISSUE_CREATED',
         timestamp: new Date(),
         payload: {
-          issue: mockContext.storage.createIssue.mock.results[0]?.value || {
+          issue: {
             id: 'issue-456',
             title: 'Critical Error',
             description: 'Critical system error',
