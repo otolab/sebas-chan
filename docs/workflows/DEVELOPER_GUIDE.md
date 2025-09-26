@@ -188,6 +188,73 @@ const parsedResponse = response.structuredOutput || JSON.parse(response.content)
 
 詳細な使い方については [Moduler Prompt利用ガイド](MODULER_PROMPT_GUIDE.md) を参照してください。
 
+### 3.5 AIドライバーの選択と利用
+
+sebas-chanでは、moduler-promptのAIServiceを使用してドライバーを管理しています。
+
+#### AIServiceによるドライバー管理
+
+ワークフローのコンテキストは内部でAIServiceを使用してドライバーを選択・作成します：
+
+```typescript
+// context.createDriverの内部実装
+const driver = await context.createDriver({
+  requiredCapabilities: ['structured'],    // 必須の能力
+  preferredCapabilities: ['japanese', 'fast'] // 優先する能力
+});
+```
+
+#### DriverCapabilityの種類
+
+以下の能力（capability）が利用可能です：
+
+- `'structured'` - 構造化出力対応（JSON形式での応答）
+- `'fast'` - 高速応答
+- `'local'` - ローカル実行可能
+- `'japanese'` - 日本語特化
+- `'reasoning'` - 推論・思考特化
+- `'large-context'` - 大規模コンテキスト対応
+- `'streaming'` - ストリーミング応答対応
+- `'vision'` - 画像認識可能
+
+#### 実装例
+
+```typescript
+// 構造化出力が必要な場合
+const driver = await context.createDriver({
+  requiredCapabilities: ['structured'],
+  preferredCapabilities: ['fast', 'local']
+});
+
+// スキーマを定義してプロンプトモジュールを作成
+const promptModule = {
+  instructions: ['データを分析してJSON形式で返してください'],
+  output: {
+    schema: {
+      type: 'object',
+      properties: {
+        analysis: { type: 'string' },
+        confidence: { type: 'number' },
+        suggestions: {
+          type: 'array',
+          items: { type: 'string' }
+        }
+      },
+      required: ['analysis', 'confidence']
+    }
+  }
+};
+
+const compiled = compile(promptModule);
+const result = await driver.query(compiled);
+
+// structuredOutputが利用可能な場合は型安全に取得
+if (result.structuredOutput) {
+  const { analysis, confidence, suggestions } = result.structuredOutput;
+  // 型安全な処理
+}
+```
+
 ## 4. ベストプラクティス
 
 ### 4.1 エラーハンドリング

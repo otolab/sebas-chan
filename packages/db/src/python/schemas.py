@@ -20,10 +20,13 @@ def get_issues_schema(vector_dimension: int = 256) -> pa.Schema:
         pa.field("title", pa.string()),
         pa.field("description", pa.string()),
         pa.field("status", pa.string()),
+        pa.field("priority", pa.int32()),  # 優先度（0-100）
         pa.field("labels", pa.list_(pa.string())),
         pa.field("updates", pa.string()),  # JSON文字列として保存
         pa.field("relations", pa.string()),  # JSON文字列として保存
         pa.field("source_input_ids", pa.list_(pa.string())),
+        pa.field("created_at", pa.timestamp('ms')),
+        pa.field("updated_at", pa.timestamp('ms')),
         pa.field("vector", pa.list_(pa.float32(), vector_dimension))  # ベクトル
     ])
 
@@ -105,15 +108,34 @@ def get_knowledge_schema(vector_dimension: int = 256) -> pa.Schema:
     ])
 
 
+def get_flows_schema() -> pa.Schema:
+    """Flowsテーブルのスキーマを返す
+
+    Returns:
+        Flowsテーブルのスキーマ
+    """
+    return pa.schema([
+        pa.field("id", pa.string()),
+        pa.field("title", pa.string()),
+        pa.field("description", pa.string()),
+        pa.field("status", pa.string()),
+        pa.field("priority_score", pa.float32()),  # 0.0-1.0
+        pa.field("issue_ids", pa.list_(pa.string())),
+        pa.field("created_at", pa.timestamp('ms')),
+        pa.field("updated_at", pa.timestamp('ms'))
+    ])
+
+
 # テーブル名の定義
 ISSUES_TABLE = "issues"
 STATE_TABLE = "state"
 POND_TABLE = "pond"
 SCHEDULES_TABLE = "schedules"
 KNOWLEDGE_TABLE = "knowledge"
+FLOWS_TABLE = "flows"
 
 # 全テーブルのリスト
-ALL_TABLES = [ISSUES_TABLE, STATE_TABLE, POND_TABLE, SCHEDULES_TABLE, KNOWLEDGE_TABLE]
+ALL_TABLES = [ISSUES_TABLE, STATE_TABLE, POND_TABLE, SCHEDULES_TABLE, KNOWLEDGE_TABLE, FLOWS_TABLE]
 
 
 def validate_issue(issue_data: dict) -> None:

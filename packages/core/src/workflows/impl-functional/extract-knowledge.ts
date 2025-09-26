@@ -2,7 +2,7 @@ import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
-import type { Knowledge, KnowledgeSource } from '@sebas-chan/shared-types';
+import type { Knowledge, KnowledgeSource, Issue } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
 /**
@@ -106,7 +106,7 @@ async function executeExtractKnowledge(
       if (issue) {
         content = `Issue: ${issue.title}\n${issue.description}`;
         // 解決済みIssueの場合は最新の更新も含める
-        if (issue.status === 'resolved' && issue.updates.length > 0) {
+        if (issue.status === 'closed' && issue.updates.length > 0) {
           const resolution = issue.updates[issue.updates.length - 1];
           content += `\n\n解決方法:\n${resolution.content}`;
         }
@@ -215,11 +215,12 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
           upvotes: Math.round(confidence * 10), // 初期評価は信頼度に基づく
           downvotes: 0,
         },
-        sources: [{
-          type: sourceType as any,
-          id: sourceId,
-          timestamp: new Date(),
-        }],
+        sources: [sourceType === 'issue' ?
+          { type: 'issue' as const, issueId: sourceId } :
+          sourceType === 'pond' ?
+          { type: 'pond' as const, pondEntryId: sourceId } :
+          { type: 'user_direct' as const }
+        ],
       };
 
       const createdKnowledge = await storage.createKnowledge(newKnowledge);
@@ -250,11 +251,11 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
         },
         sources: [
           ...targetKnowledge.sources,
-          {
-            type: sourceType as any,
-            id: sourceId,
-            timestamp: new Date(),
-          },
+          sourceType === 'issue' ?
+            { type: 'issue' as const, issueId: sourceId } :
+            sourceType === 'pond' ?
+            { type: 'pond' as const, pondEntryId: sourceId } :
+            { type: 'user_direct' as const }
         ],
       });
     }

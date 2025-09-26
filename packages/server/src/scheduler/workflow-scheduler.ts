@@ -9,7 +9,6 @@ import {
   ScheduleAction,
 } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
-import type { JSONSchema } from '@moduler-prompt/core';
 import { EventEmitter } from 'events';
 import { DBClient } from '@sebas-chan/db';
 import type { DriverFactory } from '@sebas-chan/core';
@@ -115,11 +114,11 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
   ): Promise<ScheduleInterpretation> {
     // driverFactoryが適切なドライバーを選択
     const driver = await this.driverFactory({
-      requiredCapabilities: ['structured_output'],
+      requiredCapabilities: ['structured'],
       preferredCapabilities: ['japanese', 'local_execution']
     });
 
-    const schema: JSONSchema = {
+    const schema = {
       type: 'object',
       properties: {
         next: {
@@ -136,7 +135,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
         }
       },
       required: ['next', 'interpretation']
-    };
+    } as const;
 
     const promptModule = {
       instructions: [`
@@ -154,15 +153,17 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 - "毎朝9時" → 次の9:00、パターン: "毎朝9時"
 - "来週の月曜日" → 次の月曜日
 `],
-      schema
+      output: {
+        schema
+      }
     };
 
     const compiled = compile(promptModule);
-    const result = await driver.complete({
-      prompt: compiled.instructions.join('\n'),
-      schema: schema,
-      options: { temperature: 0.2 }
-    });
+    const result = await driver.query(compiled, { temperature: 0.2 });
+
+    if (result.structuredOutput) {
+      return result.structuredOutput as ScheduleInterpretation;
+    }
     return JSON.parse(result.content) as ScheduleInterpretation;
   }
 

@@ -2,12 +2,30 @@ import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
+import type { IssueUpdate } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
 // リクエストの型定義
 interface UserRequest {
   id?: string;
   content?: string;
+}
+
+// 分析結果の型定義
+interface AnalysisResult {
+  interpretation: string;
+  requestType: string;
+  events?: Array<{
+    type: string;
+    reason: string;
+    payload: Record<string, unknown>;
+  }>;
+  actions?: Array<{
+    type: string;
+    target: string;
+    details: string;
+  }>;
+  response: string;
 }
 
 /**
@@ -253,12 +271,12 @@ JSONで応答してください：
     const compiledPrompt = compile(promptModule);
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
-    let analysis;
+    let analysis: AnalysisResult;
     if (result.structuredOutput) {
-      analysis = result.structuredOutput;
+      analysis = result.structuredOutput as AnalysisResult;
     } else {
       try {
-        analysis = JSON.parse(result.content);
+        analysis = JSON.parse(result.content) as AnalysisResult;
       } catch {
         // JSON解析失敗時のフォールバック
         analysis = {

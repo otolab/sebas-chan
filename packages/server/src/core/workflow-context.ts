@@ -44,7 +44,11 @@ export class EngineWorkflowStorage implements WorkflowStorageInterface {
   }
 
   async createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue> {
-    return this.engine.createIssue(issue);
+    return this.engine.createIssue({
+      ...issue,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
   async updateIssue(id: string, update: Partial<Issue>): Promise<Issue> {

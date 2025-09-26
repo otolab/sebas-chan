@@ -3,6 +3,7 @@ import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '..
 import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
+import { PRIORITY } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
 
 /**
@@ -180,18 +181,14 @@ JSONで応答してください：
     const timestamp = new Date();
     
     // ステータス変更の判定
-    if (analysis.shouldClose && issue.status !== 'closed' && issue.status !== 'resolved') {
-      updates.status = 'resolved';
+    if (analysis.shouldClose && issue.status !== 'closed') {
+      updates.status = 'closed';
       updates.updates = [
         ...issue.updates,
         {
           timestamp,
           content: `自動解決判定: ${analysis.closeReason || '条件を満たしたため解決'}`,
           author: 'ai' as const,
-          statusChange: {
-            from: issue.status,
-            to: 'resolved' as const,
-          },
         },
       ];
       
@@ -201,7 +198,7 @@ JSONで応答してください：
         payload: {
           issueId,
           from: issue.status,
-          to: 'resolved',
+          to: 'closed',
           reason: analysis.closeReason,
           issue: { ...issue, ...updates },
         },
@@ -209,7 +206,8 @@ JSONで応答してください：
     }
     
     // 優先度の更新
-    if (analysis.suggestedPriority && Math.abs((issue.priority || 50) - analysis.suggestedPriority) > 10) {
+    const currentPriorityScore = issue.priority || PRIORITY.LOW;
+    if (analysis.suggestedPriority && Math.abs(currentPriorityScore - analysis.suggestedPriority) > 10) {
       updates.priority = analysis.suggestedPriority;
       
       if (!updates.updates) {
@@ -217,12 +215,8 @@ JSONで応答してください：
       }
       updates.updates.push({
         timestamp,
-        content: `優先度を${issue.priority || 50}から${analysis.suggestedPriority}に変更`,
+        content: `優先度を${currentPriorityScore}から${updates.priority}に変更`,
         author: 'ai' as const,
-        priorityChange: {
-          from: issue.priority,
-          to: analysis.suggestedPriority,
-        },
       });
     }
     
@@ -230,7 +224,7 @@ JSONで応答してください：
     if (analysis.shouldMergeWith && analysis.shouldMergeWith.length > 0) {
       updates.relations = [
         ...(issue.relations || []),
-        ...analysis.shouldMergeWith.map(targetId => ({
+        ...analysis.shouldMergeWith.map((targetId: string) => ({
           type: 'duplicate_of' as const,
           targetIssueId: targetId,
         })),

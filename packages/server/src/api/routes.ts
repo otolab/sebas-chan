@@ -70,6 +70,8 @@ export function createAPIRoutes(engine: CoreEngine): Router {
         updates: [],
         relations: [],
         sourceInputIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       res.status(201).json({

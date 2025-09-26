@@ -42,6 +42,8 @@ export function createFlowsRouter(coreEngine: CoreEngine): Router {
         status: 'backlog',
         priorityScore: 0.5,
         issueIds: dto.issueIds || [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       res.status(201).json({

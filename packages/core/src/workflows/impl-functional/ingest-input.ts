@@ -1,7 +1,9 @@
-import type { AgentEvent } from '../../types.js';
+import type { AgentEvent, DataArrivedPayload } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
+import type { IssueUpdate } from '@sebas-chan/shared-types';
+import { PRIORITY } from '@sebas-chan/shared-types';
 
 /**
  * 入力内容から影響分析が必要かを判定
@@ -104,10 +106,10 @@ function determineLabels(source: string, analysisResult: string): string[] {
 function determinePriority(analysisResult: string): number | undefined {
   const severity = determineSeverity(analysisResult);
   switch (severity) {
-    case 'critical': return 90;
-    case 'high': return 70;
-    case 'medium': return 50;
-    case 'low': return 30;
+    case 'critical': return PRIORITY.CRITICAL;
+    case 'high': return PRIORITY.HIGH;
+    case 'medium': return PRIORITY.MEDIUM;
+    case 'low': return PRIORITY.LOW;
     default: return undefined;
   }
 }
@@ -133,7 +135,7 @@ async function executeIngestInput(
     timestamp: string;
   }
   
-  const payload = event.payload as DataArrivedPayload;
+  const payload = event.payload as unknown as DataArrivedPayload;
 
   try {
     // 1. すでにPondに保存されているので、そのIDを使用
@@ -238,19 +240,15 @@ JSONで以下の形式で応答してください：
           const update: IssueUpdate = {
             timestamp: new Date(),
             content: analysisResult.updateContent || `関連データ受信:\n${payload.content.substring(0, 500)}`,
-            author: 'system' as const,
-            metadata: {
-              source: payload.source,
-              pondEntryId: pondEntryId,
-            },
+            author: 'ai' as const,
           };
           
           await storage.updateIssue(issueId, {
             updates: [...issue.updates, update],
             sourceInputIds: [...(issue.sourceInputIds || []), pondEntryId],
             // 優先度の更新が必要な場合
-            ...(analysisResult.severity === 'critical' && (!issue.priority || issue.priority < 90) 
-              ? { priority: 90 } 
+            ...(analysisResult.severity === 'critical' && issue.priority !== PRIORITY.CRITICAL
+              ? { priority: PRIORITY.CRITICAL }
               : {}),
           });
           
@@ -263,7 +261,7 @@ JSONで以下の形式で応答してください：
               issueId: issueId,
               updates: {
                 before: { priority: issue.priority },
-                after: { priority: analysisResult.severity === 'critical' ? 90 : issue.priority },
+                after: { priority: analysisResult.severity === 'critical' ? PRIORITY.CRITICAL : issue.priority },
                 changedFields: ['updates', 'sourceInputIds'],
               },
               updatedBy: 'IngestInput',
@@ -277,17 +275,16 @@ JSONで以下の形式で応答してください：
     if (analysisResult.needsNewIssue && (!analysisResult.relatedIssueIds || analysisResult.relatedIssueIds.length === 0)) {
       const issueId = `issue-${Date.now()}`;
       const newIssue = {
-        id: issueId,
         title: analysisResult.newIssueTitle || extractIssueTitle(payload.content),
         description: payload.content,
         status: 'open' as const,
         labels: analysisResult.labels || determineLabels(payload.source, payload.content),
         priority: determinePriority(analysisResult.severity || 'medium'),
         sourceInputIds: [pondEntryId],
-        createdAt: new Date(),
-        updatedAt: new Date(),
         updates: [],
         relations: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
       
       const createdIssue = await storage.createIssue(newIssue);

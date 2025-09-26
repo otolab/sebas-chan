@@ -131,6 +131,8 @@ Available commands:
         updates: [],
         relations: [],
         sourceInputIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
       console.log(`Created issue: ${issue.id}`);
     } catch (error) {
@@ -151,6 +153,8 @@ Available commands:
         status: 'backlog',
         priorityScore: 0.5,
         issueIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
       console.log(`Created flow: ${flow.id}`);
     } catch (error) {

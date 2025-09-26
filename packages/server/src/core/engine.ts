@@ -25,13 +25,9 @@ import { WorkflowQueue } from './workflow-queue.js';
 import { registerDefaultWorkflows, WorkflowRegistry } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 import { createWorkflowContext, createWorkflowEventEmitter } from './workflow-context.js';
-import {
-  DriverRegistry,
-  registerDriverFactories,
-  type DriverSelectionCriteria,
-} from '@moduler-prompt/utils';
+import type { DriverSelectionCriteria } from '@sebas-chan/shared-types';
 import type { DriverFactory } from '@sebas-chan/core';
-import * as Drivers from '@moduler-prompt/driver';
+import { AIService, type ApplicationConfig, type DriverCapability } from '@moduler-prompt/driver';
 
 export interface EngineStatus {
   isRunning: boolean;
@@ -48,7 +44,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private isRunning: boolean = false;
   private dbStatus: 'connecting' | 'ready' | 'error' | 'disconnected' = 'disconnected';
   private lastError?: string;
-  private driverRegistry: DriverRegistry;
+  private aiService: AIService;
   private workflowQueue: WorkflowQueue;
   private workflowRegistry: WorkflowRegistry;
   private workflowResolver: WorkflowResolver;
@@ -66,18 +62,25 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     // CoreAgentが提供された場合はそれを使用
     this.coreAgent = coreAgent || null;
 
-    // DriverRegistryを初期化
-    this.driverRegistry = new DriverRegistry();
-    registerDriverFactories(this.driverRegistry, Drivers);
+    // AIServiceを初期化（デフォルト設定）
+    const aiServiceConfig: ApplicationConfig = {
+      models: [
+        {
+          model: 'test-driver',
+          provider: 'test',
+          capabilities: ['structured', 'fast', 'local'],
+        },
+      ],
+    };
+    this.aiService = new AIService(aiServiceConfig);
   }
 
   async initialize(): Promise<void> {
     logger.info('Initializing Core Engine...');
 
     try {
-      // DriverRegistryの設定をロード（設定ファイルが存在する場合）
-      // TODO: 設定ファイルパスを環境変数または設定から取得
-      // 例: await this.driverRegistry.loadConfig('./drivers.yaml');
+      // AIServiceの設定は現在コンストラクタで初期化済み
+      // TODO: 設定ファイルパスを環境変数または設定から取得して動的に設定
 
       // DBクライアントを初期化
       this.dbStatus = 'connecting';
@@ -224,11 +227,35 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         this.stateManager,
         this.dbClient,
         (async (criteria: DriverSelectionCriteria) => {
-          const result = this.driverRegistry.selectDriver(criteria);
-          if (!result) {
+          // DriverSelectionCriteriaをDriverCapabilityに変換
+          const capabilities: DriverCapability[] = [];
+
+          if (criteria.requiredCapabilities?.includes('structured')) {
+            capabilities.push('structured');
+          }
+          if (criteria.requiredCapabilities?.includes('fast')) {
+            capabilities.push('fast');
+          }
+          if (criteria.preferredCapabilities?.includes('japanese')) {
+            capabilities.push('japanese');
+          }
+          if (criteria.preferredCapabilities?.includes('local_execution')) {
+            capabilities.push('local');
+          }
+
+          const driver = await this.aiService.createDriverFromCapabilities(
+            capabilities,
+            {
+              preferLocal: criteria.preferredCapabilities?.includes('local_execution'),
+              lenient: true, // 条件を満たさない場合でも最適なドライバを選択
+            }
+          );
+
+          if (!driver) {
             throw new Error('No suitable driver found for the given criteria');
           }
-          return await this.driverRegistry.createDriver(result.driver);
+
+          return driver;
         }) as DriverFactory,
         workflowRecorder
       );

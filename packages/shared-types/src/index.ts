@@ -5,16 +5,31 @@ export interface Input {
   timestamp: Date;
 }
 
+/**
+ * 優先度定数
+ */
+export const PRIORITY = {
+  CRITICAL: 90,
+  HIGH: 70,
+  MEDIUM: 50,
+  LOW: 30,
+  NONE: 10,
+} as const;
+
+export type PriorityValue = typeof PRIORITY[keyof typeof PRIORITY];
+
 export interface Issue {
   id: string;
   title: string;
   description: string; // 自然言語での詳細。ベクトル化の対象
   status: 'open' | 'closed';
-  priority?: 'high' | 'medium' | 'low'; // 優先度（オプショナル）
+  priority?: number; // 優先度（0-100、オプショナル）
   labels: string[];
   updates: IssueUpdate[]; // 履歴
   relations: IssueRelation[]; // 他のIssueとの関係性
   sourceInputIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IssueUpdate {
@@ -47,6 +62,8 @@ export interface Flow {
     | 'archived';
   priorityScore: number; // 0.0 ~ 1.0 AIが動的に評価
   issueIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Knowledge {
