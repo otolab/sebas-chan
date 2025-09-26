@@ -16,7 +16,7 @@ export const PRIORITY = {
   NONE: 10,
 } as const;
 
-export type PriorityValue = typeof PRIORITY[keyof typeof PRIORITY];
+export type PriorityValue = (typeof PRIORITY)[keyof typeof PRIORITY];
 
 export interface Issue {
   id: string;

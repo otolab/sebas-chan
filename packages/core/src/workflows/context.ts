@@ -1,4 +1,9 @@
-import type { Issue, Knowledge, PondEntry, DriverSelectionCriteria } from '@sebas-chan/shared-types';
+import type {
+  Issue,
+  Knowledge,
+  PondEntry,
+  DriverSelectionCriteria,
+} from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
 import type { WorkflowRecorder } from './recorder.js';
 
