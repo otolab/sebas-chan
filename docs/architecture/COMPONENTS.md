@@ -64,18 +64,14 @@ class CoreAgent {
 
 ### WorkflowContext
 ワークフローからDB操作を行うための統一インターフェース
-```typescript
-interface WorkflowContext {
-  storage: {
-    createIssue(data: IssueData): Promise<Issue>;
-    updateIssue(id: string, data: Partial<Issue>): Promise<Issue>;
-    searchPond(query: string): Promise<PondItem[]>;
-    createKnowledge(data: KnowledgeData): Promise<Knowledge>;
-  };
-  logger: Logger;
-  state: StateDocument;
-}
-```
+
+WorkflowContextInterfaceの詳細定義については[ワークフロー技術仕様書](../workflows/SPECIFICATION.md#workflowcontext)を参照してください。
+
+主要なコンポーネント：
+- `storage` - データベース操作インターフェース（Issue、Pond、Knowledge管理）
+- `recorder` - ワークフロー実行記録
+- `createDriver` - AIドライバーファクトリ
+- `state` - システム状態
 
 ## DB Bridge（@sebas-chan/db）
 

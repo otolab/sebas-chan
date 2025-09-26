@@ -52,27 +52,15 @@ triggers: {
 
 ワークフローは`context`を通じてシステムリソースにアクセスします。
 
-```typescript
-interface WorkflowContextInterface {
-  /** システム状態（読み取り専用の文字列） */
-  state: string;
+WorkflowContextInterfaceの詳細定義については[ワークフロー技術仕様書](./SPECIFICATION.md#workflowcontext)を参照してください。
 
-  /** データベースアクセス */
-  storage: WorkflowStorageInterface;
-
-  /** AI処理能力 */
-  createDriver: DriverFactory;
-
-  /** 実行記録 */
-  recorder: WorkflowRecorder;
-
-  /** 設定値 */
-  config?: WorkflowConfig;
-
-  /** 実行時情報 */
-  metadata?: Record<string, unknown>;
-}
-```
+主要なプロパティ：
+- `state: string` - システム状態（読み取り専用の文字列）
+- `storage: WorkflowStorageInterface` - データベースアクセス
+- `createDriver: DriverFactory` - AI処理能力
+- `recorder: WorkflowRecorder` - 実行記録
+- `config?: WorkflowConfig` - 設定値
+- `metadata?: Record<string, unknown>` - 実行時情報
 
 ## 3. データストレージへのアクセス
 

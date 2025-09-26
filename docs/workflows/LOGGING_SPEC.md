@@ -60,19 +60,14 @@ interface WorkflowRecorder {
 ```
 
 ### WorkflowContextInterface
-```typescript
-interface WorkflowContextInterface {
-  state: string;
-  storage: WorkflowStorageInterface;
-  createDriver: DriverFactory;
 
-  // ワークフロー記録システム
-  recorder: WorkflowRecorder;
+WorkflowContextInterfaceの詳細定義については[ワークフロー技術仕様書](./SPECIFICATION.md#workflowcontext)を参照してください。
 
-  config?: WorkflowConfig;
-  metadata?: Record<string, unknown>;
-}
-```
+主要なプロパティ：
+- `recorder: WorkflowRecorder` - ワークフロー記録システム
+- `storage: WorkflowStorageInterface` - データストレージアクセス
+- `createDriver: DriverFactory` - AIドライバーファクトリ
+- その他のプロパティは仕様書を参照
 
 ## 記録の流れ
 

@@ -97,13 +97,8 @@ sebas-chanシステムにおいて、CoreEngineとCoreAgentは明確に異なる
 ```typescript
 // CoreEngineがCoreAgentに提供するWorkflowContext
 // packages/core/src/workflows/context.ts
-interface WorkflowContextInterface {
-  state: string;                    // システムの現在状態
-  storage: WorkflowStorage;         // DB操作インターフェース
-  logger: WorkflowLogger;          // ログ記録
-  createDriver: DriverFactory;      // AIドライバーファクトリ
-  metadata?: Record<string, any>;  // 実行時メタデータ
-}
+// WorkflowContextInterfaceの詳細定義については
+// ワークフロー技術仕様書を参照: ../workflows/SPECIFICATION.md#workflowcontext
 
 // ワークフロー定義
 // packages/core/src/workflows/workflow-types.ts

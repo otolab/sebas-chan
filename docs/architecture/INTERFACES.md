@@ -194,7 +194,7 @@ interface EventQueue {
 
 ### ワークフロー実行インターフェース
 
-> **注**: 最新の仕様については[ワークフロー技術仕様書](workflows/SPECIFICATION.md)を参照してください。
+> **注**: 最新の仕様については[ワークフロー技術仕様書](../workflows/SPECIFICATION.md)を参照してください。
 
 ```typescript
 // ワークフロー定義
