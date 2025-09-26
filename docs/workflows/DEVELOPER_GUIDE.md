@@ -378,9 +378,103 @@ describe('MyWorkflow', () => {
   - 各モジュールのテストケース詳細
   - エッジケースとエラーハンドリングのテスト
 
-## 6. 記録と検証可能性
+## 6. WorkflowRegistryの使用方法
 
-### 6.1 ログの本質的な役割
+### CoreEngineにおけるワークフロー登録
+
+CoreEngineは独立したWorkflowRegistryを持っており、CoreAgentのレジストリとは別管理されています。
+
+#### 重要な設計ポイント
+
+1. **CoreEngineのWorkflowRegistry**: CoreEngineインスタンスが独自のレジストリを保持
+2. **CoreAgentのWorkflowRegistry**: CoreAgent内部で使用される別のレジストリ
+3. **ワークフロー解決**: CoreEngineがイベントを受け取った際、自身のレジストリからワークフローを解決
+
+#### テストでの正しい実装パターン
+
+```typescript
+// ❌ 間違い: CoreAgentのレジストリに登録しても動作しない
+mockCoreAgent.getWorkflowRegistry().register(workflow);
+
+// ✅ 正解: CoreEngineのレジストリに直接登録
+// @ts-ignore - private propertyにアクセス
+engine.workflowRegistry.register(testWorkflow);
+```
+
+#### 実装例（Integration Test）
+
+```typescript
+describe('Integration Test', () => {
+  let engine: CoreEngine;
+
+  beforeEach(() => {
+    // CoreAgentをモックまたは注入
+    const mockCoreAgent = {
+      executeWorkflow: vi.fn().mockResolvedValue({ success: true }),
+      // ...
+    };
+
+    engine = new CoreEngine(mockCoreAgent);
+  });
+
+  it('should process events with registered workflow', async () => {
+    // ワークフローの定義
+    const testWorkflow = {
+      name: 'test-workflow',
+      description: 'Test workflow',
+      triggers: { eventTypes: ['INGEST_INPUT'] },
+      executor: vi.fn().mockResolvedValue({
+        success: true,
+        context: { state: {} },
+        output: {}
+      })
+    };
+
+    // CoreEngineのレジストリに登録
+    // @ts-ignore - privateプロパティへのアクセス
+    engine.workflowRegistry.register(testWorkflow);
+
+    await engine.start();
+
+    // イベント発生（INGEST_INPUTイベントが生成される）
+    await engine.createInput({
+      source: 'test',
+      content: 'Test content',
+      timestamp: new Date()
+    });
+
+    // ワークフローが実行されることを確認
+    await vi.waitFor(() => {
+      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+    });
+  });
+});
+```
+
+#### プロダクションコードでの登録
+
+プロダクションコードでは、CoreEngineの初期化時にデフォルトワークフローが自動登録されます：
+
+```typescript
+// CoreEngine内部での自動登録
+private registerDefaultWorkflows(): void {
+  // 基本ワークフロー（A-0〜A-3）の登録
+  this.workflowRegistry.register(ingestInputWorkflow);
+  this.workflowRegistry.register(processUserRequestWorkflow);
+  this.workflowRegistry.register(analyzeIssueImpactWorkflow);
+  this.workflowRegistry.register(extractKnowledgeWorkflow);
+}
+```
+
+#### 注意事項
+
+1. **イベントタイプの一致**: `createInput()`は`INGEST_INPUT`イベントを発生させるため、ワークフローのトリガーも`INGEST_INPUT`に設定する必要があります
+2. **タイミング**: ワークフローは`engine.start()`を呼ぶ前に登録する必要があります
+3. **プライベートアクセス**: テストでは`@ts-ignore`を使用してプライベートプロパティにアクセスする必要があります
+
+## 7. 記録と検証可能性
+
+### 7.1 ログの本質的な役割
 
 **context.recorderは単なるデバッグツールではありません。** これはワークフローシステムの検証可能性を保証する重要な機能です。
 
@@ -426,9 +520,9 @@ context.recorder.record(RecordType.INFO, {
 });
 ```
 
-## 7. よくあるパターン
+## 8. よくあるパターン
 
-### 7.1 チェーンワークフロー
+### 8.1 チェーンワークフロー
 
 ```typescript
 // 最初のワークフロー
@@ -448,7 +542,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 7.2 条件分岐
+### 8.2 条件分岐
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -471,7 +565,7 @@ executor: async (event, context, emitter) => {
 ```
 
 
-## 8. 一般的な問題と対処法
+## 9. 一般的な問題と対処法
 
 ### 問題: ワークフローがトリガーされない
 
@@ -517,13 +611,13 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 9. パフォーマンス最適化
+## 10. パフォーマンス最適化
 
-### 9.1 キャッシュについて
+### 10.1 キャッシュについて
 
 ワークフローはstatelessであるべきなので、現時点ではキャッシュ機能は実装しません。将来的にシステムレベルでのキャッシュ機構を導入する可能性がありますが、個別のワークフロー内ではキャッシュを保持しないようにしてください。
 
-### 9.2 並列処理
+### 10.2 並列処理
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -542,9 +636,9 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 10. スケジューラーの使用
+## 11. スケジューラーの使用
 
-### 10.1 基本的な使い方
+### 11.1 基本的な使い方
 
 ワークフロー内でIssueに関連するタスクをスケジュールできます。
 
@@ -578,7 +672,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 10.2 スケジュールイベントの処理
+### 11.2 スケジュールイベントの処理
 
 SCHEDULE_TRIGGEREDイベントを処理するワークフローの例：
 
@@ -626,7 +720,7 @@ export const handleScheduledTask: WorkflowDefinition = {
 };
 ```
 
-### 10.3 重複防止とキャンセル
+### 11.3 重複防止とキャンセル
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -653,9 +747,9 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 11. セキュリティ考慮事項
+## 12. セキュリティ考慮事項
 
-### 11.1 入力検証
+### 12.1 入力検証
 
 ```typescript
 import { z } from 'zod';
@@ -682,7 +776,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 11.2 機密情報の扱い
+### 12.2 機密情報の扱い
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -702,7 +796,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 12. まとめ
+## 13. まとめ
 
 ワークフロー開発の重要なポイント：
 

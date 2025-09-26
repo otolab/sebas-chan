@@ -19,6 +19,8 @@ describe('Pond Operations - Integration Tests', () => {
       const entry: Omit<PondEntry, 'id'> = {
         content: 'システムのパフォーマンスが低下しています。メモリ使用率が高い状態が続いています。',
         source: 'monitoring',
+        context: null,
+        metadata: null,
         timestamp: getTestTimestamp(),
       };
 
@@ -64,6 +66,8 @@ describe('Pond Operations - Integration Tests', () => {
         id: getTestId('pond-en'),
         content: 'Database connection pool exhausted. Need to increase max connections.',
         source: 'diagnostic',
+        context: null,
+        metadata: null,
         timestamp: getTestTimestamp(),
       };
 
@@ -76,6 +80,8 @@ describe('Pond Operations - Integration Tests', () => {
         id: getTestId('pond-mixed'),
         content: 'Error: Memory leakが発生している可能性があります。GC frequencyを確認してください。',
         source: 'mixed-log',
+        context: null,
+        metadata: null,
         timestamp: getTestTimestamp(),
       };
 
@@ -99,6 +105,8 @@ describe('Pond Operations - Integration Tests', () => {
         id: getTestId('pond-json'),
         content: JSON.stringify(structuredContent),
         source: 'structured-log',
+        context: null,
+        metadata: JSON.stringify({ type: 'error_report' }),
         timestamp: getTestTimestamp(),
       };
 
@@ -238,12 +246,14 @@ describe('Pond Operations - Integration Tests', () => {
 
     it('should handle concurrent additions', async () => {
       const promises = [];
-      
+
       for (let i = 0; i < 5; i++) {
         const entry: PondEntry = {
           id: getTestId(`pond-concurrent-${i}`),
           content: `並行処理テスト ${i}: データベース接続エラー`,
           source: 'concurrent-test',
+          context: null,
+          metadata: null,
           timestamp: getTestTimestamp(),
         };
         promises.push(dbClient.addPondEntry(entry));

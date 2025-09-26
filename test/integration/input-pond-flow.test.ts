@@ -66,6 +66,19 @@ describe('Input to Pond Flow Integration', () => {
 
   describe('Basic Input Processing', () => {
     it('should create input and process it into pond', async () => {
+      // ワークフローを登録
+      const testWorkflow = {
+        name: 'test-ingest-input',
+        description: 'Test workflow for INGEST_INPUT',
+        triggers: { eventTypes: ['INGEST_INPUT'] },
+        executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
+      };
+
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.register(testWorkflow);
+
+      await engine.start();
+
       // Create an input
       const input: Input = await engine.createInput({
         source: 'test-reporter',
@@ -135,6 +148,8 @@ describe('Input to Pond Flow Integration', () => {
         content: '直接追加されたナレッジ情報',
         timestamp: new Date(),
         source: 'direct',
+        context: null,
+        metadata: null,
       });
 
       expect(pondEntry).toBeDefined();
@@ -153,6 +168,8 @@ describe('Input to Pond Flow Integration', () => {
         }),
         timestamp: new Date(),
         source: 'monitoring',
+        context: null,
+        metadata: JSON.stringify({ type: 'error_report' }),
       });
 
       expect(pondEntry).toBeDefined();
@@ -169,12 +186,16 @@ describe('Input to Pond Flow Integration', () => {
         content: 'Elasticsearchのインデックスが破損している',
         timestamp: new Date(),
         source: 'test',
+        context: null,
+        metadata: null,
       });
 
       await engine.addToPond({
         content: 'Redisのメモリ使用量が限界に近い',
         timestamp: new Date(),
         source: 'test',
+        context: null,
+        metadata: null,
       });
 
       // Search tests (with mocked DB, just verify the search is called)
@@ -200,6 +221,19 @@ describe('Input to Pond Flow Integration', () => {
 
   describe('Event Processing Flow', () => {
     it('should process INGEST_INPUT events', async () => {
+      // ワークフローを登録
+      const testWorkflow = {
+        name: 'test-ingest-input-events',
+        description: 'Test workflow for INGEST_INPUT events',
+        triggers: { eventTypes: ['INGEST_INPUT'] },
+        executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
+      };
+
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.register(testWorkflow);
+
+      await engine.start();
+
       const processedEvents: string[] = [];
 
       engine.on('event:processed', (event) => {
@@ -214,8 +248,7 @@ describe('Input to Pond Flow Integration', () => {
       });
 
       // Give time for event processing
-      await engine.start();
-      await vi.advanceTimersByTimeAsync(100);
+      await vi.advanceTimersByTimeAsync(200);
 
       // Manual processing since we're in test mode
       // WorkflowQueueベースのシステムでは、ワークフローが実行されたことを確認
