@@ -14,7 +14,9 @@
     "test": "NODE_OPTIONS='--no-warnings' vitest run",
     "test:watch": "vitest",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix"
   },
   "dependencies": {
     "@sebas-chan/shared-types": "*",
