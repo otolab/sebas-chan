@@ -27,7 +27,7 @@ describe('manual-reporter CLI', () => {
   describe('submit command', () => {
     it('should submit content from command line argument', async () => {
       const testContent = 'Test input content';
-      
+
       await mockClient.submitInput({
         source: 'manual',
         content: testContent,
@@ -73,7 +73,7 @@ describe('manual-reporter CLI', () => {
   describe('health command', () => {
     it('should check API health', async () => {
       const isHealthy = await mockClient.checkHealth();
-      
+
       expect(mockClient.checkHealth).toHaveBeenCalled();
       expect(isHealthy).toBe(true);
     });
@@ -82,7 +82,7 @@ describe('manual-reporter CLI', () => {
       mockClient.checkHealth.mockResolvedValueOnce(false);
 
       const isHealthy = await mockClient.checkHealth();
-      
+
       expect(isHealthy).toBe(false);
     });
   });
