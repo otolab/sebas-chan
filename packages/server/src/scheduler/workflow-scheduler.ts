@@ -8,10 +8,11 @@ import {
   ScheduleInterpretation,
   ScheduleAction,
 } from '@sebas-chan/shared-types';
-import { compile, JSONSchema } from '@moduler-prompt/core';
+import { compile } from '@moduler-prompt/core';
+import type { JSONSchema } from '@moduler-prompt/core';
 import { EventEmitter } from 'events';
 import { DBClient } from '@sebas-chan/db';
-import type { DriverFactory } from '../types.js';
+import type { DriverFactory } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 
 export class WorkflowScheduler implements WorkflowSchedulerInterface {
@@ -30,9 +31,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 
   async initialize(): Promise<void> {
     // DBを初期化
-    if (!this.dbClient.isConnected()) {
-      await this.dbClient.connect();
-    }
+    await this.dbClient.connect();
 
     // schedulesテーブルを確認（自動作成される）
     const status = await this.dbClient.getStatus();
@@ -87,13 +86,14 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 
     // DBに保存
     const schedule = await this.createSchedule({
+      issueId,
       request,
-      event,
+      action,
       nextRun: new Date(interpretation.next),
       lastRun: null,
       pattern: interpretation.pattern || undefined,
       status: 'active',
-      correlationId: options?.correlationId,
+      dedupeKey: options?.dedupeKey,
       maxOccurrences: options?.maxOccurrences,
       occurrences: 0,
     });
@@ -114,7 +114,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
     timezone: string
   ): Promise<ScheduleInterpretation> {
     // driverFactoryが適切なドライバーを選択
-    const driver = await this.driverFactory.getDriver({
+    const driver = await this.driverFactory({
       requiredCapabilities: ['structured_output'],
       preferredCapabilities: ['japanese', 'local_execution']
     });
@@ -157,8 +157,13 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       schema
     };
 
-    const result = await driver.query(compile(promptModule), { temperature: 0.2 });
-    return result.structured as ScheduleInterpretation;
+    const compiled = compile(promptModule);
+    const result = await driver.complete({
+      prompt: compiled.instructions.join('\n'),
+      schema: schema,
+      options: { temperature: 0.2 }
+    });
+    return JSON.parse(result.content) as ScheduleInterpretation;
   }
 
   private async createSchedule(
@@ -169,27 +174,22 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 
     const scheduleData = {
       id,
+      issue_id: schedule.issueId,
       request: schedule.request,
-      event_type: schedule.event.type,
-      event_payload: JSON.stringify(schedule.event.payload),
-      event_metadata: schedule.event.metadata ? JSON.stringify(schedule.event.metadata) : null,
+      action: schedule.action,
       next_run: schedule.nextRun?.toISOString() || null,
       last_run: schedule.lastRun?.toISOString() || null,
       pattern: schedule.pattern || null,
       occurrences: schedule.occurrences,
       max_occurrences: schedule.maxOccurrences || null,
-      correlation_id: schedule.correlationId || null,
+      dedupe_key: schedule.dedupeKey || null,
       status: schedule.status,
       created_at: now.toISOString(),
       updated_at: now.toISOString()
     };
 
     // LanceDBに保存
-    await this.dbClient.execute({
-      action: 'insert',
-      table: 'schedules',
-      data: scheduleData
-    });
+    await this.dbClient.addSchedule(scheduleData);
 
     return {
       ...schedule,
@@ -208,59 +208,40 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       updated_at: new Date().toISOString()
     };
 
-    // LanceDBで更新（WHERE句をサポートしていない場合は全データ取得して更新）
-    await this.dbClient.execute({
-      action: 'update',
-      table: 'schedules',
-      filter: { id: schedule.id },
-      data: updateData
-    });
+    // LanceDBで更新
+    await this.dbClient.updateSchedule(schedule.id, updateData);
+    schedule.updatedAt = new Date();
   }
 
   private async findByDedupeKey(issueId: string, dedupeKey: string): Promise<Schedule | null> {
-    const result = await this.dbClient.execute({
-      action: 'search',
-      table: 'schedules',
-      query: '',  // テキスト検索は不要
-      filter: {
-        issue_id: issueId,
-        dedupe_key: dedupeKey,
-        status: 'active'
-      },
+    const results = await this.dbClient.searchSchedules({
+      issue_id: issueId,
+      dedupe_key: dedupeKey,
+      status: 'active',
       limit: 1
     });
 
-    if (result && result.length > 0) {
-      return this.rowToSchedule(result[0]);
+    if (results && results.length > 0) {
+      return this.rowToSchedule(results[0]);
     }
     return null;
   }
 
   private async findById(id: string): Promise<Schedule | null> {
-    const result = await this.dbClient.execute({
-      action: 'search',
-      table: 'schedules',
-      query: '',
-      filter: { id },
-      limit: 1
-    });
-
-    if (result && result.length > 0) {
-      return this.rowToSchedule(result[0]);
+    const result = await this.dbClient.getSchedule(id);
+    if (result) {
+      return this.rowToSchedule(result);
     }
     return null;
   }
 
   private async findActive(): Promise<Schedule[]> {
-    const result = await this.dbClient.execute({
-      action: 'search',
-      table: 'schedules',
-      query: '',
-      filter: { status: 'active' },
+    const results = await this.dbClient.searchSchedules({
+      status: 'active',
       limit: 1000
     });
 
-    return result.map((row: any) => this.rowToSchedule(row));
+    return results.map((row: any) => this.rowToSchedule(row));
   }
 
   private async findDue(): Promise<Schedule[]> {
@@ -317,12 +298,12 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
   private async executeSchedule(schedule: Schedule): Promise<void> {
     try {
       // イベントを発行
-      this.eventEmitter.emit('scheduled_event', {
-        type: 'SCHEDULED_TIME_REACHED',
+      this.eventEmitter.emit('workflow:trigger', {
+        type: 'SCHEDULE_TRIGGERED',
         payload: {
-          ...schedule.event.payload,
+          issueId: schedule.issueId,
           scheduleId: schedule.id,
-          scheduleName: schedule.event.type,
+          action: schedule.action,
           originalRequest: schedule.request,
         }
       });
@@ -392,25 +373,38 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
     return false;
   }
 
+  async listByIssue(issueId: string): Promise<Schedule[]> {
+    return this.list({ issueId });
+  }
+
+  async cancelByIssue(issueId: string): Promise<void> {
+    const schedules = await this.listByIssue(issueId);
+    for (const schedule of schedules) {
+      if (schedule.status === 'active') {
+        await this.cancel(schedule.id);
+      }
+    }
+  }
+
   async list(filter?: ScheduleFilter): Promise<Schedule[]> {
     // フィルタに基づいて検索
     const searchFilter: any = {};
     if (filter?.status) {
       searchFilter.status = filter.status;
     }
-    if (filter?.correlationId) {
-      searchFilter.correlation_id = filter.correlationId;
+    if (filter?.issueId) {
+      searchFilter.issue_id = filter.issueId;
+    }
+    if (filter?.action) {
+      searchFilter.action = filter.action;
     }
 
-    const result = await this.dbClient.execute({
-      action: 'search',
-      table: 'schedules',
-      query: '',
-      filter: searchFilter,
+    const results = await this.dbClient.searchSchedules({
+      ...searchFilter,
       limit: 1000
     });
 
-    let schedules = result.map((row: any) => this.rowToSchedule(row));
+    let schedules = results.map((row: any) => this.rowToSchedule(row));
 
     // 日付フィルタを適用
     if (filter?.createdAfter) {

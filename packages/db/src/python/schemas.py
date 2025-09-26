@@ -54,6 +54,8 @@ def get_pond_schema(vector_dimension: int = 256) -> pa.Schema:
         pa.field("id", pa.string()),
         pa.field("content", pa.string()),
         pa.field("source", pa.string()),
+        pa.field("context", pa.string()),  # 自然言語的なコンテキスト（nullable）
+        pa.field("metadata", pa.string()),  # JSON文字列として保存（nullable）
         pa.field("timestamp", pa.timestamp('ms')),
         pa.field("vector", pa.list_(pa.float32(), vector_dimension))  # ベクトル
     ])

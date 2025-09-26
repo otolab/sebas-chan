@@ -74,9 +74,11 @@ export type KnowledgeSource =
 export interface PondEntry {
   id: string;
   content: string;
-  vector?: number[]; // ベクトル化された表現
+  source: 'slack' | 'teams' | 'email' | 'webhook' | 'user_request' | string; // データの取得元
+  context?: string; // 自然言語的なコンテキスト（例: "work: ECサイトAPI開発"）
+  metadata?: Record<string, unknown>; // その他のメタデータ
   timestamp: Date;
-  source: string;
+  vector?: number[]; // ベクトル化された表現
   score?: number; // ベクトル検索時の類似度スコア（0〜1、1に近いほど類似）
   distance?: number; // ベクトル検索時の距離（0に近いほど類似）
 }

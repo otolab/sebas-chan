@@ -47,9 +47,11 @@ interface Input {
 interface PondEntry {
   id: string;
   content: string;           // イベントまたはInputの内容
-  vector?: number[];         // ベクトル化された表現（256次元）
+  source: string;           // イベントタイプまたはReporter名（'slack', 'teams', 'email', 'webhook', 'user_request' など）
+  context?: string;         // 自然言語的なコンテキスト（例: "work: ECサイト開発", "personal: タスク管理"）
+  metadata?: Record<string, unknown>; // 追加のメタデータ（channel、userId、sessionId など）
   timestamp: Date;
-  source: string;           // イベントタイプまたはReporter名
+  vector?: number[];         // ベクトル化された表現（256次元）
   score?: number;           // 検索時の類似度スコア（0〜1）
   distance?: number;        // 検索時のベクトル距離
 }
@@ -58,6 +60,8 @@ interface PondEntry {
 **特徴**:
 - **ベクトル検索**: 日本語対応（intfloat/multilingual-e5-small使用）
 - **セマンティック検索**: 意味的に類似した情報を発見
+- **コンテキスト対応検索**: contextフィールドを含めたベクトル生成で検索精度向上
+- **メタデータフィルタリング**: source、context、metadataによる柔軟なフィルタリング
 - **サルベージ機能**: 定期的に価値ある情報を発掘
 - **完全な履歴**: すべてのイベントとInputを保存
 

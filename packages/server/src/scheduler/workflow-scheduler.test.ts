@@ -4,23 +4,29 @@ import { EventEmitter } from 'events';
 import type { DriverFactory } from '../types.js';
 
 // DBClientのモック
+const mockDbClient = {
+  isConnected: vi.fn().mockReturnValue(false),
+  connect: vi.fn().mockResolvedValue(undefined),
+  getStatus: vi.fn().mockResolvedValue({
+    status: 'ok',
+    tables: ['schedules'],
+  }),
+  execute: vi.fn(),
+  getSchedule: vi.fn(),
+  searchSchedules: vi.fn(),
+  updateSchedule: vi.fn(),
+  deleteSchedule: vi.fn(),
+  addSchedule: vi.fn(),
+};
+
 vi.mock('@sebas-chan/db', () => ({
-  DBClient: vi.fn().mockImplementation(() => ({
-    isConnected: vi.fn().mockReturnValue(false),
-    connect: vi.fn().mockResolvedValue(undefined),
-    getStatus: vi.fn().mockResolvedValue({
-      status: 'ok',
-      tables: ['schedules'],
-    }),
-    execute: vi.fn(),
-  })),
+  DBClient: vi.fn().mockImplementation(() => mockDbClient),
 }));
 
 describe('WorkflowScheduler', () => {
   let scheduler: WorkflowScheduler;
   let mockDriverFactory: DriverFactory;
   let mockEventEmitter: EventEmitter;
-  let mockDbClient: any;
 
   beforeEach(() => {
     // モックの初期化
@@ -28,6 +34,18 @@ describe('WorkflowScheduler', () => {
     vi.spyOn(mockEventEmitter, 'emit');
 
     mockDriverFactory = vi.fn().mockResolvedValue({
+      complete: vi.fn().mockResolvedValue({
+        content: JSON.stringify({
+          next: new Date(Date.now() + 60000).toISOString(), // 1分後
+          pattern: null,
+          interpretation: 'テスト: 1分後に実行',
+        }),
+        structured: {
+          next: new Date(Date.now() + 60000).toISOString(), // 1分後
+          pattern: null,
+          interpretation: 'テスト: 1分後に実行',
+        },
+      }),
       query: vi.fn().mockResolvedValue({
         structured: {
           next: new Date(Date.now() + 60000).toISOString(), // 1分後
@@ -37,10 +55,13 @@ describe('WorkflowScheduler', () => {
       }),
     });
 
-    // DBClientモックのインスタンス作成
-    const { DBClient } = require('@sebas-chan/db');
-    mockDbClient = new DBClient();
+    // モックメソッドをリセット
     mockDbClient.execute = vi.fn();
+    mockDbClient.getSchedule = vi.fn().mockResolvedValue(null);
+    mockDbClient.searchSchedules = vi.fn().mockResolvedValue([]);
+    mockDbClient.updateSchedule = vi.fn().mockResolvedValue(undefined);
+    mockDbClient.deleteSchedule = vi.fn().mockResolvedValue(undefined);
+    mockDbClient.addSchedule = vi.fn().mockResolvedValue(undefined);
 
     scheduler = new WorkflowScheduler(
       mockDriverFactory,
@@ -54,7 +75,7 @@ describe('WorkflowScheduler', () => {
     vi.clearAllMocks();
   });
 
-  describe('scheduleFromNatural', () => {
+  describe('schedule', () => {
     it('自然言語からスケジュールを作成できる', async () => {
       const mockSchedule = {
         id: 'test-id',
@@ -83,7 +104,8 @@ describe('WorkflowScheduler', () => {
         return Promise.resolve();
       });
 
-      const result = await scheduler.scheduleFromNatural(
+      const result = await scheduler.schedule(
+        'test-issue-1',
         '5分後にリマインド',
         {
           type: 'REMINDER',
@@ -96,10 +118,15 @@ describe('WorkflowScheduler', () => {
       });
       expect(result.scheduleId).toBeDefined();
       expect(result.nextRun).toBeInstanceOf(Date);
-      expect(mockDbClient.execute).toHaveBeenCalledWith(
+      expect(mockDbClient.addSchedule).toHaveBeenCalledWith(
         expect.objectContaining({
-          action: 'insert',
-          table: 'schedules',
+          id: expect.any(String),
+          issue_id: 'test-issue-1',
+          request: '5分後にリマインド',
+          action: {
+            type: 'REMINDER',
+            payload: { message: 'test' },
+          },
         })
       );
     });
@@ -120,6 +147,15 @@ describe('WorkflowScheduler', () => {
         updated_at: new Date().toISOString(),
       };
 
+      mockDbClient.searchSchedules.mockImplementation((filter: any) => {
+        if (filter?.dedupe_key === 'test-correlation' && filter?.issue_id === 'test-issue-2') {
+          return Promise.resolve([existingSchedule]);
+        }
+        return Promise.resolve([]);
+      });
+      mockDbClient.getSchedule.mockResolvedValue(existingSchedule);
+      mockDbClient.updateSchedule.mockResolvedValue(undefined);
+      mockDbClient.addSchedule.mockResolvedValue(undefined);
       mockDbClient.execute.mockImplementation((params: any) => {
         if (params.action === 'search' && params.filter?.correlation_id) {
           return Promise.resolve([existingSchedule]);
@@ -136,24 +172,20 @@ describe('WorkflowScheduler', () => {
         return Promise.resolve([]);
       });
 
-      await scheduler.scheduleFromNatural(
+      await scheduler.schedule(
+        'test-issue-2',
         'テストスケジュール',
         { type: 'TEST', payload: {} },
-        { correlationId: 'test-correlation' }
+        { dedupeKey: 'test-correlation' }
       );
 
       // 既存スケジュールの検索が行われたことを確認
-      expect(mockDbClient.execute).toHaveBeenCalledWith(
+      expect(mockDbClient.searchSchedules).toHaveBeenCalled();
+      // 更新（キャンセル）が行れたことを確認
+      expect(mockDbClient.updateSchedule).toHaveBeenCalledWith(
+        'existing-id',
         expect.objectContaining({
-          action: 'search',
-          filter: { correlation_id: 'test-correlation' },
-        })
-      );
-      // 更新（キャンセル）が行われたことを確認
-      expect(mockDbClient.execute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'update',
-          filter: { id: 'existing-id' },
+          status: 'cancelled'
         })
       );
     });
@@ -161,6 +193,13 @@ describe('WorkflowScheduler', () => {
     it('繰り返しパターンを認識できる', async () => {
       // 繰り返しパターンを返すモック
       mockDriverFactory = vi.fn().mockResolvedValue({
+        complete: vi.fn().mockResolvedValue({
+          content: JSON.stringify({
+            next: new Date(Date.now() + 86400000).toISOString(), // 1日後
+            pattern: '毎日朝9時',
+            interpretation: '毎日朝9時に実行',
+          }),
+        }),
         query: vi.fn().mockResolvedValue({
           structured: {
             next: new Date(Date.now() + 86400000).toISOString(), // 1日後
@@ -178,7 +217,8 @@ describe('WorkflowScheduler', () => {
 
       mockDbClient.execute.mockResolvedValue([]);
 
-      const result = await scheduler.scheduleFromNatural(
+      const result = await scheduler.schedule(
+        'test-issue-3',
         '毎日朝9時にレポート',
         { type: 'REPORT', payload: {} }
       );
@@ -200,6 +240,8 @@ describe('WorkflowScheduler', () => {
         updated_at: new Date().toISOString(),
       };
 
+      mockDbClient.getSchedule.mockResolvedValue(schedule);
+      mockDbClient.updateSchedule.mockResolvedValue(undefined);
       mockDbClient.execute.mockImplementation((params: any) => {
         if (params.action === 'search' && params.filter?.id === 'test-id') {
           return Promise.resolve([schedule]);
@@ -213,15 +255,17 @@ describe('WorkflowScheduler', () => {
       const result = await scheduler.cancel('test-id');
 
       expect(result).toBe(true);
-      expect(mockDbClient.execute).toHaveBeenCalledWith(
+      expect(mockDbClient.getSchedule).toHaveBeenCalledWith('test-id');
+      expect(mockDbClient.updateSchedule).toHaveBeenCalledWith(
+        'test-id',
         expect.objectContaining({
-          action: 'update',
-          filter: { id: 'test-id' },
+          status: 'cancelled'
         })
       );
     });
 
     it('存在しないスケジュールのキャンセルはfalseを返す', async () => {
+      mockDbClient.getSchedule.mockResolvedValue(null);
       mockDbClient.execute.mockResolvedValue([]);
 
       const result = await scheduler.cancel('non-existent');
@@ -251,17 +295,15 @@ describe('WorkflowScheduler', () => {
         },
       ];
 
+      mockDbClient.searchSchedules.mockResolvedValue(schedules);
       mockDbClient.execute.mockResolvedValue(schedules);
 
       const result = await scheduler.list();
 
       expect(result).toHaveLength(2);
-      expect(mockDbClient.execute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'search',
-          table: 'schedules',
-        })
-      );
+      expect(mockDbClient.searchSchedules).toHaveBeenCalledWith({
+        limit: 1000,
+      });
     });
 
     it('フィルタ付きでスケジュールを取得できる', async () => {
@@ -276,17 +318,16 @@ describe('WorkflowScheduler', () => {
         },
       ];
 
+      mockDbClient.searchSchedules.mockResolvedValue(activeSchedules);
       mockDbClient.execute.mockResolvedValue(activeSchedules);
 
       const result = await scheduler.list({ status: 'active' });
 
       expect(result).toHaveLength(1);
-      expect(mockDbClient.execute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'search',
-          filter: { status: 'active' },
-        })
-      );
+      expect(mockDbClient.searchSchedules).toHaveBeenCalledWith({
+        status: 'active',
+        limit: 1000,
+      });
     });
   });
 
@@ -326,6 +367,13 @@ describe('WorkflowScheduler', () => {
 
       // 1秒後の実行を設定するようにモックを変更
       mockDriverFactory = vi.fn().mockResolvedValue({
+        complete: vi.fn().mockResolvedValue({
+          content: JSON.stringify({
+            next: new Date(Date.now() + 1000).toISOString(),
+            pattern: null,
+            interpretation: '1秒後に実行',
+          }),
+        }),
         query: vi.fn().mockResolvedValue({
           structured: {
             next: new Date(Date.now() + 1000).toISOString(),
@@ -341,21 +389,29 @@ describe('WorkflowScheduler', () => {
         mockDbClient
       );
 
-      await scheduler.scheduleFromNatural('テスト', {
-        type: 'TEST_EVENT',
-        payload: { test: true },
-      });
+      await scheduler.schedule(
+        'test-issue-4',
+        'テスト',
+        {
+          type: 'TEST_EVENT',
+          payload: { test: true },
+        }
+      );
 
       // 1秒進める
       await vi.advanceTimersByTimeAsync(1000);
 
       // イベントが発行されたことを確認
       expect(mockEventEmitter.emit).toHaveBeenCalledWith(
-        'scheduled_event',
+        'workflow:trigger',
         expect.objectContaining({
-          type: 'SCHEDULED_TIME_REACHED',
           payload: expect.objectContaining({
-            test: true,
+            action: expect.objectContaining({
+              type: 'TEST_EVENT',
+              payload: expect.objectContaining({
+                test: true,
+              }),
+            }),
           }),
         })
       );
@@ -387,6 +443,7 @@ describe('WorkflowScheduler', () => {
         },
       ];
 
+      mockDbClient.searchSchedules.mockResolvedValue(activeSchedules);
       mockDbClient.execute.mockImplementation((params: any) => {
         if (params.action === 'search' && params.filter?.status === 'active') {
           return Promise.resolve(activeSchedules);
@@ -398,21 +455,23 @@ describe('WorkflowScheduler', () => {
 
       expect(mockDbClient.connect).toHaveBeenCalled();
       expect(mockDbClient.getStatus).toHaveBeenCalled();
-      expect(mockDbClient.execute).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: 'search',
-          filter: { status: 'active' },
-        })
-      );
+      expect(mockDbClient.searchSchedules).toHaveBeenCalledWith({
+        status: 'active',
+        limit: 1000,
+      });
     });
 
     it('shutdown時に全タイマーをクリアする', async () => {
       mockDbClient.execute.mockResolvedValue([]);
 
-      await scheduler.scheduleFromNatural('テスト', {
-        type: 'TEST',
-        payload: {},
-      });
+      await scheduler.schedule(
+        'test-issue-5',
+        'テスト',
+        {
+          type: 'TEST',
+          payload: {},
+        }
+      );
 
       await scheduler.shutdown();
 
