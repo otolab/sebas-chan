@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, skipIf } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { compile } from '@moduler-prompt/core';
 import type { JSONSchema } from '@moduler-prompt/core';
 import type { DriverFactory } from '../types.js';
@@ -19,7 +19,7 @@ describe('Natural Language Schedule Interpretation (Integration)', () => {
 
       // テスト用のドライバーが取得できるか確認
       const testDriver = await driverFactory.getDriver({
-        requiredCapabilities: ['structured']
+        requiredCapabilities: ['structured'],
       });
 
       if (testDriver) {
@@ -34,7 +34,7 @@ describe('Natural Language Schedule Interpretation (Integration)', () => {
   describe.skipIf(!hasValidDriver)('構造化出力の動作確認', () => {
     it('should interpret relative time expressions', async () => {
       const driver = await driverFactory.getDriver({
-        requiredCapabilities: ['structured']
+        requiredCapabilities: ['structured'],
       });
       const schema: JSONSchema = {
         type: 'object',

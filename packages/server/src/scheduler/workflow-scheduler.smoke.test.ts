@@ -1,7 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { EventEmitter } from 'events';
 import { WorkflowScheduler } from './workflow-scheduler.js';
-import type { DriverFactory } from '../types.js';
 
 /**
  * WorkflowSchedulerのスモークテスト
@@ -22,11 +21,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       getStatus: vi.fn(),
     };
 
-    const scheduler = new WorkflowScheduler(
-      mockDriverFactory,
-      mockEventEmitter,
-      mockDbClient
-    );
+    const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
     expect(scheduler).toBeDefined();
     expect(scheduler).toBeInstanceOf(WorkflowScheduler);
@@ -37,11 +32,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
     const mockEventEmitter = new EventEmitter();
     const mockDbClient = {} as any;
 
-    const scheduler = new WorkflowScheduler(
-      mockDriverFactory,
-      mockEventEmitter,
-      mockDbClient
-    );
+    const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
     // 新しいAPIメソッドの存在確認
     expect(scheduler.schedule).toBeDefined();
@@ -76,17 +67,9 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       getStatus: vi.fn(),
     };
 
-    const scheduler = new WorkflowScheduler(
-      mockDriverFactory,
-      mockEventEmitter,
-      mockDbClient
-    );
+    const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
-    const result = await scheduler.schedule(
-      'issue-123',
-      '3日後の朝9時',
-      'reminder'
-    );
+    const result = await scheduler.schedule('issue-123', '3日後の朝9時', 'reminder');
 
     expect(result).toBeDefined();
     expect(result.scheduleId).toBeDefined();
@@ -122,11 +105,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       getStatus: vi.fn(),
     };
 
-    const scheduler = new WorkflowScheduler(
-      mockDriverFactory,
-      mockEventEmitter,
-      mockDbClient
-    );
+    const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
     await scheduler.schedule('issue-123', '今すぐ', 'reminder');
 

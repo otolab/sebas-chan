@@ -243,13 +243,10 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
             capabilities.push('local');
           }
 
-          const driver = await this.aiService.createDriverFromCapabilities(
-            capabilities,
-            {
-              preferLocal: criteria.preferredCapabilities?.includes('local_execution'),
-              lenient: true, // 条件を満たさない場合でも最適なドライバを選択
-            }
-          );
+          const driver = await this.aiService.createDriverFromCapabilities(capabilities, {
+            preferLocal: criteria.preferredCapabilities?.includes('local_execution'),
+            lenient: true, // 条件を満たさない場合でも最適なドライバを選択
+          });
 
           if (!driver) {
             throw new Error('No suitable driver found for the given criteria');

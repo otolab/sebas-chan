@@ -2,7 +2,6 @@ import {
   WorkflowSchedulerInterface,
   Schedule,
   ScheduleResult,
-  ScheduledEventPayload,
   ScheduleOptions,
   ScheduleFilter,
   ScheduleInterpretation,
@@ -115,7 +114,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
     // driverFactoryが適切なドライバーを選択
     const driver = await this.driverFactory({
       requiredCapabilities: ['structured'],
-      preferredCapabilities: ['japanese', 'local_execution']
+      preferredCapabilities: ['japanese', 'local_execution'],
     });
 
     const schema = {
@@ -123,22 +122,23 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       properties: {
         next: {
           type: 'string',
-          description: '次回実行時刻（ISO8601形式）'
+          description: '次回実行時刻（ISO8601形式）',
         },
         pattern: {
           type: ['string', 'null'],
-          description: '繰り返しパターン（例：毎日、毎週月曜）'
+          description: '繰り返しパターン（例：毎日、毎週月曜）',
         },
         interpretation: {
           type: 'string',
-          description: '解釈の日本語説明'
-        }
+          description: '解釈の日本語説明',
+        },
       },
-      required: ['next', 'interpretation']
+      required: ['next', 'interpretation'],
     } as const;
 
     const promptModule = {
-      instructions: [`
+      instructions: [
+        `
 現在時刻: ${new Date().toISOString()}
 タイムゾーン: ${timezone}
 
@@ -152,10 +152,11 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 - "明日の10時" → 翌日の10:00
 - "毎朝9時" → 次の9:00、パターン: "毎朝9時"
 - "来週の月曜日" → 次の月曜日
-`],
+`,
+      ],
       output: {
-        schema
-      }
+        schema,
+      },
     };
 
     const compiled = compile(promptModule);
@@ -186,7 +187,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       dedupe_key: schedule.dedupeKey || null,
       status: schedule.status,
       created_at: now.toISOString(),
-      updated_at: now.toISOString()
+      updated_at: now.toISOString(),
     };
 
     // LanceDBに保存
@@ -206,7 +207,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       last_run: schedule.lastRun?.toISOString() || null,
       occurrences: schedule.occurrences,
       status: schedule.status,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
     };
 
     // LanceDBで更新
@@ -219,7 +220,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       issue_id: issueId,
       dedupe_key: dedupeKey,
       status: 'active',
-      limit: 1
+      limit: 1,
     });
 
     if (results && results.length > 0) {
@@ -239,7 +240,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
   private async findActive(): Promise<Schedule[]> {
     const results = await this.dbClient.searchSchedules({
       status: 'active',
-      limit: 1000
+      limit: 1000,
     });
 
     return results.map((row: any) => this.rowToSchedule(row));
@@ -250,9 +251,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
     const activeSchedules = await this.findActive();
 
     // next_runが現在時刻を過ぎているものをフィルタ
-    return activeSchedules.filter(schedule =>
-      schedule.nextRun && schedule.nextRun <= now
-    );
+    return activeSchedules.filter((schedule) => schedule.nextRun && schedule.nextRun <= now);
   }
 
   private rowToSchedule(row: any): Schedule {
@@ -306,7 +305,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
           scheduleId: schedule.id,
           action: schedule.action,
           originalRequest: schedule.request,
-        }
+        },
       });
 
       // 実行回数を更新
@@ -314,8 +313,10 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       schedule.lastRun = new Date();
 
       // 次回実行を計算
-      if (schedule.pattern &&
-          (!schedule.maxOccurrences || schedule.occurrences < schedule.maxOccurrences)) {
+      if (
+        schedule.pattern &&
+        (!schedule.maxOccurrences || schedule.occurrences < schedule.maxOccurrences)
+      ) {
         const nextInterpretation = await this.interpretScheduleRequest(
           schedule.pattern,
           'Asia/Tokyo'
@@ -402,17 +403,17 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 
     const results = await this.dbClient.searchSchedules({
       ...searchFilter,
-      limit: 1000
+      limit: 1000,
     });
 
     let schedules = results.map((row: any) => this.rowToSchedule(row));
 
     // 日付フィルタを適用
     if (filter?.createdAfter) {
-      schedules = schedules.filter(s => s.createdAt >= filter.createdAfter!);
+      schedules = schedules.filter((s) => s.createdAt >= filter.createdAfter!);
     }
     if (filter?.createdBefore) {
-      schedules = schedules.filter(s => s.createdAt <= filter.createdBefore!);
+      schedules = schedules.filter((s) => s.createdAt <= filter.createdBefore!);
     }
 
     return schedules;

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, skipIf } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { compile } from '@moduler-prompt/core';
 import type { JSONSchema } from '@moduler-prompt/core';
 

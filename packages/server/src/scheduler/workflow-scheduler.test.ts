@@ -63,11 +63,7 @@ describe('WorkflowScheduler', () => {
     mockDbClient.deleteSchedule = vi.fn().mockResolvedValue(undefined);
     mockDbClient.addSchedule = vi.fn().mockResolvedValue(undefined);
 
-    scheduler = new WorkflowScheduler(
-      mockDriverFactory,
-      mockEventEmitter,
-      mockDbClient
-    );
+    scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
   });
 
   afterEach(async () => {
@@ -77,22 +73,7 @@ describe('WorkflowScheduler', () => {
 
   describe('schedule', () => {
     it('自然言語からスケジュールを作成できる', async () => {
-      const mockSchedule = {
-        id: 'test-id',
-        request: '5分後にリマインド',
-        event_type: 'REMINDER',
-        event_payload: JSON.stringify({ message: 'test' }),
-        event_metadata: null,
-        next_run: new Date(Date.now() + 300000).toISOString(),
-        last_run: null,
-        pattern: null,
-        occurrences: 0,
-        max_occurrences: null,
-        correlation_id: null,
-        status: 'active',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      // モックデータは直接resultで検証
 
       mockDbClient.execute.mockImplementation((params: any) => {
         if (params.action === 'insert') {
@@ -104,14 +85,10 @@ describe('WorkflowScheduler', () => {
         return Promise.resolve();
       });
 
-      const result = await scheduler.schedule(
-        'test-issue-1',
-        '5分後にリマインド',
-        {
-          type: 'REMINDER',
-          payload: { message: 'test' },
-        }
-      );
+      const result = await scheduler.schedule('test-issue-1', '5分後にリマインド', {
+        type: 'REMINDER',
+        payload: { message: 'test' },
+      });
 
       expect(result).toMatchObject({
         interpretation: 'テスト: 1分後に実行',
@@ -185,7 +162,7 @@ describe('WorkflowScheduler', () => {
       expect(mockDbClient.updateSchedule).toHaveBeenCalledWith(
         'existing-id',
         expect.objectContaining({
-          status: 'cancelled'
+          status: 'cancelled',
         })
       );
     });
@@ -209,19 +186,14 @@ describe('WorkflowScheduler', () => {
         }),
       });
 
-      scheduler = new WorkflowScheduler(
-        mockDriverFactory,
-        mockEventEmitter,
-        mockDbClient
-      );
+      scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
       mockDbClient.execute.mockResolvedValue([]);
 
-      const result = await scheduler.schedule(
-        'test-issue-3',
-        '毎日朝9時にレポート',
-        { type: 'REPORT', payload: {} }
-      );
+      const result = await scheduler.schedule('test-issue-3', '毎日朝9時にレポート', {
+        type: 'REPORT',
+        payload: {},
+      });
 
       expect(result.pattern).toBe('毎日朝9時');
       expect(result.interpretation).toBe('毎日朝9時に実行');
@@ -259,7 +231,7 @@ describe('WorkflowScheduler', () => {
       expect(mockDbClient.updateSchedule).toHaveBeenCalledWith(
         'test-id',
         expect.objectContaining({
-          status: 'cancelled'
+          status: 'cancelled',
         })
       );
     });
@@ -335,22 +307,7 @@ describe('WorkflowScheduler', () => {
     it('スケジュール時刻になったらイベントが発行される', async () => {
       vi.useFakeTimers();
 
-      const schedule = {
-        id: 'timer-test',
-        request: 'テスト',
-        event_type: 'TEST_EVENT',
-        event_payload: JSON.stringify({ test: true }),
-        event_metadata: null,
-        next_run: new Date(Date.now() + 1000).toISOString(), // 1秒後
-        last_run: null,
-        pattern: null,
-        occurrences: 0,
-        max_occurrences: null,
-        status: 'active',
-        correlation_id: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+      // テスト用のスケジュールデータ
 
       mockDbClient.execute.mockImplementation((params: any) => {
         if (params.action === 'insert') {
@@ -383,20 +340,12 @@ describe('WorkflowScheduler', () => {
         }),
       });
 
-      scheduler = new WorkflowScheduler(
-        mockDriverFactory,
-        mockEventEmitter,
-        mockDbClient
-      );
+      scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
-      await scheduler.schedule(
-        'test-issue-4',
-        'テスト',
-        {
-          type: 'TEST_EVENT',
-          payload: { test: true },
-        }
-      );
+      await scheduler.schedule('test-issue-4', 'テスト', {
+        type: 'TEST_EVENT',
+        payload: { test: true },
+      });
 
       // 1秒進める
       await vi.advanceTimersByTimeAsync(1000);
@@ -464,14 +413,10 @@ describe('WorkflowScheduler', () => {
     it('shutdown時に全タイマーをクリアする', async () => {
       mockDbClient.execute.mockResolvedValue([]);
 
-      await scheduler.schedule(
-        'test-issue-5',
-        'テスト',
-        {
-          type: 'TEST',
-          payload: {},
-        }
-      );
+      await scheduler.schedule('test-issue-5', 'テスト', {
+        type: 'TEST',
+        payload: {},
+      });
 
       await scheduler.shutdown();
 
