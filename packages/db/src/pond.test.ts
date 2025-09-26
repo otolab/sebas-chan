@@ -20,9 +20,9 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
         metadata: {
           channel: '#dev-backend',
           user: 'dev-user',
-          thread_ts: '1234567890.123456'
+          thread_ts: '1234567890.123456',
         },
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(true);
@@ -32,7 +32,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
       // timestampがISO文字列に変換されて送信される
       expect(client.sendRequest).toHaveBeenCalledWith('addPondEntry', {
         ...entry,
-        timestamp: entry.timestamp.toISOString()
+        timestamp: entry.timestamp.toISOString(),
       });
       expect(result).toBe(true);
     });
@@ -42,7 +42,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
         id: 'test-pond-002',
         content: '一般的なメモ',
         source: 'manual' as const,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(true);
@@ -51,7 +51,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
 
       expect(client.sendRequest).toHaveBeenCalledWith('addPondEntry', {
         ...entry,
-        timestamp: entry.timestamp.toISOString()
+        timestamp: entry.timestamp.toISOString(),
       });
       expect(result).toBe(true);
     });
@@ -62,7 +62,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
         content: 'エラーレポート',
         source: 'teams' as const,
         context: 'work: プロジェクトA',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(true);
@@ -71,7 +71,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
 
       expect(client.sendRequest).toHaveBeenCalledWith('addPondEntry', {
         ...entry,
-        timestamp: entry.timestamp.toISOString()
+        timestamp: entry.timestamp.toISOString(),
       });
       expect(result).toBe(true);
     });
@@ -88,15 +88,15 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
             context: 'work: ECサイト開発',
             metadata: { channel: '#dev' },
             timestamp: new Date().toISOString(),
-            score: 0.95
-          }
+            score: 0.95,
+          },
         ],
         meta: {
           total: 1,
           limit: 20,
           offset: 0,
-          hasMore: false
-        }
+          hasMore: false,
+        },
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(mockResults);
@@ -104,13 +104,13 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
       const result = await client.searchPond({
         q: 'エラー',
         context: 'ECサイト',
-        limit: 20
+        limit: 20,
       });
 
       expect(client.sendRequest).toHaveBeenCalledWith('searchPond', {
         q: 'エラー',
         context: 'ECサイト',
-        limit: 20
+        limit: 20,
       });
       expect(result.data).toHaveLength(1);
       expect(result.data[0].context).toBe('work: ECサイト開発');
@@ -127,7 +127,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
             context: 'work: backend',
             timestamp: new Date().toISOString(),
             score: 0.92,
-            distance: 0.08
+            distance: 0.08,
           },
           {
             id: 'pond-2',
@@ -136,22 +136,22 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
             context: 'work: backend',
             timestamp: new Date().toISOString(),
             score: 0.85,
-            distance: 0.15
-          }
+            distance: 0.15,
+          },
         ],
         meta: {
           total: 2,
           limit: 10,
           offset: 0,
-          hasMore: false
-        }
+          hasMore: false,
+        },
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(mockResults);
 
       const result = await client.searchPond({
         q: 'API',
-        limit: 10
+        limit: 10,
       });
 
       expect(result.data).toHaveLength(2);
@@ -168,15 +168,15 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
             content: 'Slackからのエラー報告',
             source: 'slack',
             context: 'work: プロジェクトX',
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         ],
         meta: {
           total: 1,
           limit: 20,
           offset: 0,
-          hasMore: false
-        }
+          hasMore: false,
+        },
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(mockResults);
@@ -184,13 +184,13 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
       const result = await client.searchPond({
         source: 'slack',
         context: 'プロジェクトX',
-        limit: 20
+        limit: 20,
       });
 
       expect(client.sendRequest).toHaveBeenCalledWith('searchPond', {
         source: 'slack',
         context: 'プロジェクトX',
-        limit: 20
+        limit: 20,
       });
       expect(result.data).toHaveLength(1);
       expect(result.data[0].source).toBe('slack');
@@ -207,10 +207,10 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
         context: 'personal: タスク管理',
         metadata: {
           sessionId: 'session-123',
-          userId: 'user-456'
+          userId: 'user-456',
         },
         timestamp: new Date().toISOString(),
-        vector: [0.1, 0.2, 0.3]
+        vector: [0.1, 0.2, 0.3],
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(mockEntry);
@@ -222,7 +222,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
       expect(result?.context).toBe('personal: タスク管理');
       expect(result?.metadata).toEqual({
         sessionId: 'session-123',
-        userId: 'user-456'
+        userId: 'user-456',
       });
     });
 
@@ -232,7 +232,7 @@ describe('DBClient - Pond Methods with Context and Metadata', () => {
         content: '古いエントリ',
         source: 'email',
         timestamp: new Date().toISOString(),
-        vector: [0.1, 0.2]
+        vector: [0.1, 0.2],
       };
 
       client.sendRequest = vi.fn().mockResolvedValue(mockEntry);

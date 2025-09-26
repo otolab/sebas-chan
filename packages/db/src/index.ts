@@ -530,7 +530,7 @@ export class DBClient extends EventEmitter {
 
   // Schedule操作メソッド
   async addSchedule(scheduleData: any): Promise<string> {
-    return await this.sendRequest('addSchedule', scheduleData) as string;
+    return (await this.sendRequest('addSchedule', scheduleData)) as string;
   }
 
   async getSchedule(id: string): Promise<any | null> {
@@ -538,11 +538,11 @@ export class DBClient extends EventEmitter {
   }
 
   async updateSchedule(id: string, updates: any): Promise<boolean> {
-    return await this.sendRequest('updateSchedule', { id, updates }) as boolean;
+    return (await this.sendRequest('updateSchedule', { id, updates })) as boolean;
   }
 
   async searchSchedules(filters: any): Promise<any[]> {
-    return await this.sendRequest('searchSchedules', filters) as any[];
+    return (await this.sendRequest('searchSchedules', filters)) as any[];
   }
 
   // テスト用メソッド
