@@ -80,10 +80,13 @@ interface Issue {
   title: string;
   description: string;        // 自然言語での詳細。ベクトル化の対象
   status: 'open' | 'closed';
+  priority?: number;          // 優先度（0-100）
   labels: string[];
   updates: IssueUpdate[];      // 履歴
   relations: IssueRelation[];  // 他のIssueとの関係性
   sourceInputIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 interface IssueUpdate {

@@ -126,7 +126,10 @@ const issue = await context.storage.createIssue({
   title: 'ユーザーからの要望',
   description: event.payload.text,
   status: 'open',
-  priority: 'medium'
+  labels: [],
+  updates: [],
+  relations: [],
+  sourceInputIds: []
 });
 
 // 検索
@@ -549,7 +552,12 @@ executor: async (event, context, emitter) => {
 executor: async (event, context, emitter) => {
   const issue = await context.storage.createIssue({
     title: '重要なタスク',
-    priority: 85
+    description: '緊急対応が必要なタスク',
+    status: 'open',
+    labels: ['urgent'],
+    updates: [],
+    relations: [],
+    sourceInputIds: []
   });
 
   // リマインダーを設定
