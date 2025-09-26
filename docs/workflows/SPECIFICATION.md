@@ -136,7 +136,7 @@ interface WorkflowResult {
 
 ## 3. WorkflowContext
 
-ワークフローが実行される環境を提供するインターフェース。
+ワークフローが実行される環境を提供するインターフェース。詳細は[ワークフローから見える世界](./WORKFLOW_PERSPECTIVE.md)を参照。
 
 ### 3.1 WorkflowContextInterface
 
@@ -168,22 +168,45 @@ interface WorkflowContextInterface {
 
 ```typescript
 interface WorkflowStorageInterface {
-  // Issue操作
+  // Issue操作 - 問題管理の中心
   getIssue(id: string): Promise<Issue | null>;
   searchIssues(query: string): Promise<Issue[]>;
   createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
   updateIssue(id: string, update: Partial<Issue>): Promise<Issue>;
 
-  // Pond操作
+  // Pond操作 - 生データの永続化とベクトル検索
   searchPond(query: string): Promise<PondEntry[]>;
   addPondEntry(entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry>;
 
-  // Knowledge操作
+  // Knowledge操作 - 再利用可能な知識の管理
   getKnowledge(id: string): Promise<Knowledge | null>;
   searchKnowledge(query: string): Promise<Knowledge[]>;
   createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge>;
   updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge>;
 }
+```
+
+#### 活用パターン
+
+```typescript
+// 関連Issueの効率的な検索
+const relatedIssues = await context.storage.searchIssues(
+  `${issue.title} OR (${issue.labels.join(' OR ')})`
+);
+
+// Pondからのパターン発見
+const similarEntries = await context.storage.searchPond(errorMessage);
+if (similarEntries.length > THRESHOLD) {
+  // パターンとして認識
+}
+
+// 知識の信頼度更新
+await context.storage.updateKnowledge(knowledgeId, {
+  reputation: {
+    upvotes: knowledge.reputation.upvotes + 1,
+    downvotes: knowledge.reputation.downvotes
+  }
+});
 ```
 
 ### 3.3 WorkflowEventEmitterInterface
@@ -196,6 +219,105 @@ interface WorkflowEventEmitterInterface {
     type: WorkflowEventType;
     payload: unknown;
   }): void;
+}
+```
+
+### 3.4 WorkflowSchedulerInterface
+
+Issueに関連付けられたスケジュール実行を管理するインターフェース。
+
+```typescript
+interface WorkflowSchedulerInterface {
+  /**
+   * Issue関連のスケジュールを作成
+   * 自然言語をModulerPromptで解釈して絶対時刻（ISO8601）に変換
+   */
+  schedule(
+    issueId: string,
+    request: string,
+    action: ScheduleAction,
+    options?: ScheduleOptions
+  ): Promise<ScheduleResult>;
+
+  /**
+   * スケジュールをキャンセル
+   */
+  cancel(scheduleId: string): Promise<boolean>;
+
+  /**
+   * Issue関連のスケジュール一覧を取得
+   */
+  listByIssue(issueId: string): Promise<Schedule[]>;
+
+  /**
+   * Issue関連の全スケジュールをキャンセル
+   * Issue closeと連動して自動実行される
+   */
+  cancelByIssue(issueId: string): Promise<void>;
+}
+```
+
+#### スケジューラーの設計原則
+
+1. **Issue必須**: すべてのスケジュールは必ずIssueに紐付く
+2. **ライフサイクル連動**: Issue closeでスケジュールも自動キャンセル
+3. **自然言語処理**: ModulerPromptで「3日後の朝9時」等を絶対時刻に変換
+4. **永続化**: LanceDBでスケジュール情報を永続化
+5. **自動復旧**: システム再起動時に未実行スケジュールを自動復元
+
+#### アクション種別（ScheduleAction）
+
+```typescript
+type ScheduleAction =
+  | 'reminder'        // リマインダー通知
+  | 'escalate'        // エスカレーション
+  | 'auto_close'      // 自動クローズ
+  | 'follow_up'       // フォローアップ
+  | 'check_progress'; // 進捗確認
+```
+
+#### 使用例
+
+```typescript
+// ワークフロー内でのスケジュール登録
+const result = await context.scheduler.schedule(
+  issue.id,
+  "3日後の朝9時にリマインド",
+  'reminder',
+  { timezone: 'Asia/Tokyo' }
+);
+
+// 重複防止（Issue ID + dedupeKeyの組み合わせでユニーク判定）
+await context.scheduler.schedule(
+  issue.id,
+  "毎日午後3時に進捗確認",
+  'check_progress',
+  {
+    dedupeKey: 'daily-check',  // 同じIssue内でのみユニーク
+    maxOccurrences: 7
+  }
+);
+// 注: 異なるIssueでは同じdedupeKeyを使用可能
+
+// Issue close時の自動キャンセル
+await context.scheduler.cancelByIssue(issue.id);
+```
+
+#### スケジュール実行時のイベント
+
+```typescript
+interface ScheduleTriggeredEvent {
+  type: 'SCHEDULE_TRIGGERED';
+  payload: {
+    issueId: string;
+    scheduleId: string;
+    action: ScheduleAction;
+    originalRequest: string;
+    metadata?: {
+      occurrences: number;
+      nextRun?: string;
+    };
+  };
 }
 ```
 
@@ -272,7 +394,100 @@ interface WorkflowResolution {
 3. **優先度ソート**: `priority`の降順でソート
 4. **実行リスト生成**: WorkflowDefinitionの配列を返す
 
-## 7. 実行フロー
+## 7. イベント設計
+
+### 7.1 イベントの多態性
+
+payloadとconditionを活用して、シンプルなイベント構成を実現します。
+
+```typescript
+// 単一のイベントタイプで複数の意味を表現
+interface DataEvent extends AgentEvent {
+  type: 'DATA_CHANGED';
+  payload:
+    | { entity: 'issue'; action: 'created'; data: Issue }
+    | { entity: 'issue'; action: 'updated'; data: IssueUpdate }
+    | { entity: 'knowledge'; action: 'created'; data: Knowledge }
+    | { entity: 'pond'; action: 'added'; data: PondEntry };
+}
+
+// ワークフローは特定のパターンのみに反応
+const issueAnalysisWorkflow: WorkflowDefinition = {
+  name: 'AnalyzeNewIssue',
+  triggers: {
+    eventTypes: ['DATA_CHANGED'],
+    condition: (event) => {
+      const payload = event.payload as any;
+      return payload.entity === 'issue' && payload.action === 'created';
+    },
+    priority: 30
+  },
+  executor: analyzeIssue
+};
+```
+
+### 7.2 データSchemaに基づくイベント
+
+データモデルの変更が自然にイベントを生成します。
+
+```typescript
+// Issue更新時の自動イベント生成
+async function updateIssueWithEvents(
+  storage: WorkflowStorageInterface,
+  emitter: WorkflowEventEmitterInterface,
+  issueId: string,
+  update: IssueUpdate
+): Promise<void> {
+  const before = await storage.getIssue(issueId);
+  const after = await storage.updateIssue(issueId, { updates: [...before.updates, update] });
+
+  // 状態変化に基づいてイベントを発行
+  if (before.status !== after.status) {
+    emitter.emit({
+      type: 'ISSUE_STATUS_CHANGED',
+      payload: {
+        issueId,
+        from: before.status,
+        to: after.status,
+        issue: after
+      }
+    });
+  }
+
+  // 優先度変化
+  if (before.priority !== after.priority && after.priority > 80) {
+    emitter.emit({
+      type: 'HIGH_PRIORITY_DETECTED',
+      payload: { issueId, priority: after.priority }
+    });
+  }
+}
+```
+
+### 7.3 シンプルなイベント構成の原則
+
+1. **汎用イベントタイプ**: 細かすぎるイベントタイプを避ける
+2. **payload での差別化**: 詳細はpayloadで表現
+3. **condition での絞り込み**: ワークフロー側で必要な条件を定義
+
+```typescript
+// 推奨: シンプルなイベントタイプ
+const RECOMMENDED_EVENT_TYPES = [
+  'DATA_CHANGED',      // データの変更全般
+  'USER_ACTION',       // ユーザーからのアクション
+  'SYSTEM_EVENT',      // システムイベント
+  'ANALYSIS_COMPLETE', // 分析処理の完了
+  'ERROR_OCCURRED'     // エラー発生
+];
+
+// 非推奨: 細かすぎるイベントタイプ
+const NOT_RECOMMENDED = [
+  'ISSUE_CREATED_WITH_HIGH_PRIORITY_AND_ERROR_LABEL',
+  'KNOWLEDGE_UPDATED_WITH_UPVOTE_FROM_ADMIN_USER'
+];
+```
+
+## 8. 実行フロー
 
 ```mermaid
 sequenceDiagram
@@ -297,7 +512,7 @@ sequenceDiagram
     Queue->>Event: 全実行完了
 ```
 
-## 8. パフォーマンス要件
+## 9. パフォーマンス要件
 
 | 項目 | 要件 | 備考 |
 |------|------|------|
@@ -306,17 +521,24 @@ sequenceDiagram
 | 同時実行数 | 最大10 | システムリソースに依存 |
 | メモリ使用量 | < 100MB/ワークフロー | 通常の処理時 |
 
-## 9. セキュリティ考慮事項
+## 10. セキュリティ考慮事項
 
 1. **入力検証**: すべての外部入力は検証する
 2. **権限チェック**: 操作権限を適切に確認
 3. **ログサニタイズ**: 機密情報をログに含めない
 4. **タイムアウト**: DoS攻撃を防ぐため適切に設定
 
-## 10. 今後の拡張予定
+## 11. 今後の拡張予定
 
 - **ワークフローバージョニング**: 複数バージョンの並行実行
 - **条件付き分岐**: ワークフロー内での条件分岐
 - **並列実行**: 複数ワークフローの並列処理
 - **ワークフローチェーン**: 明示的な連鎖実行
 - **メトリクス収集**: 実行時間、成功率などの統計
+
+## 12. 関連文書
+
+- [ワークフローから見える世界](./WORKFLOW_PERSPECTIVE.md) - ワークフローの視点と制約
+- [開発者ガイド](./DEVELOPER_GUIDE.md) - 実装ガイドライン
+- [ModulerPromptガイド](./MODULER_PROMPT_GUIDE.md) - AI処理の実装
+- [ロギング仕様](./LOGGING_SPEC.md) - ログ記録の仕様

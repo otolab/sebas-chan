@@ -44,6 +44,8 @@ export function createIssuesRouter(coreEngine: CoreEngine): Router {
         updates: [],
         relations: [],
         sourceInputIds: dto.sourceInputIds || [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       res.status(201).json({

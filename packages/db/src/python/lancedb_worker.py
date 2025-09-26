@@ -17,8 +17,8 @@ from pathlib import Path
 from embedding import create_embedding_model
 # スキーマ定義をインポート
 from schemas import (
-    get_issues_schema, get_state_schema, get_pond_schema,
-    ISSUES_TABLE, STATE_TABLE, POND_TABLE, ALL_TABLES,
+    get_issues_schema, get_state_schema, get_pond_schema, get_schedules_schema,
+    ISSUES_TABLE, STATE_TABLE, POND_TABLE, SCHEDULES_TABLE, ALL_TABLES,
     validate_issue
 )
 
@@ -118,6 +118,17 @@ class LanceDBWorker:
                     sys.stderr.write(f"Warning: Table {POND_TABLE} already exists, skipping creation\n")
                     sys.stderr.flush()
 
+            # Schedules テーブル
+            if SCHEDULES_TABLE not in existing_tables:
+                try:
+                    self.db.create_table(SCHEDULES_TABLE, schema=get_schedules_schema())
+                except ValueError as e:
+                    if "already exists" not in str(e):
+                        raise
+                    # テーブルが既に存在する場合は無視（並行実行時の競合状態対策）
+                    sys.stderr.write(f"Warning: Table {SCHEDULES_TABLE} already exists, skipping creation\n")
+                    sys.stderr.flush()
+
         except Exception as e:
             # テーブル初期化エラーをログに出力してから再raise
             sys.stderr.write(f"Error initializing tables: {str(e)}\n")
@@ -154,6 +165,14 @@ class LanceDBWorker:
                 result = self.search_pond(params)
             elif method == "getPondSources":
                 result = self.get_pond_sources()
+            elif method == "addSchedule":
+                result = self.add_schedule(params)
+            elif method == "getSchedule":
+                result = self.get_schedule(params.get("id"))
+            elif method == "updateSchedule":
+                result = self.update_schedule(params.get("id"), params.get("updates", {}))
+            elif method == "searchSchedules":
+                result = self.search_schedules(params)
             elif method == "clearDatabase":
                 result = self.clear_database()
             else:
@@ -293,18 +312,35 @@ class LanceDBWorker:
     
     def add_pond_entry(self, entry_data: dict) -> bool:
         """Pondエントリーを追加"""
-        # テキストコンテンツからベクトルを生成
+        # contextを含めてベクトル生成用のテキストを構築
         if self.embedding_model.is_loaded:
-            vector = self.embedding_model.encode(entry_data["content"])
+            # contextがある場合は含めてベクトル化
+            if entry_data.get("context"):
+                text_to_embed = f"Context: {entry_data['context']}\nContent: {entry_data['content']}"
+            else:
+                text_to_embed = entry_data["content"]
+
+            vector = self.embedding_model.encode(text_to_embed)
             entry_data["vector"] = vector.tolist() if hasattr(vector, 'tolist') else vector
         else:
             # モデルが読み込まれていない場合はダミーベクトル
             entry_data["vector"] = [0.0] * self.vector_dimension
-        
+
         # タイムスタンプをパース
         if isinstance(entry_data.get("timestamp"), str):
             entry_data["timestamp"] = pd.Timestamp(entry_data["timestamp"]).floor('ms')
-        
+
+        # metadataがdict型の場合はJSON文字列に変換
+        if isinstance(entry_data.get("metadata"), dict):
+            import json
+            entry_data["metadata"] = json.dumps(entry_data["metadata"], ensure_ascii=False)
+
+        # contextとmetadataのデフォルト値を設定（nullableフィールド）
+        if "context" not in entry_data:
+            entry_data["context"] = ""
+        if "metadata" not in entry_data:
+            entry_data["metadata"] = "{}"
+
         table = self.db.open_table(POND_TABLE)
         table.add([entry_data])
         return True
@@ -321,6 +357,13 @@ class LanceDBWorker:
             # タイムスタンプをISO形式に変換
             if 'timestamp' in entry:
                 entry['timestamp'] = entry['timestamp'].isoformat()
+            # metadataをJSONからdictに変換
+            if 'metadata' in entry and isinstance(entry['metadata'], str):
+                import json
+                try:
+                    entry['metadata'] = json.loads(entry['metadata'])
+                except json.JSONDecodeError:
+                    entry['metadata'] = {}
             return entry
         return None
     
@@ -340,32 +383,42 @@ class LanceDBWorker:
         # パラメータの取得
         query = filters.get('q', '')
         source = filters.get('source')
+        context = filters.get('context')  # contextフィルタを追加
         date_from = filters.get('dateFrom')
         date_to = filters.get('dateTo')
         limit = filters.get('limit', 20)
         offset = filters.get('offset', 0)
-        
+
         # ベクトル検索かどうかのフラグ
         is_vector_search = False
-        
+
         # ステップ1: LanceDBレベルでのフィルタリング（DataFusion SQL構文使用）
         where_conditions = []
         if source:
             where_conditions.append(f"source = '{source}'")
+        if context:
+            # contextの部分一致検索（LIKE句）
+            where_conditions.append(f"context LIKE '%{context}%'")
         if date_from:
             # CAST関数を使用してタイムスタンプを比較
             where_conditions.append(f"timestamp >= CAST('{date_from}' AS TIMESTAMP)")
         if date_to:
             # CAST関数を使用してタイムスタンプを比較
             where_conditions.append(f"timestamp <= CAST('{date_to}' AS TIMESTAMP)")
-        
+
         where_clause = " AND ".join(where_conditions) if where_conditions else None
-        
+
         # ステップ2: ベクトル検索またはテーブル全体の取得
         if query and self.embedding_model.is_loaded:
             try:
+                # contextがある場合は検索クエリに含める
+                if context:
+                    query_text = f"Context: {context}\nContent: {query}"
+                else:
+                    query_text = query
+
                 # ベクトル検索で類似度の高い順に多めに取得
-                query_vector = self.embedding_model.encode(query)
+                query_vector = self.embedding_model.encode(query_text)
                 # フィルタを適用してベクトル検索
                 search_results = table.search(query_vector)
                 if where_clause:
@@ -448,6 +501,13 @@ class LanceDBWorker:
             # タイムスタンプをISO形式に変換
             if 'timestamp' in record:
                 record['timestamp'] = record['timestamp'].isoformat()
+            # metadataをJSONからdictに変換
+            if 'metadata' in record and isinstance(record['metadata'], str):
+                import json
+                try:
+                    record['metadata'] = json.loads(record['metadata'])
+                except json.JSONDecodeError:
+                    record['metadata'] = {}
             # _distanceフィールドは除去しない（デバッグ用に残す）
         
         return {
@@ -464,12 +524,143 @@ class LanceDBWorker:
         """利用可能なPondソース一覧を取得"""
         table = self.db.open_table(POND_TABLE)
         df = table.to_pandas()
-        
+
         # ユニークなソース一覧を取得してソート
         sources = sorted(df['source'].unique().tolist())
         return sources
-    
-    
+
+    def add_schedule(self, schedule_data: Dict[str, Any]) -> str:
+        """スケジュールを追加
+
+        Args:
+            schedule_data: スケジュールデータ
+
+        Returns:
+            追加されたスケジュールのID
+        """
+        table = self.db.open_table(SCHEDULES_TABLE)
+
+        # IDが指定されていない場合は生成
+        if 'id' not in schedule_data:
+            schedule_data['id'] = f"schedule-{pd.Timestamp.now().value}"
+
+        # タイムスタンプフィールドの処理
+        for field in ['next_run', 'last_run', 'created_at', 'updated_at']:
+            if field in schedule_data and schedule_data[field]:
+                if isinstance(schedule_data[field], str):
+                    schedule_data[field] = pd.Timestamp(schedule_data[field])
+
+        # デフォルト値の設定
+        if 'created_at' not in schedule_data:
+            schedule_data['created_at'] = pd.Timestamp.now().floor('ms')
+        if 'updated_at' not in schedule_data:
+            schedule_data['updated_at'] = pd.Timestamp.now().floor('ms')
+
+        # テーブルに追加
+        table.add([schedule_data])
+        return schedule_data['id']
+
+    def get_schedule(self, schedule_id: str) -> Optional[Dict[str, Any]]:
+        """スケジュールを取得
+
+        Args:
+            schedule_id: スケジュールID
+
+        Returns:
+            スケジュールデータ（見つからない場合はNone）
+        """
+        table = self.db.open_table(SCHEDULES_TABLE)
+        result = table.search().where(f"id = '{schedule_id}'").limit(1).to_list()
+
+        if result:
+            schedule = result[0]
+            # タイムスタンプフィールドをISO形式に変換
+            for field in ['next_run', 'last_run', 'created_at', 'updated_at']:
+                if field in schedule and schedule[field]:
+                    schedule[field] = schedule[field].isoformat()
+            return schedule
+        return None
+
+    def update_schedule(self, schedule_id: str, updates: Dict[str, Any]) -> bool:
+        """スケジュールを更新
+
+        Args:
+            schedule_id: スケジュールID
+            updates: 更新するフィールド
+
+        Returns:
+            更新に成功した場合True
+        """
+        table = self.db.open_table(SCHEDULES_TABLE)
+
+        # 既存のスケジュールを取得
+        existing = self.get_schedule(schedule_id)
+        if not existing:
+            return False
+
+        # 更新データを準備
+        for key, value in updates.items():
+            existing[key] = value
+
+        # タイムスタンプフィールドの処理
+        for field in ['next_run', 'last_run', 'created_at', 'updated_at']:
+            if field in existing and existing[field]:
+                if isinstance(existing[field], str):
+                    existing[field] = pd.Timestamp(existing[field])
+
+        # 更新日時を更新
+        existing['updated_at'] = pd.Timestamp.now().floor('ms')
+
+        # テーブルを更新（LanceDBは直接更新をサポートしないため、削除して再追加）
+        df = table.to_pandas()
+        df = df[df['id'] != schedule_id]
+
+        # 新しいテーブルを作成
+        self.db.drop_table(SCHEDULES_TABLE)
+        self.db.create_table(SCHEDULES_TABLE, data=[existing] if len(df) == 0 else pd.concat([df, pd.DataFrame([existing])], ignore_index=True))
+
+        return True
+
+    def search_schedules(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """スケジュールを検索
+
+        Args:
+            filters: 検索フィルタ
+
+        Returns:
+            マッチするスケジュールのリスト
+        """
+        table = self.db.open_table(SCHEDULES_TABLE)
+        df = table.to_pandas()
+
+        # フィルタリング
+        if 'issue_id' in filters and filters['issue_id']:
+            df = df[df['issue_id'] == filters['issue_id']]
+        if 'status' in filters and filters['status']:
+            df = df[df['status'] == filters['status']]
+        if 'action' in filters and filters['action']:
+            df = df[df['action'] == filters['action']]
+
+        # ソート（created_atの降順）
+        df = df.sort_values('created_at', ascending=False)
+
+        # limitとoffsetの適用
+        limit = filters.get('limit', 100)
+        offset = filters.get('offset', 0)
+        df = df.iloc[offset:offset + limit]
+
+        # 結果を辞書のリストに変換
+        results = df.to_dict('records')
+
+        # タイムスタンプフィールドをISO形式に変換
+        for record in results:
+            for field in ['next_run', 'last_run', 'created_at', 'updated_at']:
+                if field in record and record[field]:
+                    if hasattr(record[field], 'isoformat'):
+                        record[field] = record[field].isoformat()
+
+        return results
+
     def clear_database(self) -> bool:
         """データベース全体をクリア（テスト用）"""
         # すべてのテーブルを削除

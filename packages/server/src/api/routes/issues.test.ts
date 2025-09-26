@@ -154,6 +154,8 @@ describe('Issues API Routes', () => {
         updates: [],
         relations: [],
         sourceInputIds: [],
+        createdAt: expect.any(Date),
+        updatedAt: expect.any(Date),
       });
     });
 
@@ -175,6 +177,8 @@ describe('Issues API Routes', () => {
         updates: [],
         relations: [],
         sourceInputIds: [],
+        createdAt: expect.any(Date),
+        updatedAt: expect.any(Date),
       });
     });
   });

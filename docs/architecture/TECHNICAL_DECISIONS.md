@@ -41,6 +41,35 @@
 - 組み込み可能（サーバーレス）
 - スケーラビリティ
 
+### AI基盤
+
+#### moduler-prompt/AIService
+**選定理由**:
+- capability駆動のドライバー選択
+- 統一的なドライバー管理
+- 構造化出力のネイティブサポート
+- プロバイダーに依存しない抽象化
+
+**実装方針**:
+```typescript
+// CoreEngineでAIServiceを初期化
+const aiService = new AIService({
+  models: [
+    {
+      model: 'test-driver',
+      provider: 'test',
+      capabilities: ['structured', 'fast', 'local']
+    }
+  ]
+});
+
+// ワークフローでcapabilityベースで選択
+const driver = await aiService.createDriverFromCapabilities(
+  ['structured', 'japanese'],
+  { preferLocal: true, lenient: true }
+);
+```
+
 ## 設計原則
 
 ### 1. シンプルさ優先

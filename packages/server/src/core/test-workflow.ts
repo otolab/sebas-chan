@@ -50,6 +50,8 @@ export class TestWorkflow {
         updates: [],
         relations: [],
         sourceInputIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
       };
 
       // テストデータに保存
@@ -87,6 +89,8 @@ export class TestWorkflow {
       updates: [],
       relations: [],
       sourceInputIds: [input.id],
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     // テストデータに保存
@@ -137,6 +141,8 @@ export class TestWorkflow {
       status: flowStatus,
       priorityScore,
       issueIds: [issueId],
+      createdAt: new Date(),
+      updatedAt: new Date(),
     };
 
     // テストデータに保存

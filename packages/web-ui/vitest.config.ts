@@ -5,5 +5,7 @@ export default defineConfig({
     include: ['src/**/*.{test,spec}.{js,ts}'],
     environment: 'node',
     globals: true,
+    silent: true,
+    logLevel: 'error',
   },
 });

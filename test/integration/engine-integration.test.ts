@@ -104,6 +104,25 @@ describe('CoreEngine - CoreAgent Integration', () => {
   describe('Event forwarding to CoreAgent', () => {
     it('should process INGEST_INPUT event through CoreAgent', async () => {
       await engine.initialize();
+
+      // ワークフローを登録（CoreEngineのworkflowRegistryに直接登録）
+      const testWorkflow = {
+        name: 'test-ingest-input',
+        description: 'Test workflow for INGEST_INPUT',
+        triggers: {
+          eventTypes: ['INGEST_INPUT'],
+        },
+        executor: vi.fn().mockResolvedValue({
+          success: true,
+          context: { state: {} },
+          output: {},
+        }),
+      };
+
+      // engineのworkflowRegistryにアクセスするため、privateプロパティにアクセス
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.register(testWorkflow);
+
       await engine.start();
 
       // createInputを呼び出してINGEST_INPUTイベントを生成
@@ -138,6 +157,30 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
     it('should process multiple event types through CoreAgent', async () => {
       await engine.initialize();
+
+      // デフォルトワークフローをクリア
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.clear();
+
+      // 複数のワークフローを登録
+      const workflows = [
+        {
+          name: 'test-process-user-request',
+          description: 'Test workflow for PROCESS_USER_REQUEST',
+          triggers: { eventTypes: ['PROCESS_USER_REQUEST'] },
+          executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
+        },
+        {
+          name: 'test-analyze-issue-impact',
+          description: 'Test workflow for ANALYZE_ISSUE_IMPACT',
+          triggers: { eventTypes: ['ANALYZE_ISSUE_IMPACT'] },
+          executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
+        },
+      ];
+
+      // @ts-ignore - private propertyにアクセス
+      workflows.forEach(w => engine.workflowRegistry.register(w));
+
       await engine.start();
 
       // 異なるタイプのイベントを追加
@@ -168,6 +211,18 @@ describe('CoreEngine - CoreAgent Integration', () => {
   describe('WorkflowContext functionality', () => {
     it('should provide working DB operations through storage', async () => {
       await engine.initialize();
+
+      // ワークフローを登録
+      const testWorkflow = {
+        name: 'test-db-operations',
+        description: 'Test workflow for DB operations',
+        triggers: { eventTypes: ['INGEST_INPUT'] },
+        executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
+      };
+
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.register(testWorkflow);
+
       await engine.start();
 
       // イベントを発生させてcontextを取得
@@ -315,6 +370,18 @@ describe('CoreEngine - CoreAgent Integration', () => {
   describe('Input to Pond flow', () => {
     it('should complete full flow: createInput -> INGEST_INPUT -> CoreAgent', async () => {
       await engine.initialize();
+
+      // ワークフローを登録
+      const testWorkflow = {
+        name: 'test-ingest-input-flow',
+        description: 'Test workflow for INGEST_INPUT flow',
+        triggers: { eventTypes: ['INGEST_INPUT'] },
+        executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
+      };
+
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.register(testWorkflow);
+
       await engine.start();
 
       // 1. Input作成
@@ -355,6 +422,18 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
     it('should handle multiple inputs in sequence', async () => {
       await engine.initialize();
+
+      // ワークフローを登録
+      const testWorkflow = {
+        name: 'test-multiple-inputs',
+        description: 'Test workflow for multiple inputs',
+        triggers: { eventTypes: ['INGEST_INPUT'] },
+        executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
+      };
+
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.register(testWorkflow);
+
       await engine.start();
 
       // 複数のInputを作成

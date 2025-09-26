@@ -3,7 +3,6 @@
  */
 
 import type { AIDriver } from '@moduler-prompt/driver';
-import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 import {
   Issue,
   Flow,
@@ -15,8 +14,13 @@ import {
 } from './index.js';
 import { Event, WorkflowType } from './events.js';
 
-// @moduler-prompt/utilsからDriverSelectionCriteriaをre-export
-export type { DriverSelectionCriteria } from '@moduler-prompt/utils';
+/**
+ * AIドライバー選択条件
+ */
+export interface DriverSelectionCriteria {
+  requiredCapabilities?: string[];
+  preferredCapabilities?: string[];
+}
 
 /**
  * Core APIインターフェース

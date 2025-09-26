@@ -23,6 +23,7 @@ Moduler Promptは、セキュリティと構造化のためにプロンプトを
 
 ```typescript
 import type { WorkflowDefinition } from '@sebas-chan/core';
+import { RecordType } from '@sebas-chan/core';
 import { compile } from '@moduler-prompt/core';
 import type { PromptModule } from '@moduler-prompt/core';
 
@@ -84,6 +85,73 @@ export const analyzeIssueWorkflow: WorkflowDefinition = {
 ```
 
 ## よく使うパターン
+
+### driver.queryの返り値処理
+
+`driver.query()`は`QueryResult`型のオブジェクトを返します：
+
+```typescript
+interface QueryResult {
+  content: string;              // 生のテキストレスポンス
+  structuredOutput?: unknown;   // 構造化出力（スキーマ指定時）
+  usage?: {...};                // トークン使用量
+  finishReason?: 'stop' | 'length' | 'error';
+}
+```
+
+#### スキーマ指定による構造化出力
+
+```typescript
+// スキーマを含むプロンプトをコンパイル
+const compiled = compile(module, context);
+compiled.metadata = {
+  outputSchema: {
+    type: 'object',
+    properties: {
+      interpretation: { type: 'string' },
+      requestType: {
+        type: 'string',
+        enum: ['issue', 'question', 'feedback']
+      },
+      priority: { type: 'number' },
+      actions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            type: { type: 'string' },
+            target: { type: 'string' },
+            details: { type: 'string' }
+          }
+        }
+      }
+    },
+    required: ['interpretation', 'requestType']
+  }
+};
+
+// 実行
+const result = await driver.query(compiled);
+
+// 構造化出力を取得
+if (result.structuredOutput) {
+  const data = result.structuredOutput as {
+    interpretation: string;
+    requestType: 'issue' | 'question' | 'feedback';
+    priority?: number;
+    actions?: Array<{...}>;
+  };
+  console.log(data.requestType);
+} else {
+  // structuredOutputがない場合は手動パース
+  const data = JSON.parse(result.content);
+}
+```
+
+**ドライバーサポート状況**:
+- **完全サポート**: OpenAI、Anthropic、VertexAI（ネイティブJSON出力）
+- **JSON抽出サポート**: TestDriver、EchoDriver（extractJSON使用）
+- **手動パース必要**: その他のドライバー
 
 ### モジュール合成
 
@@ -176,13 +244,13 @@ try {
 
   // finishReasonをチェック（正常終了か確認）
   if (result.finishReason && result.finishReason !== 'stop') {
-    context.logger.warn('AI response finished with reason:', result.finishReason);
+    context.recorder.record(RecordType.WARN, 'AI response finished with reason', { finishReason: result.finishReason });
   }
 
   return { success: true, context, output: result };
 
 } catch (error) {
-  context.logger.error('AI processing failed', { error });
+  context.recorder.record(RecordType.ERROR, 'AI processing failed', { error });
   return {
     success: false,
     context,

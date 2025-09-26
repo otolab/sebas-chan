@@ -437,6 +437,8 @@ export class DBClient extends EventEmitter {
     id: string;
     content: string;
     source: string;
+    context?: string; // 自然言語的なコンテキスト
+    metadata?: Record<string, unknown>; // その他のメタデータ
     timestamp: Date | string;
   }): Promise<boolean> {
     const timestamp =
@@ -471,6 +473,7 @@ export class DBClient extends EventEmitter {
   async searchPond(filters: {
     q?: string;
     source?: string;
+    context?: string; // contextフィルタを追加
     dateFrom?: string | Date;
     dateTo?: string | Date;
     limit?: number;
@@ -480,6 +483,8 @@ export class DBClient extends EventEmitter {
       id: string;
       content: string;
       source: string;
+      context?: string;
+      metadata?: Record<string, unknown>;
       timestamp: string;
       vector?: number[];
       score?: number;
@@ -507,8 +512,12 @@ export class DBClient extends EventEmitter {
         id: string;
         content: string;
         source: string;
+        context?: string;
+        metadata?: Record<string, unknown>;
         timestamp: string;
         vector?: number[];
+        score?: number;
+        distance?: number;
       }>;
       meta: {
         total: number;
@@ -517,6 +526,23 @@ export class DBClient extends EventEmitter {
         hasMore: boolean;
       };
     };
+  }
+
+  // Schedule操作メソッド
+  async addSchedule(scheduleData: any): Promise<string> {
+    return (await this.sendRequest('addSchedule', scheduleData)) as string;
+  }
+
+  async getSchedule(id: string): Promise<any | null> {
+    return await this.sendRequest('getSchedule', { id });
+  }
+
+  async updateSchedule(id: string, updates: any): Promise<boolean> {
+    return (await this.sendRequest('updateSchedule', { id, updates })) as boolean;
+  }
+
+  async searchSchedules(filters: any): Promise<any[]> {
+    return (await this.sendRequest('searchSchedules', filters)) as any[];
   }
 
   // テスト用メソッド

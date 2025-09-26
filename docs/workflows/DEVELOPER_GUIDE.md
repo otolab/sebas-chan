@@ -10,6 +10,7 @@
 
 ```typescript
 import type { WorkflowDefinition } from '@sebas-chan/core';
+import { RecordType } from '@sebas-chan/core';
 
 export const myWorkflow: WorkflowDefinition = {
   name: 'my-workflow',
@@ -125,7 +126,10 @@ const issue = await context.storage.createIssue({
   title: 'ユーザーからの要望',
   description: event.payload.text,
   status: 'open',
-  priority: 'medium'
+  labels: [],
+  updates: [],
+  relations: [],
+  sourceInputIds: []
 });
 
 // 検索
@@ -179,9 +183,80 @@ const moduleContext = {
 };
 const compiled = compile(analysisModule, moduleContext);
 const response = await driver.query(compiled);
+
+// driver.queryはQueryResult型を返します
+// structuredOutputフィールドで構造化データ取得可能
+const parsedResponse = response.structuredOutput || JSON.parse(response.content);
 ```
 
 詳細な使い方については [Moduler Prompt利用ガイド](MODULER_PROMPT_GUIDE.md) を参照してください。
+
+### 3.5 AIドライバーの選択と利用
+
+sebas-chanでは、moduler-promptのAIServiceを使用してドライバーを管理しています。
+
+#### AIServiceによるドライバー管理
+
+ワークフローのコンテキストは内部でAIServiceを使用してドライバーを選択・作成します：
+
+```typescript
+// context.createDriverの内部実装
+const driver = await context.createDriver({
+  requiredCapabilities: ['structured'],    // 必須の能力
+  preferredCapabilities: ['japanese', 'fast'] // 優先する能力
+});
+```
+
+#### DriverCapabilityの種類
+
+以下の能力（capability）が利用可能です：
+
+- `'structured'` - 構造化出力対応（JSON形式での応答）
+- `'fast'` - 高速応答
+- `'local'` - ローカル実行可能
+- `'japanese'` - 日本語特化
+- `'reasoning'` - 推論・思考特化
+- `'large-context'` - 大規模コンテキスト対応
+- `'streaming'` - ストリーミング応答対応
+- `'vision'` - 画像認識可能
+
+#### 実装例
+
+```typescript
+// 構造化出力が必要な場合
+const driver = await context.createDriver({
+  requiredCapabilities: ['structured'],
+  preferredCapabilities: ['fast', 'local']
+});
+
+// スキーマを定義してプロンプトモジュールを作成
+const promptModule = {
+  instructions: ['データを分析してJSON形式で返してください'],
+  output: {
+    schema: {
+      type: 'object',
+      properties: {
+        analysis: { type: 'string' },
+        confidence: { type: 'number' },
+        suggestions: {
+          type: 'array',
+          items: { type: 'string' }
+        }
+      },
+      required: ['analysis', 'confidence']
+    }
+  }
+};
+
+const compiled = compile(promptModule);
+const result = await driver.query(compiled);
+
+// structuredOutputが利用可能な場合は型安全に取得
+if (result.structuredOutput) {
+  const { analysis, confidence, suggestions } = result.structuredOutput;
+  // 型安全な処理
+}
+```
 
 ## 4. ベストプラクティス
 
@@ -303,9 +378,103 @@ describe('MyWorkflow', () => {
   - 各モジュールのテストケース詳細
   - エッジケースとエラーハンドリングのテスト
 
-## 6. 記録と検証可能性
+## 6. WorkflowRegistryの使用方法
 
-### 6.1 ログの本質的な役割
+### CoreEngineにおけるワークフロー登録
+
+CoreEngineは独立したWorkflowRegistryを持っており、CoreAgentのレジストリとは別管理されています。
+
+#### 重要な設計ポイント
+
+1. **CoreEngineのWorkflowRegistry**: CoreEngineインスタンスが独自のレジストリを保持
+2. **CoreAgentのWorkflowRegistry**: CoreAgent内部で使用される別のレジストリ
+3. **ワークフロー解決**: CoreEngineがイベントを受け取った際、自身のレジストリからワークフローを解決
+
+#### テストでの正しい実装パターン
+
+```typescript
+// ❌ 間違い: CoreAgentのレジストリに登録しても動作しない
+mockCoreAgent.getWorkflowRegistry().register(workflow);
+
+// ✅ 正解: CoreEngineのレジストリに直接登録
+// @ts-ignore - private propertyにアクセス
+engine.workflowRegistry.register(testWorkflow);
+```
+
+#### 実装例（Integration Test）
+
+```typescript
+describe('Integration Test', () => {
+  let engine: CoreEngine;
+
+  beforeEach(() => {
+    // CoreAgentをモックまたは注入
+    const mockCoreAgent = {
+      executeWorkflow: vi.fn().mockResolvedValue({ success: true }),
+      // ...
+    };
+
+    engine = new CoreEngine(mockCoreAgent);
+  });
+
+  it('should process events with registered workflow', async () => {
+    // ワークフローの定義
+    const testWorkflow = {
+      name: 'test-workflow',
+      description: 'Test workflow',
+      triggers: { eventTypes: ['INGEST_INPUT'] },
+      executor: vi.fn().mockResolvedValue({
+        success: true,
+        context: { state: {} },
+        output: {}
+      })
+    };
+
+    // CoreEngineのレジストリに登録
+    // @ts-ignore - privateプロパティへのアクセス
+    engine.workflowRegistry.register(testWorkflow);
+
+    await engine.start();
+
+    // イベント発生（INGEST_INPUTイベントが生成される）
+    await engine.createInput({
+      source: 'test',
+      content: 'Test content',
+      timestamp: new Date()
+    });
+
+    // ワークフローが実行されることを確認
+    await vi.waitFor(() => {
+      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+    });
+  });
+});
+```
+
+#### プロダクションコードでの登録
+
+プロダクションコードでは、CoreEngineの初期化時にデフォルトワークフローが自動登録されます：
+
+```typescript
+// CoreEngine内部での自動登録
+private registerDefaultWorkflows(): void {
+  // 基本ワークフロー（A-0〜A-3）の登録
+  this.workflowRegistry.register(ingestInputWorkflow);
+  this.workflowRegistry.register(processUserRequestWorkflow);
+  this.workflowRegistry.register(analyzeIssueImpactWorkflow);
+  this.workflowRegistry.register(extractKnowledgeWorkflow);
+}
+```
+
+#### 注意事項
+
+1. **イベントタイプの一致**: `createInput()`は`INGEST_INPUT`イベントを発生させるため、ワークフローのトリガーも`INGEST_INPUT`に設定する必要があります
+2. **タイミング**: ワークフローは`engine.start()`を呼ぶ前に登録する必要があります
+3. **プライベートアクセス**: テストでは`@ts-ignore`を使用してプライベートプロパティにアクセスする必要があります
+
+## 7. 記録と検証可能性
+
+### 7.1 ログの本質的な役割
 
 **context.recorderは単なるデバッグツールではありません。** これはワークフローシステムの検証可能性を保証する重要な機能です。
 
@@ -351,9 +520,9 @@ context.recorder.record(RecordType.INFO, {
 });
 ```
 
-## 7. よくあるパターン
+## 8. よくあるパターン
 
-### 7.1 チェーンワークフロー
+### 8.1 チェーンワークフロー
 
 ```typescript
 // 最初のワークフロー
@@ -373,7 +542,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 7.2 条件分岐
+### 8.2 条件分岐
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -396,7 +565,7 @@ executor: async (event, context, emitter) => {
 ```
 
 
-## 8. 一般的な問題と対処法
+## 9. 一般的な問題と対処法
 
 ### 問題: ワークフローがトリガーされない
 
@@ -442,13 +611,13 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 9. パフォーマンス最適化
+## 10. パフォーマンス最適化
 
-### 9.1 キャッシュについて
+### 10.1 キャッシュについて
 
 ワークフローはstatelessであるべきなので、現時点ではキャッシュ機能は実装しません。将来的にシステムレベルでのキャッシュ機構を導入する可能性がありますが、個別のワークフロー内ではキャッシュを保持しないようにしてください。
 
-### 9.2 並列処理
+### 10.2 並列処理
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -467,9 +636,120 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 10. セキュリティ考慮事項
+## 11. スケジューラーの使用
 
-### 10.1 入力検証
+### 11.1 基本的な使い方
+
+ワークフロー内でIssueに関連するタスクをスケジュールできます。
+
+```typescript
+executor: async (event, context, emitter) => {
+  const issue = await context.storage.createIssue({
+    title: '重要なタスク',
+    description: '緊急対応が必要なタスク',
+    status: 'open',
+    labels: ['urgent'],
+    updates: [],
+    relations: [],
+    sourceInputIds: []
+  });
+
+  // リマインダーを設定
+  const schedule = await context.scheduler.schedule(
+    issue.id,
+    "3日後の朝9時",
+    'reminder',
+    { timezone: 'Asia/Tokyo' }
+  );
+
+  context.recorder.record(RecordType.INFO, {
+    message: 'リマインダー設定',
+    scheduleId: schedule.scheduleId,
+    nextRun: schedule.nextRun
+  });
+
+  return { success: true, context, output: { issue, schedule } };
+}
+```
+
+### 11.2 スケジュールイベントの処理
+
+SCHEDULE_TRIGGEREDイベントを処理するワークフローの例：
+
+```typescript
+export const handleScheduledTask: WorkflowDefinition = {
+  name: 'handle-scheduled-task',
+  description: 'スケジュールされたタスクを処理',
+  triggers: {
+    eventTypes: ['SCHEDULE_TRIGGERED']
+  },
+  executor: async (event, context, emitter) => {
+    const { issueId, action, originalRequest } = event.payload;
+    const issue = await context.storage.getIssue(issueId);
+
+    switch (action) {
+      case 'reminder':
+        // リマインダー通知を送信
+        await sendReminder(issue, originalRequest);
+        break;
+
+      case 'escalate':
+        // 優先度を上げる
+        await context.storage.updateIssue(issueId, {
+          priority: Math.min(100, issue.priority + 10)
+        });
+        emitter.emit({
+          type: 'HIGH_PRIORITY_DETECTED',
+          payload: { issueId, priority: issue.priority + 10 }
+        });
+        break;
+
+      case 'auto_close':
+        // 自動クローズ
+        await context.storage.updateIssue(issueId, {
+          status: 'closed',
+          closedAt: new Date()
+        });
+        // スケジュールも自動でキャンセルされる
+        await context.scheduler.cancelByIssue(issueId);
+        break;
+    }
+
+    return { success: true, context };
+  }
+};
+```
+
+### 11.3 重複防止とキャンセル
+
+```typescript
+executor: async (event, context, emitter) => {
+  const issueId = event.payload.issueId;
+
+  // 同じIssue内で同じdedupeKeyを使うと古いものは自動キャンセル
+  await context.scheduler.schedule(
+    issueId,
+    "毎日午後3時",
+    'check_progress',
+    {
+      dedupeKey: 'daily-check',  // Issue ID + dedupeKeyでユニーク判定
+      maxOccurrences: 7           // 最大7回まで
+    }
+  );
+  // 注: 異なるIssueでは同じdedupeKeyを使用可能
+
+  // Issue closeと連動して自動キャンセル
+  if (event.payload.action === 'close') {
+    await context.scheduler.cancelByIssue(issueId);
+  }
+
+  return { success: true, context };
+}
+```
+
+## 12. セキュリティ考慮事項
+
+### 12.1 入力検証
 
 ```typescript
 import { z } from 'zod';
@@ -496,7 +776,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 10.2 機密情報の扱い
+### 12.2 機密情報の扱い
 
 ```typescript
 executor: async (event, context, emitter) => {
@@ -516,7 +796,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-## 11. まとめ
+## 13. まとめ
 
 ワークフロー開発の重要なポイント：
 

@@ -10,9 +10,13 @@ const program = new Command();
 
 program
   .name('manual-reporter')
-  .description('Manual input reporter for sebas-chan system - A CLI tool for submitting inputs to the sebas-chan information management system')
+  .description(
+    'Manual input reporter for sebas-chan system - A CLI tool for submitting inputs to the sebas-chan information management system'
+  )
   .version('0.0.1')
-  .addHelpText('after', `
+  .addHelpText(
+    'after',
+    `
 Examples:
   $ manual-reporter submit -c "Meeting notes from today"
   $ manual-reporter submit -f ./notes.txt
@@ -20,16 +24,27 @@ Examples:
   $ manual-reporter watch -d ./inputs -p "*.md"
   $ manual-reporter health
 
-For more information, see: https://github.com/otolab/sebas-chan`);
+For more information, see: https://github.com/otolab/sebas-chan`
+  );
 
 program
   .command('submit')
   .description('Submit a single input to the sebas-chan system')
-  .option('-a, --api-url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
-  .option('-s, --source <source>', 'Source identifier for tracking where the input came from (default: manual)', 'manual')
+  .option(
+    '-a, --api-url <url>',
+    'API endpoint URL (default: http://localhost:3001)',
+    'http://localhost:3001'
+  )
+  .option(
+    '-s, --source <source>',
+    'Source identifier for tracking where the input came from (default: manual)',
+    'manual'
+  )
   .option('-c, --content <content>', 'Input content as a string')
   .option('-f, --file <file>', 'Path to file containing the input content')
-  .addHelpText('after', `
+  .addHelpText(
+    'after',
+    `
 Notes:
   - Either --content or --file must be provided
   - The source field helps track where information originated from
@@ -38,11 +53,12 @@ Notes:
 Examples:
   $ manual-reporter submit -c "Important task: Review PR #123"
   $ manual-reporter submit -f meeting-notes.txt -s "meeting"
-  $ manual-reporter submit --file todo.md --source "planning"`)
+  $ manual-reporter submit --file todo.md --source "planning"`
+  )
   .action(async (options) => {
     try {
       let content: string;
-      
+
       if (options.file) {
         content = readFileSync(options.file, 'utf-8');
       } else if (options.content) {
@@ -82,13 +98,31 @@ Examples:
 program
   .command('watch')
   .description('Watch files/directories and automatically submit new or changed content as inputs')
-  .option('-a, --api-url <url>', 'API endpoint URL (default: http://localhost:3001)', 'http://localhost:3001')
-  .option('-s, --source <source>', 'Source identifier for tracking where the input came from (default: manual)', 'manual')
+  .option(
+    '-a, --api-url <url>',
+    'API endpoint URL (default: http://localhost:3001)',
+    'http://localhost:3001'
+  )
+  .option(
+    '-s, --source <source>',
+    'Source identifier for tracking where the input came from (default: manual)',
+    'manual'
+  )
   .option('-f, --file <file>', 'Path to a specific file to watch')
   .option('-d, --dir <dir>', 'Path to a directory to watch')
-  .option('-p, --pattern <pattern>', 'Glob pattern for files to watch in directory mode (default: *.txt)', '*.txt')
-  .option('-i, --interval <ms>', 'Polling interval in milliseconds for change detection (default: 1000)', '1000')
-  .addHelpText('after', `
+  .option(
+    '-p, --pattern <pattern>',
+    'Glob pattern for files to watch in directory mode (default: *.txt)',
+    '*.txt'
+  )
+  .option(
+    '-i, --interval <ms>',
+    'Polling interval in milliseconds for change detection (default: 1000)',
+    '1000'
+  )
+  .addHelpText(
+    'after',
+    `
 Notes:
   - Either --file or --dir must be provided
   - In directory mode, use --pattern to filter files (e.g., "*.md", "*.txt")
@@ -100,7 +134,8 @@ Examples:
   $ manual-reporter watch -f inbox.txt
   $ manual-reporter watch -d ./notes -p "*.md"
   $ manual-reporter watch --dir ./inputs --pattern "*.txt" --interval 5000
-  $ manual-reporter watch -f todo.txt -s "tasks"`)
+  $ manual-reporter watch -f todo.txt -s "tasks"`
+  )
   .action(async (options) => {
     try {
       if (!options.file && !options.dir) {
@@ -117,7 +152,7 @@ Examples:
       });
 
       const processedFiles = new Set<string>();
-      
+
       const submitFile = async (filePath: string) => {
         try {
           const content = readFileSync(filePath, 'utf-8');
@@ -138,12 +173,14 @@ Examples:
             console.error(`  ❌ Failed: ${result.error}`);
           }
         } catch (error) {
-          console.error(`  ❌ Error reading file: ${error instanceof Error ? error.message : error}`);
+          console.error(
+            `  ❌ Error reading file: ${error instanceof Error ? error.message : error}`
+          );
         }
       };
 
       const watchPath = options.file || join(options.dir, options.pattern);
-      
+
       console.log(`👁️  Watching: ${watchPath}`);
       console.log('   Press Ctrl+C to stop\n');
 
@@ -181,15 +218,22 @@ Examples:
 program
   .command('health')
   .description('Check if the sebas-chan API server is running and healthy')
-  .option('-a, --api-url <url>', 'API endpoint URL to check (default: http://localhost:3001)', 'http://localhost:3001')
-  .addHelpText('after', `
+  .option(
+    '-a, --api-url <url>',
+    'API endpoint URL to check (default: http://localhost:3001)',
+    'http://localhost:3001'
+  )
+  .addHelpText(
+    'after',
+    `
 Notes:
   - Returns exit code 0 if healthy, 1 if unhealthy
   - Useful for scripts and automation
 
 Examples:
   $ manual-reporter health
-  $ manual-reporter health --api-url http://localhost:8080`)
+  $ manual-reporter health --api-url http://localhost:8080`
+  )
   .action(async (options) => {
     try {
       const client = new ReporterClient({
@@ -197,7 +241,7 @@ Examples:
       });
 
       const isHealthy = await client.checkHealth();
-      
+
       if (isHealthy) {
         console.log('✅ API is healthy');
       } else {

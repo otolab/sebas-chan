@@ -1,6 +1,10 @@
-import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
+import type {
+  Issue,
+  Knowledge,
+  PondEntry,
+  DriverSelectionCriteria,
+} from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
-import type { DriverSelectionCriteria } from '@moduler-prompt/utils';
 import type { WorkflowRecorder } from './recorder.js';
 
 // イベントタイプの定義
@@ -16,7 +20,6 @@ export type WorkflowEventType =
   | string; // 拡張可能
 
 // ドライバーファクトリの型定義
-// @moduler-prompt/utilsのDriverSelectionCriteriaを使用
 export type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
 
 /**

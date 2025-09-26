@@ -5,15 +5,31 @@ export interface Input {
   timestamp: Date;
 }
 
+/**
+ * 優先度定数
+ */
+export const PRIORITY = {
+  CRITICAL: 90,
+  HIGH: 70,
+  MEDIUM: 50,
+  LOW: 30,
+  NONE: 10,
+} as const;
+
+export type PriorityValue = (typeof PRIORITY)[keyof typeof PRIORITY];
+
 export interface Issue {
   id: string;
   title: string;
   description: string; // 自然言語での詳細。ベクトル化の対象
   status: 'open' | 'closed';
+  priority?: number; // 優先度（0-100、オプショナル）
   labels: string[];
   updates: IssueUpdate[]; // 履歴
   relations: IssueRelation[]; // 他のIssueとの関係性
   sourceInputIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface IssueUpdate {
@@ -46,6 +62,8 @@ export interface Flow {
     | 'archived';
   priorityScore: number; // 0.0 ~ 1.0 AIが動的に評価
   issueIds: string[];
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Knowledge {
@@ -73,9 +91,11 @@ export type KnowledgeSource =
 export interface PondEntry {
   id: string;
   content: string;
-  vector?: number[]; // ベクトル化された表現
+  source: 'slack' | 'teams' | 'email' | 'webhook' | 'user_request' | string; // データの取得元
+  context?: string; // 自然言語的なコンテキスト（例: "work: ECサイトAPI開発"）
+  metadata?: Record<string, unknown>; // その他のメタデータ
   timestamp: Date;
-  source: string;
+  vector?: number[]; // ベクトル化された表現
   score?: number; // ベクトル検索時の類似度スコア（0〜1、1に近いほど類似）
   distance?: number; // ベクトル検索時の距離（0に近いほど類似）
 }
@@ -125,3 +145,4 @@ export interface LogDetail {
 export type * from './events.js';
 export type * from './workflow.js';
 export type * from './api.js';
+export type * from './workflow-scheduler.js';

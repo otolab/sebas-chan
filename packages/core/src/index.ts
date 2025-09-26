@@ -71,7 +71,19 @@ class CoreAgent {
 }
 
 // 型の再エクスポート
-export type { AgentEvent, AgentEventPayload } from './types.js';
+export type {
+  AgentEvent,
+  AgentEventPayload,
+  TypedAgentEvent,
+  DataArrivedPayload,
+  ProcessUserRequestPayload,
+  IssueCreatedPayload,
+  IssueUpdatedPayload,
+  HighPriorityDetectedPayload,
+  ErrorDetectedPayload,
+  KnowledgeExtractablePayload,
+  ScheduleTriggeredPayload
+} from './types.js';
 export { WorkflowRecorder, RecordType } from './workflows/recorder.js';
 
 // ワークフロー関連のエクスポート

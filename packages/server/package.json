@@ -12,7 +12,7 @@
     "build": "tsc --build --force --verbose",
     "dev": "tsc --build --watch & nodemon --watch dist --exec 'node dist/main.js'",
     "start": "node dist/main.js",
-    "test": "vitest run",
+    "test": "NODE_OPTIONS='--no-warnings' vitest run",
     "test:watch": "vitest",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
@@ -20,8 +20,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@moduler-prompt/driver": "^0.1.2",
-    "@moduler-prompt/utils": "^0.1.1",
+    "@moduler-prompt/driver": "^0.2.1",
+    "@moduler-prompt/utils": "^0.1.2",
     "@sebas-chan/core": "*",
     "@sebas-chan/db": "*",
     "@sebas-chan/shared-types": "*",
