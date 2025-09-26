@@ -177,8 +177,11 @@ Return the next execution time as current time or within 1 minute.
     });
   });
 
-  describe('パフォーマンステスト', () => {
+  describe.skipIf(!hasValidDriver)('パフォーマンステスト', () => {
     it('should complete within reasonable time with MLX', async () => {
+      const driver = await driverFactory.getDriver({
+        requiredCapabilities: ['structured'],
+      });
       const schema: JSONSchema = {
         type: 'object',
         properties: {

@@ -215,7 +215,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
           upvotes: Math.round(confidence * 10), // 初期評価は信頼度に基づく
           downvotes: 0,
         },
-        sources: [sourceType === 'issue' ?
+        sources: [sourceType === 'issue' || sourceType === 'resolution' ?
           { type: 'issue' as const, issueId: sourceId } :
           sourceType === 'pond' ?
           { type: 'pond' as const, pondEntryId: sourceId } :
@@ -251,7 +251,7 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
         },
         sources: [
           ...targetKnowledge.sources,
-          sourceType === 'issue' ?
+          sourceType === 'issue' || sourceType === 'resolution' ?
             { type: 'issue' as const, issueId: sourceId } :
             sourceType === 'pond' ?
             { type: 'pond' as const, pondEntryId: sourceId } :

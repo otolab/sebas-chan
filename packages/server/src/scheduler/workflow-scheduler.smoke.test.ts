@@ -45,18 +45,21 @@ describe('WorkflowScheduler (Smoke Test)', () => {
 
   it('should call driver for natural language interpretation', async () => {
     const mockDriver = {
-      complete: vi.fn().mockResolvedValue({
+      query: vi.fn().mockResolvedValue({
         content: JSON.stringify({
           next: '2025-01-26T09:00:00+09:00',
           pattern: null,
           interpretation: 'テスト実行',
         }),
+        structuredOutput: {
+          next: '2025-01-26T09:00:00+09:00',
+          pattern: null,
+          interpretation: 'テスト実行',
+        },
       }),
     };
 
-    const mockDriverFactory = {
-      getDriver: vi.fn().mockResolvedValue(mockDriver),
-    } as any;
+    const mockDriverFactory = vi.fn().mockResolvedValue(mockDriver) as any;
 
     const mockEventEmitter = new EventEmitter();
 
@@ -65,35 +68,43 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       connect: vi.fn(),
       execute: vi.fn().mockResolvedValue([]),
       getStatus: vi.fn(),
-    };
+      addSchedule: vi.fn().mockResolvedValue(undefined),
+      searchSchedules: vi.fn().mockResolvedValue([]),
+    } as any;
 
     const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
-    const result = await scheduler.schedule('issue-123', '3日後の朝9時', 'reminder');
+    const result = await scheduler.schedule('issue-123', '3日後の朝9時', {
+      type: 'reminder',
+      payload: {},
+    });
 
     expect(result).toBeDefined();
     expect(result.scheduleId).toBeDefined();
     expect(result.interpretation).toBe('テスト実行');
-    expect(mockDriverFactory.getDriver).toHaveBeenCalled();
-    expect(mockDriver.complete).toHaveBeenCalled();
+    expect(mockDriverFactory).toHaveBeenCalled();
+    expect(mockDriver.query).toHaveBeenCalled();
   });
 
   it('should emit SCHEDULE_TRIGGERED event format', async () => {
     vi.useFakeTimers();
 
     const mockDriver = {
-      complete: vi.fn().mockResolvedValue({
+      query: vi.fn().mockResolvedValue({
         content: JSON.stringify({
           next: new Date(Date.now() + 100).toISOString(), // 100ms後
           pattern: null,
           interpretation: '即座に実行',
         }),
+        structuredOutput: {
+          next: new Date(Date.now() + 100).toISOString(), // 100ms後
+          pattern: null,
+          interpretation: '即座に実行',
+        },
       }),
     };
 
-    const mockDriverFactory = {
-      getDriver: vi.fn().mockResolvedValue(mockDriver),
-    } as any;
+    const mockDriverFactory = vi.fn().mockResolvedValue(mockDriver) as any;
 
     const mockEventEmitter = new EventEmitter();
     const emitSpy = vi.spyOn(mockEventEmitter, 'emit');
@@ -103,11 +114,16 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       connect: vi.fn(),
       execute: vi.fn().mockResolvedValue([]),
       getStatus: vi.fn(),
-    };
+      addSchedule: vi.fn().mockResolvedValue(undefined),
+      searchSchedules: vi.fn().mockResolvedValue([]),
+    } as any;
 
     const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
-    await scheduler.schedule('issue-123', '今すぐ', 'reminder');
+    await scheduler.schedule('issue-123', '今すぐ', {
+      type: 'reminder',
+      payload: {},
+    });
 
     // タイマーを進める
     await vi.advanceTimersByTimeAsync(150);
@@ -120,7 +136,10 @@ describe('WorkflowScheduler (Smoke Test)', () => {
         payload: expect.objectContaining({
           issueId: 'issue-123',
           scheduleId: expect.any(String),
-          action: 'reminder',
+          action: expect.objectContaining({
+            type: 'reminder',
+            payload: {},
+          }),
           originalRequest: '今すぐ',
         }),
       })

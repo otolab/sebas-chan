@@ -47,7 +47,12 @@ describe('WorkflowScheduler', () => {
         },
       }),
       query: vi.fn().mockResolvedValue({
-        structured: {
+        content: JSON.stringify({
+          next: new Date(Date.now() + 60000).toISOString(), // 1分後
+          pattern: null,
+          interpretation: 'テスト: 1分後に実行',
+        }),
+        structuredOutput: {
           next: new Date(Date.now() + 60000).toISOString(), // 1分後
           pattern: null,
           interpretation: 'テスト: 1分後に実行',
@@ -178,7 +183,12 @@ describe('WorkflowScheduler', () => {
           }),
         }),
         query: vi.fn().mockResolvedValue({
-          structured: {
+          content: JSON.stringify({
+            next: new Date(Date.now() + 86400000).toISOString(), // 1日後
+            pattern: '毎日朝9時',
+            interpretation: '毎日朝9時に実行',
+          }),
+          structuredOutput: {
             next: new Date(Date.now() + 86400000).toISOString(), // 1日後
             pattern: '毎日朝9時',
             interpretation: '毎日朝9時に実行',
@@ -332,7 +342,12 @@ describe('WorkflowScheduler', () => {
           }),
         }),
         query: vi.fn().mockResolvedValue({
-          structured: {
+          content: JSON.stringify({
+            next: new Date(Date.now() + 1000).toISOString(),
+            pattern: null,
+            interpretation: '1秒後に実行',
+          }),
+          structuredOutput: {
             next: new Date(Date.now() + 1000).toISOString(),
             pattern: null,
             interpretation: '1秒後に実行',
