@@ -4,6 +4,9 @@ import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Knowledge, KnowledgeSource, Issue } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
+import type { AIDriver } from '@moduler-prompt/driver';
+import { RecordType } from '../recorder.js';
+import { extractKnowledgePromptModule, type KnowledgeExtractionContext } from './extract-knowledge-prompts.js';
 
 /**
  * 知識タイプを決定
@@ -80,7 +83,7 @@ async function executeExtractKnowledge(
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
-  const { storage, createDriver } = context;
+  const { storage, createDriver, recorder } = context;
   
   // 複数のイベントタイプに対応
   let content = '';
@@ -156,6 +159,12 @@ async function executeExtractKnowledge(
   }
 
   if (!content) {
+    recorder.record(RecordType.ERROR, {
+      workflowName: 'ExtractKnowledge',
+      error: 'No content to extract knowledge from',
+      sourceType,
+      sourceId,
+    });
     return {
       success: false,
       context,
@@ -163,9 +172,29 @@ async function executeExtractKnowledge(
     };
   }
 
+  // 処理開始を記録
+  recorder.record(RecordType.INPUT, {
+    workflowName: 'ExtractKnowledge',
+    event: event.type,
+    sourceType,
+    sourceId,
+    confidence,
+    contentLength: content.length,
+  });
+
   try {
     // 1. 既存の類似知識を検索
+    recorder.record(RecordType.INFO, {
+      step: 'searchExistingKnowledge',
+      query: content.substring(0, 100),
+    });
+
     const existingKnowledge = await storage.searchKnowledge(content);
+
+    recorder.record(RecordType.DB_QUERY, {
+      type: 'searchKnowledge',
+      existingCount: existingKnowledge.length,
+    });
 
     // 2. AIで知識を抽出・構造化
     const driver = await createDriver({
@@ -173,29 +202,29 @@ async function executeExtractKnowledge(
       preferredCapabilities: ['japanese', 'reasoning'],
     });
 
-    const prompt = `
-以下の情報から再利用可能な知識を抽出してください：
+    recorder.record(RecordType.AI_CALL, {
+      step: 'extractKnowledge',
+      model: 'structured-reasoning',
+      temperature: 0.2,
+    });
 
-ソースタイプ: ${sourceType}
-信頼度: ${confidence}
-内容:
-${content}
+    // コンテキストを作成
+    const context: KnowledgeExtractionContext = {
+      sourceType,
+      confidence,
+      content,
+      existingKnowledge
+    };
 
-${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.slice(0, 3).map(k => k.content).join('\n')}` : ''}
-
-以下の形式で知識を抽出してください：
-1. 問題の概要
-2. 解決方法またはベストプラクティス
-3. 適用可能な状況
-4. 注意点
-
-簡潔にまとめてください。
-`;
-
-    const promptModule = { instructions: [prompt] };
-    const compiledPrompt = compile(promptModule);
+    // コンパイル
+    const compiledPrompt = compile(extractKnowledgePromptModule, context);
     const result = await driver.query(compiledPrompt, { temperature: 0.2 });
     const extractedKnowledge = result.content;
+
+    recorder.record(RecordType.INFO, {
+      step: 'knowledgeExtracted',
+      knowledgeLength: extractedKnowledge.length,
+    });
 
     // 3. 重複チェック
     const isDuplicate = existingKnowledge.some(
@@ -225,8 +254,20 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 
       const createdKnowledge = await storage.createKnowledge(newKnowledge);
       knowledgeId = createdKnowledge.id;
+
+      recorder.record(RecordType.DB_QUERY, {
+        type: 'createKnowledge',
+        knowledgeId,
+        knowledgeType,
+      });
       
       // 知識作成イベントを発行
+      recorder.record(RecordType.INFO, {
+        step: 'eventEmitted',
+        eventType: 'KNOWLEDGE_CREATED',
+        knowledgeId,
+      });
+
       emitter.emit({
         type: 'KNOWLEDGE_CREATED',
         payload: {
@@ -258,6 +299,12 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
             { type: 'user_direct' as const }
         ],
       });
+
+      recorder.record(RecordType.DB_QUERY, {
+        type: 'updateKnowledge',
+        knowledgeId,
+        action: 'incrementUpvotes',
+      });
     }
 
     // 6. State更新
@@ -270,6 +317,15 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
 - Duplicate: ${isDuplicate}
 - Content preview: ${extractedKnowledge.substring(0, 100)}...
 `;
+
+    // 処理完了を記録
+    recorder.record(RecordType.OUTPUT, {
+      workflowName: 'ExtractKnowledge',
+      success: true,
+      knowledgeId,
+      isDuplicate,
+      confidence,
+    });
 
     return {
       success: true,
@@ -286,6 +342,13 @@ ${existingKnowledge.length > 0 ? `\n既存の関連知識:\n${existingKnowledge.
       },
     };
   } catch (error) {
+    // エラーを記録
+    recorder.record(RecordType.ERROR, {
+      workflowName: 'ExtractKnowledge',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return {
       success: false,
       context,

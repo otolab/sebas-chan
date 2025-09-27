@@ -5,6 +5,9 @@ import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
 import { PRIORITY } from '@sebas-chan/shared-types';
 import { compile } from '@moduler-prompt/core';
+import type { AIDriver } from '@moduler-prompt/driver';
+import { RecordType } from '../recorder.js';
+import { analyzeImpactPromptModule, type ImpactAnalysisContext } from './analyze-issue-impact-prompts.js';
 
 /**
  * 影響度スコアを計算
@@ -55,7 +58,7 @@ async function executeAnalyzeIssueImpact(
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
-  const { storage, createDriver } = context;
+  const { storage, createDriver, recorder } = context;
   
   // IssueのIDを取得
   let issueId: string | undefined;
@@ -69,6 +72,11 @@ async function executeAnalyzeIssueImpact(
   }
 
   if (!issue || !issueId) {
+    recorder.record(RecordType.ERROR, {
+      workflowName: 'AnalyzeIssueImpact',
+      error: 'Issue not found',
+      issueId,
+    });
     return {
       success: false,
       context,
@@ -76,10 +84,29 @@ async function executeAnalyzeIssueImpact(
     };
   }
 
+  // 処理開始を記録
+  recorder.record(RecordType.INPUT, {
+    workflowName: 'AnalyzeIssueImpact',
+    event: event.type,
+    issueId,
+    issueStatus: issue.status,
+    updateCount: issue.updates.length,
+  });
+
   try {
     // 1. 関連するIssueを検索して関係性を分析
+    recorder.record(RecordType.INFO, {
+      step: 'searchRelatedIssues',
+      query: issue.description.substring(0, 100),
+    });
+
     const relatedIssues = await storage.searchIssues(issue.description);
     const otherRelatedIssues = relatedIssues.filter(i => i.id !== issueId);
+
+    recorder.record(RecordType.DB_QUERY, {
+      type: 'searchIssues',
+      relatedCount: otherRelatedIssues.length,
+    });
 
     // 2. AIで状態変化と影響を分析
     const driver = await createDriver({
@@ -87,84 +114,34 @@ async function executeAnalyzeIssueImpact(
       preferredCapabilities: ['japanese', 'structured'],
     });
 
-    const prompt = `
-以下のIssueの現在の状態を分析し、必要なアクションを判定してください：
+    recorder.record(RecordType.AI_CALL, {
+      step: 'analyzeImpact',
+      model: 'reasoning-structured',
+    });
 
-Issue ID: ${issue.id}
-タイトル: ${issue.title}
-説明: ${issue.description}
-現在のステータス: ${issue.status}
-ラベル: ${issue.labels.join(', ')}
-優先度: ${issue.priority || '未設定'}
-更新回数: ${issue.updates.length}
-
-関連Issue数: ${otherRelatedIssues.length}
-${otherRelatedIssues.length > 0 ? `関連Issue:
-${otherRelatedIssues.slice(0, 5).map(i => 
-  `- [${i.id}] ${i.title} (status: ${i.status})`
-).join('\n')}` : ''}
-
-最新の更新:
-${issue.updates.slice(-3).map(u => 
-  `- ${u.timestamp}: ${u.content.substring(0, 100)}...`
-).join('\n')}
-
-以下を分析してください：
-1. このIssueは解決可能な状態か（close判定）
-2. 優先度の見直しが必要か
-3. 他のIssueとの統合が必要か
-4. 影響範囲とコンポーネント
-5. 知識として抽出すべき内容があるか
-
-JSONで応答してください：
-{
-  "shouldClose": boolean,
-  "closeReason": "解決理由",
-  "suggestedPriority": number (0-100),
-  "shouldMergeWith": ["統合すべきIssueのID"],
-  "impactedComponents": ["影響を受けるコンポーネント"],
-  "hasKnowledge": boolean,
-  "knowledgeSummary": "抽出可能な知識の概要",
-  "impactScore": number (0-1)
-}
-`;
-
-    const promptModule = {
-      instructions: [prompt],
-      output: {
-        schema: {
-          type: 'object',
-          properties: {
-            shouldClose: { type: 'boolean' },
-            suggestedPriority: { type: 'number', minimum: 0, maximum: 100 },
-            shouldMergeWith: {
-              type: 'array',
-              items: { type: 'string' }
-            },
-            impactedComponents: {
-              type: 'array',
-              items: { type: 'string' }
-            },
-            hasKnowledge: { type: 'boolean' },
-            knowledgeSummary: { type: 'string' },
-            impactScore: { type: 'number', minimum: 0, maximum: 1 }
-          },
-          required: ['shouldClose', 'suggestedPriority', 'shouldMergeWith', 'impactedComponents', 'hasKnowledge', 'impactScore']
-        }
-      }
+    // コンテキストを作成
+    const context: ImpactAnalysisContext = {
+      issue,
+      otherRelatedIssues
     };
-    const compiledPrompt = compile(promptModule);
+
+    // コンパイル
+    const compiledPrompt = compile(analyzeImpactPromptModule, context);
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
     // 構造化出力またはJSON形式で解析
-    let analysis;
+    let analysis: any;
     if (result.structuredOutput) {
       analysis = result.structuredOutput;
     } else {
       try {
         analysis = JSON.parse(result.content);
-      } catch {
+      } catch (parseError) {
         // JSON解析失敗時のフォールバック
+        recorder.record(RecordType.WARN, {
+          step: 'jsonParseFailed',
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+        });
         analysis = {
           shouldClose: false,
           suggestedPriority: issue.priority || 50,
@@ -175,6 +152,14 @@ JSONで応答してください：
         };
       }
     }
+
+    recorder.record(RecordType.INFO, {
+      step: 'analysisComplete',
+      shouldClose: analysis.shouldClose,
+      suggestedPriority: analysis.suggestedPriority,
+      hasKnowledge: analysis.hasKnowledge,
+      impactScore: analysis.impactScore,
+    });
 
     // 3. 分析結果に基づいてIssueを更新
     const updates: Partial<Issue> = {};
@@ -234,9 +219,15 @@ JSONで応答してください：
     // Issueを更新
     if (Object.keys(updates).length > 0) {
       await storage.updateIssue(issueId, updates);
+      recorder.record(RecordType.DB_QUERY, {
+        type: 'updateIssue',
+        issueId,
+        updatedFields: Object.keys(updates),
+      });
     }
 
     // 4. 後続イベントの発行
+    const emittedEvents: string[] = [];
     
     // 知識抽出可能な場合
     if (analysis.hasKnowledge || (analysis.shouldClose && issue.updates.length > 2)) {
@@ -249,6 +240,12 @@ JSONで応答してください：
           reason: analysis.knowledgeSummary || '解決済みIssueから知識を抽出',
           suggestedCategory: analysis.shouldClose ? 'solution' : 'pattern',
         },
+      });
+      emittedEvents.push('KNOWLEDGE_EXTRACTABLE');
+      recorder.record(RecordType.INFO, {
+        step: 'eventEmitted',
+        eventType: 'KNOWLEDGE_EXTRACTABLE',
+        confidence: analysis.impactScore || 0.7,
       });
     }
 
@@ -264,6 +261,12 @@ JSONで応答してください：
           requiredAction: analysis.shouldClose ? 'レビューと承認' : '緊急対応が必要',
         },
       });
+      emittedEvents.push('HIGH_PRIORITY_DETECTED');
+      recorder.record(RecordType.INFO, {
+        step: 'eventEmitted',
+        eventType: 'HIGH_PRIORITY_DETECTED',
+        priority: analysis.suggestedPriority || Math.round(analysis.impactScore * 100),
+      });
     }
 
     // 5. State更新
@@ -276,6 +279,15 @@ JSONで応答してください：
 - Related Issues: ${otherRelatedIssues.length}
 - Impacted Components: ${analysis.impactedComponents.join(', ') || 'None'}
 `;
+
+    // 処理完了を記録
+    recorder.record(RecordType.OUTPUT, {
+      workflowName: 'AnalyzeIssueImpact',
+      success: true,
+      issueId,
+      impactScore: analysis.impactScore,
+      eventsEmitted: emittedEvents,
+    });
 
     return {
       success: true,
@@ -293,6 +305,13 @@ JSONで応答してください：
       },
     };
   } catch (error) {
+    // エラーを記録
+    recorder.record(RecordType.ERROR, {
+      workflowName: 'AnalyzeIssueImpact',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return {
       success: false,
       context,

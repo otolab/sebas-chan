@@ -4,6 +4,10 @@ import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { IssueUpdate } from '@sebas-chan/shared-types';
 import { PRIORITY } from '@sebas-chan/shared-types';
+import { compile } from '@moduler-prompt/core';
+import type { AIDriver } from '@moduler-prompt/driver';
+import { RecordType } from '../recorder.js';
+import { ingestInputPromptModule, type InputAnalysisContext } from './ingest-input-prompts.js';
 
 /**
  * 入力内容から影響分析が必要かを判定
@@ -123,7 +127,7 @@ async function executeIngestInput(
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
-  const { storage, createDriver } = context;
+  const { storage, createDriver, recorder } = context;
   
   // DATA_ARRIVEDイベントのペイロード
   interface DataArrivedPayload {
@@ -137,6 +141,15 @@ async function executeIngestInput(
   
   const payload = event.payload as unknown as DataArrivedPayload;
 
+  // 処理開始を記録
+  recorder.record(RecordType.INPUT, {
+    workflowName: 'IngestInput',
+    event: event.type,
+    source: payload.source,
+    contentLength: payload.content?.length || 0,
+    pondEntryId: payload.pondEntryId,
+  });
+
   try {
     // 1. すでにPondに保存されているので、そのIDを使用
     const pondEntryId = payload.pondEntryId;
@@ -148,65 +161,34 @@ async function executeIngestInput(
     });
 
     // 3. 関連する既存Issueを検索
+    recorder.record(RecordType.INFO, {
+      step: 'searchRelatedIssues',
+      query: payload.content.substring(0, 100),
+    });
+
     const relatedIssues = await storage.searchIssues(payload.content);
+
+    recorder.record(RecordType.DB_QUERY, {
+      type: 'searchIssues',
+      resultCount: relatedIssues.length,
+    });
     
-    const promptModule = {
-      instructions: [`
-以下のデータを分析し、既存のIssueとの関連性を判定してください。
+    recorder.record(RecordType.AI_CALL, {
+      step: 'analyzeInput',
+      model: 'fast-japanese',
+      temperature: 0.3,
+    });
 
-データソース: ${payload.source}
-データ形式: ${payload.format || '不明'}
-内容:
-${payload.content}
-
-既存のIssue (${relatedIssues.length}件):
-${relatedIssues.slice(0, 10).map(issue => 
-  `- [${issue.id}] ${issue.title} (status: ${issue.status}, labels: ${issue.labels.join(', ')})`
-).join('\n')}
-
-以下を判定してください：
-1. 既存Issueとの関連性（どのIssueに情報を追加すべきか）
-2. 新規Issueの必要性（既存で対応できない場合）
-3. 問題の深刻度・優先度
-4. 適用すべきラベル
-
-JSONで以下の形式で応答してください：
-{
-  "relatedIssueIds": ["既存IssueのID"],
-  "needsNewIssue": boolean,
-  "newIssueTitle": "新規Issueが必要な場合のタイトル",
-  "severity": "low|medium|high|critical",
-  "updateContent": "既存Issueに追加する情報",
-  "labels": ["適用すべきラベル"]
-}
-`],
-      output: {
-        schema: {
-          type: 'object',
-          properties: {
-            relatedIssueIds: {
-              type: 'array',
-              items: { type: 'string' }
-            },
-            needsNewIssue: { type: 'boolean' },
-            newIssueTitle: { type: 'string' },
-            severity: {
-              type: 'string',
-              enum: ['critical', 'high', 'medium', 'low']
-            },
-            updateContent: { type: 'string' },
-            labels: {
-              type: 'array',
-              items: { type: 'string' }
-            }
-          },
-          required: ['relatedIssueIds', 'needsNewIssue', 'severity', 'labels']
-        }
-      }
+    // コンテキストを作成
+    const context: InputAnalysisContext = {
+      source: payload.source,
+      format: payload.format,
+      content: payload.content,
+      relatedIssues
     };
 
-    const { compile } = await import('@moduler-prompt/core');
-    const compiledPrompt = compile(promptModule);
+    // コンパイル
+    const compiledPrompt = compile(ingestInputPromptModule, context);
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
     // 構造化出力またはJSON形式で解析
@@ -216,8 +198,12 @@ JSONで以下の形式で応答してください：
     } else {
       try {
         analysisResult = JSON.parse(result.content);
-      } catch {
+      } catch (parseError) {
         // JSON解析に失敗した場合はテキストとして扱う
+        recorder.record(RecordType.WARN, {
+          step: 'jsonParseFailed',
+          error: parseError instanceof Error ? parseError.message : String(parseError),
+        });
         analysisResult = {
           relatedIssueIds: [],
           needsNewIssue: true,
@@ -228,6 +214,13 @@ JSONで以下の形式で応答してください：
         };
       }
     }
+
+    recorder.record(RecordType.INFO, {
+      step: 'analysisComplete',
+      relatedIssueIds: analysisResult.relatedIssueIds,
+      needsNewIssue: analysisResult.needsNewIssue,
+      severity: analysisResult.severity,
+    });
 
     const createdIssueIds: string[] = [];
     const updatedIssueIds: string[] = [];
@@ -253,6 +246,12 @@ JSONで以下の形式で応答してください：
           });
           
           updatedIssueIds.push(issueId);
+
+          recorder.record(RecordType.DB_QUERY, {
+            type: 'updateIssue',
+            issueId,
+            action: 'addUpdate',
+          });
           
           // Issue更新イベントを発行
           emitter.emit({
@@ -289,6 +288,12 @@ JSONで以下の形式で応答してください：
       
       const createdIssue = await storage.createIssue(newIssue);
       createdIssueIds.push(createdIssue.id);
+
+      recorder.record(RecordType.DB_QUERY, {
+        type: 'createIssue',
+        issueId: createdIssue.id,
+        title: newIssue.title,
+      });
       
       // Issue作成イベントを発行
       emitter.emit({
@@ -317,6 +322,12 @@ JSONで以下の形式で応答してください：
           },
         },
       });
+
+      recorder.record(RecordType.INFO, {
+        step: 'eventEmitted',
+        eventType: 'ERROR_DETECTED',
+        severity: analysisResult.severity,
+      });
     }
 
     // 7. State更新
@@ -330,6 +341,16 @@ JSONで以下の形式で応答してください：
 - Issues Created: ${createdIssueIds.join(', ') || 'None'}
 - Severity: ${analysisResult.severity || 'N/A'}
 `;
+
+    // 処理完了を記録
+    recorder.record(RecordType.OUTPUT, {
+      workflowName: 'IngestInput',
+      success: true,
+      pondEntryId,
+      updatedIssues: updatedIssueIds.length,
+      createdIssues: createdIssueIds.length,
+      severity: analysisResult.severity,
+    });
 
     return {
       success: true,
@@ -346,6 +367,13 @@ JSONで以下の形式で応答してください：
       },
     };
   } catch (error) {
+    // エラーを記録
+    recorder.record(RecordType.ERROR, {
+      workflowName: 'IngestInput',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     return {
       success: false,
       context,

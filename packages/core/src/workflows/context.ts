@@ -7,6 +7,9 @@ import type {
 import type { AIDriver } from '@moduler-prompt/driver';
 import type { WorkflowRecorder } from './recorder.js';
 
+// Re-export for convenience
+export type { WorkflowRecorder } from './recorder.js';
+
 // イベントタイプの定義
 export type WorkflowEventType =
   | 'INGEST_INPUT'
