@@ -2,8 +2,9 @@
  * AnalyzeIssueImpactワークフロー用プロンプトモジュール定義
  */
 
-import type { PromptModule } from '@moduler-prompt/core';
+import { type PromptModule, merge } from '@moduler-prompt/core';
 import type { Issue } from '@sebas-chan/shared-types';
+import { statePromptModule } from './state-prompt-module.js';
 
 /**
  * 分析用コンテキストの型定義
@@ -11,15 +12,17 @@ import type { Issue } from '@sebas-chan/shared-types';
 export interface ImpactAnalysisContext {
   issue: Issue;
   otherRelatedIssues: Issue[];
+  state: string; // statePromptModuleと統合するため追加
 }
 
 /**
- * AnalyzeIssueImpactワークフローのプロンプトモジュール
+ * 基本のAnalyzeImpactプロンプトモジュール
  */
-export const analyzeImpactPromptModule: PromptModule<ImpactAnalysisContext> = {
+const baseAnalyzeImpactModule: PromptModule<ImpactAnalysisContext> = {
   createContext: () => ({
     issue: {} as Issue,
-    otherRelatedIssues: []
+    otherRelatedIssues: [],
+    state: ''
   }),
 
   // objective: instructions大セクションに分類
@@ -49,28 +52,32 @@ export const analyzeImpactPromptModule: PromptModule<ImpactAnalysisContext> = {
 
   // inputs: data大セクションに分類（動的データ）
   inputs: [
-    (ctx: ImpactAnalysisContext) => `Issue ID: ${ctx.issue.id}`,
-    (ctx: ImpactAnalysisContext) => `タイトル: ${ctx.issue.title}`,
-    (ctx: ImpactAnalysisContext) => `説明: ${ctx.issue.description}`,
-    (ctx: ImpactAnalysisContext) => `現在のステータス: ${ctx.issue.status}`,
-    (ctx: ImpactAnalysisContext) => `ラベル: ${ctx.issue.labels.join(', ') || 'なし'}`,
-    (ctx: ImpactAnalysisContext) => `優先度: ${ctx.issue.priority || '未設定'}`,
-    (ctx: ImpactAnalysisContext) => `更新回数: ${ctx.issue.updates.length}`,
-    '',
-    (ctx: ImpactAnalysisContext) => `関連Issue数: ${ctx.otherRelatedIssues.length}`,
-    (ctx: ImpactAnalysisContext) => ctx.otherRelatedIssues.slice(0, 5).map(i =>
-      `  - [${i.id}] ${i.title} (status: ${i.status})`
-    ),
-    '',
-    '最新の更新:',
-    (ctx: ImpactAnalysisContext) => ctx.issue.updates.slice(-3).map(u =>
-      `  - ${u.timestamp}: ${u.content.substring(0, 100)}...`
-    )
+    (ctx: ImpactAnalysisContext) => `
+## 現在のIssue情報
+- Issue ID: ${ctx.issue.id}
+- タイトル: ${ctx.issue.title}
+- 説明: ${ctx.issue.description}
+- 現在のステータス: ${ctx.issue.status}
+- ラベル: ${ctx.issue.labels.join(', ') || 'なし'}
+- 優先度: ${ctx.issue.priority || '未設定'}
+- 更新回数: ${ctx.issue.updates.length}
+
+## 関連Issue情報
+- 関連Issue数: ${ctx.otherRelatedIssues.length}
+${ctx.otherRelatedIssues.slice(0, 5).map(i =>
+  `  - [${i.id}] ${i.title} (status: ${i.status})`
+).join('\n')}
+
+## 最新の更新
+${ctx.issue.updates.slice(-3).map(u =>
+  `  - ${u.timestamp}: ${u.content.substring(0, 100)}...`
+).join('\n')}
+`
   ],
 
-  // output: output大セクションに分類
-  output: {
-    schema: {
+  // schema: output大セクションに分類
+  schema: [
+    JSON.stringify({
     type: 'object',
     properties: {
       shouldClose: { type: 'boolean' },
@@ -89,6 +96,14 @@ export const analyzeImpactPromptModule: PromptModule<ImpactAnalysisContext> = {
       impactScore: { type: 'number', minimum: 0, maximum: 1 }
     },
     required: ['shouldClose', 'suggestedPriority', 'shouldMergeWith', 'impactedComponents', 'hasKnowledge', 'impactScore']
-    }
-  }
+    })
+  ]
 };
+
+/**
+ * statePromptModuleと統合したAnalyzeImpactプロンプトモジュール
+ */
+export const analyzeImpactPromptModule = merge(
+  statePromptModule,
+  baseAnalyzeImpactModule
+);

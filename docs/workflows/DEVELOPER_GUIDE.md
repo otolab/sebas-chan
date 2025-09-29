@@ -49,17 +49,103 @@ type WorkflowExecutor = (
 ```typescript
 interface WorkflowResult {
   success: boolean;
-  context: WorkflowContextInterface;  // 更新されたコンテキスト
+  context: WorkflowContextInterface;  // 更新されたコンテキスト（特にstateが更新される）
   output?: unknown;                    // 処理結果
   error?: Error;                       // エラー情報
 }
 ```
 
-## 2. 実装パターン
+## 3. context.stateの継続的更新
 
-## 3. 重要な実装パターン
+### 3.1 原則
 
-### 3.1 トリガー設計パターン
+1. **常に更新**: すべてのワークフローはcontext.stateを更新する責任がある
+2. **構造化出力に含める**: AI処理では必ずupdatedStateをスキーマに含める
+3. **updateStatePromptModuleの利用**: 標準モジュールを使用してState更新を実装
+4. **簡潔で有用**: 重要な情報のみを保持し、古い情報は適切に削除
+
+### 3.2 実装パターン
+
+```typescript
+import { merge } from '@moduler-prompt/core';
+import { statePromptModule, updateStatePromptModule } from './state-prompt-module.js';
+
+// 1. PromptModuleにstatePromptModuleをマージ
+export const myWorkflowPromptModule = merge(
+  statePromptModule,  // 現在のstateを含める
+  {
+    // ワークフロー固有の定義
+    objective: ['タスクの目的'],
+    schema: [
+      JSON.stringify({
+        type: 'object',
+        properties: {
+          // ワークフロー固有の出力
+          result: { type: 'string' },
+          // 必ずupdatedStateを含める
+          updatedState: { type: 'string' }
+        },
+        required: ['result', 'updatedState']
+      })
+    ]
+  }
+);
+
+// 2. ワークフロー実行でstate更新
+async function executeWorkflow(
+  event: AgentEvent,
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
+): Promise<WorkflowResult> {
+  // AI処理
+  const result = await processWithAI(event.payload, context);
+
+  // 構造化出力からupdatedStateを取得
+  const updatedState = result.updatedState;
+
+  // contextを更新して返す
+  return {
+    success: true,
+    context: {
+      ...context,
+      state: updatedState  // 更新されたstateを設定
+    },
+    output: result
+  };
+}
+```
+
+### 3.3 State更新専用の処理
+
+複雑な処理後にStateを更新する場合：
+
+```typescript
+import { updateStatePromptModule } from './state-prompt-module.js';
+
+async function updateContextState(
+  driver: AIDriver,
+  currentState: string,
+  newInfo: string
+): Promise<string> {
+  const compiled = compile(updateStatePromptModule, {
+    currentState,
+    newInfo
+  });
+
+  const result = await driver.query(compiled, { temperature: 0.3 });
+
+  if (!result.structuredOutput?.updatedState) {
+    // フォールバック: 単純追加
+    return currentState + '\n' + newInfo;
+  }
+
+  return result.structuredOutput.updatedState;
+}
+```
+
+## 4. 重要な実装パターン
+
+### 4.1 トリガー設計パターン
 
 **単純トリガー**: 特定イベントタイプに反応
 ```typescript
@@ -75,7 +161,7 @@ triggers: {
 }
 ```
 
-### 3.2 エラー処理パターン
+### 4.2 エラー処理パターン
 
 全ての例外を適切に捕捉し、WorkflowResultとして返す：
 ```typescript
@@ -94,7 +180,7 @@ executor: async (event, context, emitter) => {
 }
 ```
 
-### 3.3 記録パターン
+### 4.3 記録パターン
 
 処理の重要なポイントで必ず記録を残す：
 ```typescript
@@ -126,8 +212,9 @@ Moduler Promptフレームワークの正しい理解：
 
 3. **セキュリティモデル**: ユーザーデータと指示を分離
 4. **型安全性**: コンテキストとスキーマ定義による構造化
+5. **構造化出力の前提**: ワークフローでは常に構造化出力（structuredOutput）を使用
 
-詳細は[Moduler Prompt利用ガイド](MODULER_PROMPT_GUIDE.md)を参照。
+詳細は[Moduler Prompt利用ガイド](../ai/MODULER_PROMPT_GUIDE.md)を参照。
 
 ### 4.2 AI処理の実装パターン
 
@@ -137,17 +224,19 @@ import type { PromptModule } from '@moduler-prompt/core';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { RecordType } from '../recorder.js';
 
-// 1. コンテキスト型を定義
+// 1. コンテキスト型を定義（常にstateを含める）
 interface MyWorkflowContext {
   inputData: string;
   relatedItems: Item[];
+  state: string;  // context.stateを必ず含める
 }
 
 // 2. PromptModuleを関数外で静的に定義
 export const myWorkflowPromptModule: PromptModule<MyWorkflowContext> = {
   createContext: () => ({
     inputData: '',
-    relatedItems: []
+    relatedItems: [],
+    state: ''
   }),
 
   objective: ['データを分析して適切な処理を判定する'],
@@ -166,16 +255,17 @@ export const myWorkflowPromptModule: PromptModule<MyWorkflowContext> = {
     (ctx) => ctx.relatedItems.map(item => `  - ${item.name}`)
   ],
 
-  output: {
-    schema: {
+  schema: [
+    JSON.stringify({
       type: 'object',
       properties: {
         analysis: { type: 'string' },
-        recommendations: { type: 'array', items: { type: 'string' } }
+        recommendations: { type: 'array', items: { type: 'string' } },
+        updatedState: { type: 'string' }  // 常にState更新を含める
       },
-      required: ['analysis', 'recommendations']
-    }
-  }
+      required: ['analysis', 'recommendations', 'updatedState']
+    })
+  ]
 };
 
 // 3. ワークフロー内での使用
@@ -188,10 +278,11 @@ async function processWithAI(
   // 関連データを取得
   const relatedItems = await storage.searchItems(inputData);
 
-  // コンテキストを作成
+  // コンテキストを作成（必ずcontext.stateを含める）
   const promptContext: MyWorkflowContext = {
     inputData,
-    relatedItems
+    relatedItems,
+    state: context.state
   };
 
   // AIドライバーを作成
@@ -210,13 +301,24 @@ async function processWithAI(
   const compiled = compile(myWorkflowPromptModule, promptContext);
   const result = await driver.query(compiled, { temperature: 0.3 });
 
+  // 構造化出力を前提とする
+  if (!result.structuredOutput) {
+    throw new Error('構造化出力の取得に失敗しました');
+  }
+
+  const output = result.structuredOutput as {
+    analysis: string;
+    recommendations: string[];
+    updatedState: string;
+  };
+
   // 結果を記録
   recorder.record(RecordType.INFO, {
     step: 'analysisComplete',
-    hasStructuredOutput: !!result.structuredOutput
+    analysis: output.analysis
   });
 
-  return result.structuredOutput || JSON.parse(result.content);
+  return output;
 }
 ```
 

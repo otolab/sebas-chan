@@ -180,40 +180,32 @@ async function executeIngestInput(
     });
 
     // コンテキストを作成
-    const context: InputAnalysisContext = {
+    const analysisContext: InputAnalysisContext = {
       source: payload.source,
       format: payload.format,
       content: payload.content,
-      relatedIssues
+      relatedIssues,
+      currentState: context.state
     };
 
     // コンパイル
-    const compiledPrompt = compile(ingestInputPromptModule, context);
+    const compiledPrompt = compile(ingestInputPromptModule, analysisContext);
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
-    // 構造化出力またはJSON形式で解析
-    let analysisResult;
-    if (result.structuredOutput) {
-      analysisResult = result.structuredOutput;
-    } else {
-      try {
-        analysisResult = JSON.parse(result.content);
-      } catch (parseError) {
-        // JSON解析に失敗した場合はテキストとして扱う
-        recorder.record(RecordType.WARN, {
-          step: 'jsonParseFailed',
-          error: parseError instanceof Error ? parseError.message : String(parseError),
-        });
-        analysisResult = {
-          relatedIssueIds: [],
-          needsNewIssue: true,
-          newIssueTitle: extractIssueTitle(payload.content),
-          severity: 'medium',
-          updateContent: result.content,
-          labels: determineLabels(payload.source, result.content),
-        };
-      }
+    // 構造化出力を取得（必須）
+    if (!result.structuredOutput) {
+      throw new Error('構造化出力の取得に失敗しました');
     }
+
+    const analysisResult = result.structuredOutput as {
+      relatedIssueIds: string[];
+      needsNewIssue: boolean;
+      newIssueTitle?: string;
+      severity: 'low' | 'medium' | 'high' | 'critical';
+      updateContent?: string;
+      labels: string[];
+      updatedState: string;
+    };
 
     recorder.record(RecordType.INFO, {
       step: 'analysisComplete',
@@ -330,17 +322,8 @@ async function executeIngestInput(
       });
     }
 
-    // 7. State更新
-    const timestamp = new Date().toISOString();
-    const updatedState = context.state + `
-## データ取り込み処理 (${timestamp})
-- Source: ${payload.source}
-- Pond Entry ID: ${pondEntryId}
-- Related Issues Found: ${relatedIssues.length}
-- Issues Updated: ${updatedIssueIds.join(', ') || 'None'}
-- Issues Created: ${createdIssueIds.join(', ') || 'None'}
-- Severity: ${analysisResult.severity || 'N/A'}
-`;
+    // 7. State更新 - AIが生成したupdatedStateを使用
+    const updatedState = analysisResult.updatedState;
 
     // 処理完了を記録
     recorder.record(RecordType.OUTPUT, {

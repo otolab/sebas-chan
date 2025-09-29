@@ -2,8 +2,9 @@
  * IngestInputワークフロー用プロンプトモジュール定義
  */
 
-import type { PromptModule } from '@moduler-prompt/core';
+import { merge, type PromptModule } from '@moduler-prompt/core';
 import type { Issue } from '@sebas-chan/shared-types';
+import { statePromptModule } from './state-prompt-module.js';
 
 /**
  * 入力分析用コンテキストの型定義
@@ -13,18 +14,22 @@ export interface InputAnalysisContext {
   format: string | undefined;
   content: string;
   relatedIssues: Issue[];
+  currentState: string;  // statePromptModuleと統合
 }
 
 /**
  * IngestInputワークフローのプロンプトモジュール
  */
-export const ingestInputPromptModule: PromptModule<InputAnalysisContext> = {
-  createContext: () => ({
-    source: '',
-    format: undefined,
-    content: '',
-    relatedIssues: []
-  }),
+export const ingestInputPromptModule: PromptModule<InputAnalysisContext> = merge(
+  statePromptModule,
+  {
+    createContext: () => ({
+      source: '',
+      format: undefined,
+      content: '',
+      relatedIssues: [],
+      currentState: ''
+    }),
 
   // objective: instructions大セクションに分類
   objective: [
@@ -71,9 +76,9 @@ export const ingestInputPromptModule: PromptModule<InputAnalysisContext> = {
     (ctx: InputAnalysisContext) => ctx.relatedIssues.length > 10 ? '  ...' : ''
   ],
 
-  // output: output大セクションに分類
-  output: {
-    schema: {
+  // schema: output大セクションに分類
+  schema: [
+    JSON.stringify({
       type: 'object',
       properties: {
         relatedIssueIds: {
@@ -90,9 +95,14 @@ export const ingestInputPromptModule: PromptModule<InputAnalysisContext> = {
         labels: {
           type: 'array',
           items: { type: 'string' }
+        },
+        updatedState: {
+          type: 'string',
+          description: '更新されたシステム状態'
         }
       },
-      required: ['relatedIssueIds', 'needsNewIssue', 'severity', 'labels']
-    }
+      required: ['relatedIssueIds', 'needsNewIssue', 'severity', 'labels', 'updatedState']
+    })
+  ]
   }
-};
+);

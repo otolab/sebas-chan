@@ -209,17 +209,29 @@ async function executeExtractKnowledge(
     });
 
     // コンテキストを作成
-    const context: KnowledgeExtractionContext = {
+    const extractionContext: KnowledgeExtractionContext = {
       sourceType,
       confidence,
       content,
-      existingKnowledge
+      existingKnowledge,
+      currentState: context.state
     };
 
     // コンパイル
-    const compiledPrompt = compile(extractKnowledgePromptModule, context);
+    const compiledPrompt = compile(extractKnowledgePromptModule, extractionContext);
     const result = await driver.query(compiledPrompt, { temperature: 0.2 });
-    const extractedKnowledge = result.content;
+
+    // 構造化出力を取得
+    if (!result.structuredOutput) {
+      throw new Error('構造化出力の取得に失敗しました');
+    }
+
+    const output = result.structuredOutput as {
+      extractedKnowledge: string;
+      updatedState: string;
+    };
+
+    const extractedKnowledge = output.extractedKnowledge;
 
     recorder.record(RecordType.INFO, {
       step: 'knowledgeExtracted',
@@ -307,16 +319,8 @@ async function executeExtractKnowledge(
       });
     }
 
-    // 6. State更新
-    const timestamp = new Date().toISOString();
-    const updatedState = context.state + `
-## 知識抽出 (${timestamp})
-- Knowledge ID: ${knowledgeId || 'N/A'}
-- Source Type: ${sourceType}
-- Confidence: ${confidence.toFixed(2)}
-- Duplicate: ${isDuplicate}
-- Content preview: ${extractedKnowledge.substring(0, 100)}...
-`;
+    // 6. State更新 - AIが生成したupdatedStateを使用
+    const updatedState = output.updatedState;
 
     // 処理完了を記録
     recorder.record(RecordType.OUTPUT, {

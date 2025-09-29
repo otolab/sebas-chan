@@ -87,11 +87,11 @@ export const analysisPromptModule: PromptModule<AnalysisContext> = {
     '- search: 検索'
   ],
 
-  // output: output大セクションに分類
-  output: {
-    schema: {
-    type: 'object',
-    properties: {
+  // schema: output大セクションに分類
+  schema: [
+    JSON.stringify({
+      type: 'object',
+      properties: {
       interpretation: {
         type: 'string',
         description: 'リクエストの解釈'
@@ -135,9 +135,10 @@ export const analysisPromptModule: PromptModule<AnalysisContext> = {
         type: 'string',
         description: 'ユーザーへの応答メッセージ'
       }
-    },
-    required: ['interpretation', 'requestType', 'response']
-  }
+      },
+      required: ['interpretation', 'requestType', 'response']
+    })
+  ]
 };
 
 
