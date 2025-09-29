@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { analyzeIssueImpactWorkflow } from './analyze-issue-impact.js';
+import { analyzeIssueImpactWorkflow } from './index.js';
 import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
@@ -10,6 +10,16 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   let mockContext: WorkflowContextInterface;
   let mockEmitter: WorkflowEventEmitterInterface;
   let mockEvent: AgentEvent;
+
+  // テスト用ユーティリティ: createDriverのモックを設定
+  const setupDriverMocks = (analyzeIssueResponse: any) => {
+    // 1つのドライバーインスタンスで1つの応答を返す（updatedStateは分析結果に含まれる）
+    mockContext.createDriver = vi.fn().mockResolvedValue(
+      new TestDriver({
+        responses: [JSON.stringify(analyzeIssueResponse)],
+      })
+    );
+  };
 
   const mockIssue: Issue = {
     id: 'issue-456',
@@ -44,26 +54,14 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
           updates: [],
           relations: [],
           sourceInputIds: [],
-        createdAt: new Date(),
-        updatedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
         }),
         updateIssue: vi.fn(),
         createKnowledge: vi.fn(),
         updateKnowledge: vi.fn(),
       },
-      createDriver: async () => new TestDriver({
-        responses: [JSON.stringify({
-          impactScore: 0.8,
-          urgency: 'high',
-          impactedComponents: ['ユーザー管理', '認証'],
-          suggestedAction: 'escalate',
-          shouldMergeWith: [],
-          hasKnowledge: false,
-          shouldClose: false,
-          suggestedPriority: 80,
-          updatedState: 'Initial state\nIssue影響分析\nIssue ID: issue-123\nImpact Score: 0.8\nUrgency: high'
-        })]
-      }),
+      createDriver: vi.fn(), // 各テストケースで設定
       recorder: new WorkflowRecorder('test'),
     };
 
@@ -97,6 +95,18 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   it('should analyze issue and return impact score', async () => {
     mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
 
+    setupDriverMocks({
+      shouldClose: false,
+      closeReason: '',
+      suggestedPriority: 80,
+      shouldMergeWith: [],
+      impactedComponents: ['ユーザー管理', '認証'],
+      hasKnowledge: false,
+      knowledgeSummary: '',
+      impactScore: 0.8,
+      updatedState: 'Initial state\n## Issue影響分析\nIssue ID: issue-123\nImpact Score: 0.8',
+    });
+
     const result = await analyzeIssueImpactWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
@@ -119,19 +129,16 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     (mockEvent.payload as any).issue.title = 'Critical urgent crash - system completely down';
     mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
 
-    // AIが高影響度と判定するモック
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        impactScore: 0.9,
-        urgency: 'immediate',
-        impactedComponents: ['system', 'database'],
-        suggestedAction: 'escalate',
-        shouldMergeWith: [],
-        hasKnowledge: true,
-        shouldClose: false,
-        suggestedPriority: 90,
-        updatedState: 'Initial state\nCritical issue detected\nHigh priority event triggered'
-      })]
+    setupDriverMocks({
+      shouldClose: false,
+      closeReason: '',
+      suggestedPriority: 90,
+      shouldMergeWith: [],
+      impactedComponents: ['system', 'database'],
+      hasKnowledge: true,
+      knowledgeSummary: 'Critical system issue',
+      impactScore: 0.9,
+      updatedState: 'Initial state\nCritical issue detected\nHigh priority event triggered',
     });
 
     const result = await analyzeIssueImpactWorkflow.executor(mockEvent, mockContext, mockEmitter);
@@ -151,19 +158,16 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   it('should update issue priority when significant difference detected', async () => {
     mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
 
-    // AIが優先度変更を推奨するモック
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        impactScore: 0.7,
-        urgency: 'high',
-        impactedComponents: [],
-        suggestedAction: 'monitor',
-        shouldMergeWith: [],
-        hasKnowledge: false,
-        shouldClose: false,
-        suggestedPriority: 85,
-        updatedState: 'Initial state\nPriority updated to 85'
-      })]
+    setupDriverMocks({
+      shouldClose: false,
+      closeReason: '',
+      suggestedPriority: 85,
+      shouldMergeWith: [],
+      impactedComponents: [],
+      hasKnowledge: false,
+      knowledgeSummary: '',
+      impactScore: 0.7,
+      updatedState: 'Initial state\nPriority updated to 85',
     });
 
     const result = await analyzeIssueImpactWorkflow.executor(mockEvent, mockContext, mockEmitter);
@@ -183,18 +187,16 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
 
     // 通常の影響度
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        impactScore: 0.5,
-        urgency: 'medium',
-        impactedComponents: [],
-        suggestedAction: 'monitor',
-        shouldMergeWith: [],
-        hasKnowledge: false,
-        shouldClose: false,
-        suggestedPriority: 50,
-        updatedState: 'Initial state\nImpact score: 0.5'
-      })]
+    setupDriverMocks({
+      shouldClose: false,
+      closeReason: '',
+      suggestedPriority: 50,
+      shouldMergeWith: [],
+      impactedComponents: [],
+      hasKnowledge: false,
+      knowledgeSummary: '',
+      impactScore: 0.5,
+      updatedState: 'Initial state\nImpact score: 0.5',
     });
 
     let result = await analyzeIssueImpactWorkflow.executor(mockEvent, mockContext, mockEmitter);
@@ -202,18 +204,16 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     expect(normalScore).toBe(0.5);
 
     // 高影響度
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        impactScore: 0.9,
-        urgency: 'immediate',
-        impactedComponents: ['core', 'api'],
-        suggestedAction: 'escalate',
-        shouldMergeWith: [],
-        hasKnowledge: true,
-        shouldClose: false,
-        suggestedPriority: 90,
-        updatedState: 'Initial state\nHigh impact score: 0.9'
-      })]
+    setupDriverMocks({
+      shouldClose: false,
+      closeReason: '',
+      suggestedPriority: 90,
+      shouldMergeWith: [],
+      impactedComponents: ['core', 'api'],
+      hasKnowledge: true,
+      knowledgeSummary: 'Critical core issue',
+      impactScore: 0.9,
+      updatedState: 'Initial state\nHigh impact score: 0.9',
     });
 
     result = await analyzeIssueImpactWorkflow.executor(mockEvent, mockContext, mockEmitter);
@@ -222,13 +222,26 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   });
 
   it('should update state with analysis information', async () => {
+    setupDriverMocks({
+      shouldClose: false,
+      closeReason: '',
+      suggestedPriority: 75,
+      shouldMergeWith: [],
+      impactedComponents: ['ユーザー管理', '認証'],
+      hasKnowledge: false,
+      knowledgeSummary: '',
+      impactScore: 0.75,
+      updatedState:
+        'Initial state\n## Issue影響分析 (2024-01-01T00:00:00.000Z)\n- Issue ID: issue-123\n- Impact Score: 0.75\n- Should Close: false\n- Suggested Priority: 75\n- Impacted Components: ユーザー管理, 認証',
+    });
+
     const result = await analyzeIssueImpactWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
     expect(result.context.state).toContain('Issue影響分析');
     expect(result.context.state).toContain('Issue ID:');
     expect(result.context.state).toContain('Impact Score:');
-    expect(result.context.state).toContain('Urgency: high');
+    expect(result.context.state).toContain('Impacted Components:');
 
     // Related issues countは outputに含まれる
     expect((result.output as any).relatedIssuesCount).toBe(1);
@@ -257,19 +270,16 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   it('should add relations when merge is suggested', async () => {
     mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
 
-    // AIがマージを推奨するモック
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        impactScore: 0.5,
-        urgency: 'medium',
-        impactedComponents: [],
-        suggestedAction: 'merge',
-        shouldMergeWith: ['issue-456'],
-        hasKnowledge: false,
-        shouldClose: false,
-        suggestedPriority: 50,
-        updatedState: 'Initial state\nDuplicate detected: issue-456'
-      })]
+    setupDriverMocks({
+      shouldClose: false,
+      closeReason: '',
+      suggestedPriority: 50,
+      shouldMergeWith: ['issue-456'],
+      impactedComponents: [],
+      hasKnowledge: false,
+      knowledgeSummary: '',
+      impactScore: 0.5,
+      updatedState: 'Initial state\nDuplicate detected: issue-456',
     });
 
     const result = await analyzeIssueImpactWorkflow.executor(mockEvent, mockContext, mockEmitter);

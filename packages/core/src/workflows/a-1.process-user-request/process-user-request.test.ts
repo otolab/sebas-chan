@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { processUserRequestWorkflow } from './process-user-request.js';
+import { processUserRequestWorkflow } from './index.js';
 import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
@@ -56,7 +56,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
             target: 'issue',
             details: 'システムエラーのIssue作成'
           }],
-          response: 'エラー報告を受付しました。調査を開始します。'
+          response: 'エラー報告を受付しました。調査を開始します。',
+          updatedState: 'Initial state\n## ユーザーリクエスト処理\n- User ID: user-123\n- Request Type: issue\n- Interpretation: システムエラーに関する報告'
         })]
       }),
       recorder: new WorkflowRecorder('test'),
@@ -109,7 +110,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
           target: 'knowledge',
           details: 'ログイン方法の知識検索'
         }],
-        response: 'ログイン方法について説明します。'
+        response: 'ログイン方法について説明します。',
+        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- Request Type: question'
       })]
     });
 
@@ -139,7 +141,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
           payload: {}
         }],
         actions: [],
-        response: 'フィードバックありがとうございます。'
+        response: 'フィードバックありがとうございます。',
+        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- Request Type: feedback'
       })]
     });
 
@@ -187,7 +190,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
         requestType: 'feedback',
         events: [],
         actions: [],
-        response: 'リクエスト内容が空です。'
+        response: 'リクエスト内容が空です。',
+        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- Request Type: feedback'
       })]
     });
 

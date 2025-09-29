@@ -1,42 +1,45 @@
 import { merge, type PromptModule } from '@moduler-prompt/core';
 
-export interface Context {
+/**
+ * State管理用のコンテキスト型
+ */
+export interface StateContext {
   currentState: string;
 }
 
 /**
  * context.stateを組み込むための共通PromptModule
  */
-export const statePromptModule: PromptModule<Context> = {
+export const statePromptModule: PromptModule<StateContext> = {
   createContext: () => ({ currentState: '(initial)' }),
   terms: ['- State: アシスタントが利用するメモです。システム全体で共有されています。'],
   state: [
     {
       type: 'subsection',
       title: '現在の状態(State)',
-      items: [(ctx: Context) => ctx.currentState || '（状態なし）'],
+      items: [(ctx: StateContext) => ctx.currentState || '（状態なし）'],
     },
   ],
 };
 
 /**
- * 
+ * State更新用の出力スキーマ
  */
 const updateStateOutputSchema = {
-  type: 'object',
+  type: 'object' as const,
   properties: {
     updatedState: {
-      type: 'string',
+      type: 'string' as const,
       description: '更新されたシステム状態',
     },
   },
   required: ['updatedState'],
-};
+} as const;
 
 /**
  * State更新用のPromptModule
  */
-export const updateStatePromptModule: PromptModule = merge(statePromptModule, {
+export const updateStatePromptModule: PromptModule<StateContext> = merge(statePromptModule, {
   instructions: [
     {
       type: 'subsection',
@@ -49,9 +52,9 @@ export const updateStatePromptModule: PromptModule = merge(statePromptModule, {
     },
   ],
   schema: [
-    () => ({
-      type: 'json' as const,
+    {
+      type: 'json',
       content: updateStateOutputSchema,
-    }),
+    },
   ],
 });

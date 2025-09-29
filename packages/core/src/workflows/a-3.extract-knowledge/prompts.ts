@@ -4,7 +4,7 @@
 
 import { merge, type PromptModule } from '@moduler-prompt/core';
 import type { Knowledge } from '@sebas-chan/shared-types';
-import { statePromptModule } from './state-prompt-module.js';
+import { updateStatePromptModule } from '../shared/prompts/state.js';
 
 /**
  * 知識抽出用コンテキストの型定義
@@ -74,26 +74,37 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
         )
     ],
 
-    // 構造化出力のスキーマ
+    // schemaセクション（output大セクションに分類）
     schema: [
-      JSON.stringify({
-        type: 'object',
-        properties: {
-          extractedKnowledge: {
-            type: 'string',
-            description: '抽出された知識の内容'
+      {
+        type: 'json',
+        content: {
+          type: 'object',
+          properties: {
+            extractedKnowledge: {
+              type: 'string' as const,
+              description: '抽出された知識の内容'
+            },
+            // updatedStateはupdateStatePromptModuleから自動的に提供される
           },
-          updatedState: {
-            type: 'string',
-            description: '更新されたシステム状態'
-          }
-        },
-        required: ['extractedKnowledge', 'updatedState']
-      })
+          required: ['extractedKnowledge']
+        }
+      }
     ]
 };
 
+/**
+ * updateStatePromptModuleと統合したExtractKnowledgeプロンプトモジュール
+ *
+ * 設計意図:
+ * - merge関数を活用して機能を統合（重複を避ける）
+ * - updateStatePromptModuleは以下を提供:
+ *   - statePromptModuleの機能（現在の状態表示）
+ *   - State更新のinstructions
+ *   - updatedStateフィールドのschema定義
+ * - これにより1回のAI呼び出しで知識抽出とState更新を同時に実行可能
+ */
 export const extractKnowledgePromptModule = merge(
-  statePromptModule,
+  updateStatePromptModule,
   baseExtractKnowledgeModule
 );

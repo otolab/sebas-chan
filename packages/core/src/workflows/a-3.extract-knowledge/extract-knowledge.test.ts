@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { extractKnowledgeWorkflow } from './extract-knowledge.js';
+import { extractKnowledgeWorkflow } from './index.js';
 import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';

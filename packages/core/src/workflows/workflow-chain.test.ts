@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ingestInputWorkflow } from './ingest-input.js';
-import { processUserRequestWorkflow } from './process-user-request.js';
-import { analyzeIssueImpactWorkflow } from './analyze-issue-impact.js';
-import { extractKnowledgeWorkflow } from './extract-knowledge.js';
-import type { AgentEvent } from '../../types.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import { ingestInputWorkflow } from './a-0.ingest-input/index.js';
+import { processUserRequestWorkflow } from './a-1.process-user-request/index.js';
+import { analyzeIssueImpactWorkflow } from './a-2.analyze-issue-impact/index.js';
+import { extractKnowledgeWorkflow } from './a-3.extract-knowledge/index.js';
+import type { AgentEvent } from '../types.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './context.js';
 import { TestDriver } from '@moduler-prompt/driver';
-import { WorkflowRecorder } from '../recorder.js';
+import { WorkflowRecorder } from './recorder.js';
 
 describe('Workflow Chain Integration Tests', () => {
   let mockContext: WorkflowContextInterface;
@@ -53,50 +53,53 @@ describe('Workflow Chain Integration Tests', () => {
         }),
         updateKnowledge: vi.fn(),
       },
-      createDriver: async () => new TestDriver({
-        responses: [
-          // For process-user-request (A-1)
-          JSON.stringify({
-            interpretation: 'ログインエラーの調査依頼',
-            requestType: 'issue',
-            events: [{
-              type: 'ISSUE_CREATED',
-              reason: 'ログインエラーの報告',
-              payload: {}
-            }],
-            suggestedActions: ['エラーログの確認', '影響範囲の調査']
-          }),
-          // For analyze-issue-impact (A-2)
-          JSON.stringify({
-            severity: 'high',
-            needsNewIssue: false,
-            relatedIssueIds: [],
-            potentialCauses: ['認証サービスの問題'],
-            affectedComponents: ['ログインシステム'],
-            estimatedImpact: {
-              users: 100,
-              operations: ['ログイン'],
-              urgency: 'high'
-            }
-          }),
-          // For extract-knowledge (A-3)
-          '抽出された知識: エラー発生時は即座にログを確認し、影響範囲を特定する必要がある。',
-          // For ingest-input (A-0)
-          JSON.stringify({
-            severity: 'critical',
-            needsNewIssue: true,
-            newIssueTitle: 'システムエラー検出',
-            relatedIssueIds: [],
-            potentialCauses: ['システム障害'],
-            affectedComponents: ['システム全体'],
-            estimatedImpact: {
-              users: 1000,
-              operations: ['全般'],
-              urgency: 'critical'
-            }
-          })
-        ]
-      }),
+      createDriver: async () =>
+        new TestDriver({
+          responses: [
+            // For process-user-request (A-1)
+            JSON.stringify({
+              interpretation: 'ログインエラーの調査依頼',
+              requestType: 'issue',
+              events: [
+                {
+                  type: 'ISSUE_CREATED',
+                  reason: 'ログインエラーの報告',
+                  payload: {},
+                },
+              ],
+              suggestedActions: ['エラーログの確認', '影響範囲の調査'],
+            }),
+            // For analyze-issue-impact (A-2)
+            JSON.stringify({
+              severity: 'high',
+              needsNewIssue: false,
+              relatedIssueIds: [],
+              potentialCauses: ['認証サービスの問題'],
+              affectedComponents: ['ログインシステム'],
+              estimatedImpact: {
+                users: 100,
+                operations: ['ログイン'],
+                urgency: 'high',
+              },
+            }),
+            // For extract-knowledge (A-3)
+            '抽出された知識: エラー発生時は即座にログを確認し、影響範囲を特定する必要がある。',
+            // For ingest-input (A-0)
+            JSON.stringify({
+              severity: 'critical',
+              needsNewIssue: true,
+              newIssueTitle: 'システムエラー検出',
+              relatedIssueIds: [],
+              potentialCauses: ['システム障害'],
+              affectedComponents: ['システム全体'],
+              estimatedImpact: {
+                users: 1000,
+                operations: ['全般'],
+                urgency: 'critical',
+              },
+            }),
+          ],
+        }),
       recorder: new WorkflowRecorder('test'),
     };
   });
@@ -239,23 +242,26 @@ describe('Workflow Chain Integration Tests', () => {
       // Question用のコンテキストを作成
       const questionContext = {
         ...mockContext,
-        createDriver: async () => new TestDriver({
-          responses: [
-            // For process-user-request (question)
-            JSON.stringify({
-              interpretation: 'キャッシュクリア方法の質問',
-              requestType: 'question',
-              events: [{
-                type: 'KNOWLEDGE_EXTRACTABLE',
-                reason: 'ユーザーが質問をしました',
-                payload: {}
-              }],
-              suggestedActions: ['関連ドキュメントの検索']
-            }),
-            // For extract-knowledge
-            'キャッシュクリアの手順: 1. 設定メニューを開く 2. キャッシュ管理を選択 3. クリアボタンをクリック'
-          ]
-        })
+        createDriver: async () =>
+          new TestDriver({
+            responses: [
+              // For process-user-request (question)
+              JSON.stringify({
+                interpretation: 'キャッシュクリア方法の質問',
+                requestType: 'question',
+                events: [
+                  {
+                    type: 'KNOWLEDGE_EXTRACTABLE',
+                    reason: 'ユーザーが質問をしました',
+                    payload: {},
+                  },
+                ],
+                suggestedActions: ['関連ドキュメントの検索'],
+              }),
+              // For extract-knowledge
+              'キャッシュクリアの手順: 1. 設定メニューを開く 2. キャッシュ管理を選択 3. クリアボタンをクリック',
+            ],
+          }),
       };
 
       // A-1: PROCESS_USER_REQUEST（質問）
@@ -336,7 +342,7 @@ describe('Workflow Chain Integration Tests', () => {
 
       // 並行実行
       const results = await Promise.all(
-        events.map(event => ingestInputWorkflow.executor(event, mockContext, mockEmitter))
+        events.map((event) => ingestInputWorkflow.executor(event, mockContext, mockEmitter))
       );
 
       // 両方成功
@@ -417,7 +423,8 @@ describe('Workflow Chain Integration Tests', () => {
           // 各ワークフローに対して適切な応答を返す
           if (driverCallCount === 1) {
             // For ingest-input (A-0)
-            const newState = accumulatedState + '\n## データ取り込み処理\n最新の入力処理を完了しました。';
+            const newState =
+              accumulatedState + '\n## データ取り込み処理\n最新の入力処理を完了しました。';
             return new TestDriver({
               responses: [
                 JSON.stringify({
@@ -427,9 +434,9 @@ describe('Workflow Chain Integration Tests', () => {
                   severity: 'critical',
                   updateContent: 'エラー検出',
                   labels: ['error', 'critical'],
-                  updatedState: newState
-                })
-              ]
+                  updatedState: newState,
+                }),
+              ],
             });
           } else if (driverCallCount === 2) {
             // For analyze-issue-impact (A-2) - 最初のドライバー作成
@@ -443,19 +450,20 @@ describe('Workflow Chain Integration Tests', () => {
                   impactedComponents: ['critical-system'],
                   hasKnowledge: true,
                   knowledgeSummary: '重要なエラー',
-                  impactScore: 0.9
-                })
-              ]
+                  impactScore: 0.9,
+                }),
+              ],
             });
           } else if (driverCallCount === 3) {
             // For analyze-issue-impact (A-2) - 2回目のドライバー作成（State更新用）
-            const newState = accumulatedState + '\n## Issue影響分析\n高影響度のIssueを検出しました。';
+            const newState =
+              accumulatedState + '\n## Issue影響分析\n高影響度のIssueを検出しました。';
             return new TestDriver({
               responses: [
                 JSON.stringify({
-                  updatedState: newState
-                })
-              ]
+                  updatedState: newState,
+                }),
+              ],
             });
           } else {
             // For extract-knowledge (A-3)
@@ -463,10 +471,11 @@ describe('Workflow Chain Integration Tests', () => {
             return new TestDriver({
               responses: [
                 JSON.stringify({
-                  extractedKnowledge: 'システムエラーへの対処法: エラー発生時は即座にログを確認し、影響範囲を特定する必要がある。',
-                  updatedState: newState
-                })
-              ]
+                  extractedKnowledge:
+                    'システムエラーへの対処法: エラー発生時は即座にログを確認し、影響範囲を特定する必要がある。',
+                  updatedState: newState,
+                }),
+              ],
             });
           }
         },
@@ -508,7 +517,6 @@ describe('Workflow Chain Integration Tests', () => {
           mockEmitter
         );
 
-
         // 状態が累積的に更新されている
         expect(analyzeResult.context.state).toContain('最新の入力処理');
         expect(analyzeResult.context.state).toContain('Issue影響分析');
@@ -525,11 +533,13 @@ describe('Workflow Chain Integration Tests', () => {
           description: 'Critical system error',
           status: 'closed',
           labels: ['high-priority'],
-          updates: [{
-            content: 'エラーを修正しました',
-            timestamp: new Date(),
-            author: 'user',
-          }],
+          updates: [
+            {
+              content: 'エラーを修正しました',
+              timestamp: new Date(),
+              author: 'user',
+            },
+          ],
           relations: [],
           sourceInputIds: [],
           createdAt: new Date(),

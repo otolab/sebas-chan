@@ -3,11 +3,10 @@
  */
 
 import type { Issue, IssueRelation } from '@sebas-chan/shared-types';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { WorkflowEventEmitterInterface } from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
-import { impactScorePromptModule } from './impact-score-prompt-module.js';
-import { updateStatePromptModule } from './state-prompt-module.js';
+import { analyzeImpactPromptModule, type ImpactAnalysisContext } from './prompts.js';
 import { RecordType } from '../recorder.js';
 
 /**
@@ -22,85 +21,47 @@ export interface ImpactAnalysisResult {
   hasKnowledge: boolean;
   knowledgeSummary?: string;
   impactScore: number;
+  updatedState: string; // State更新も含む
 }
 
 /**
- * 影響度スコアをAIで計算
+ * Issueの影響度をAIで分析
+ * 意図: 分析とState更新を1回のAI呼び出しで完結（updateStatePromptModuleの活用）
  */
-export async function calculateImpactScoreWithAI(
+export async function analyzeIssue(
   driver: AIDriver,
-  issueContent: string,
-  relatedIssuesCount: number
-): Promise<{ score: number; reasoning: string }> {
-  const compiledPrompt = compile(impactScorePromptModule, {
-    issueContent,
-    relatedIssuesCount
-  });
-
-  const result = await driver.query(compiledPrompt, { temperature: 0.2 });
-
-  if (result.structuredOutput) {
-    const output = result.structuredOutput as { impactScore: number; reasoning: string };
-    return {
-      score: output.impactScore,
-      reasoning: output.reasoning
-    };
-  }
-
-  // フォールバック
-  return {
-    score: 0.5,
-    reasoning: 'スコア計算に失敗したため、デフォルト値を使用'
+  issue: Issue,
+  relatedIssues: Issue[],
+  currentState: string
+): Promise<ImpactAnalysisResult> {
+  // 意図: PromptModuleのコンテキストに必要なデータを集約
+  const analysisContext: ImpactAnalysisContext = {
+    issue,
+    otherRelatedIssues: relatedIssues,
+    currentState, // updateStatePromptModuleが必要とする現在のState
   };
-}
 
-/**
- * context.stateを更新
- */
-export async function updateContextState(
-  driver: AIDriver,
-  currentState: string,
-  analysisResult: ImpactAnalysisResult,
-  issueId: string
-): Promise<string> {
-  const newInfo = `
-## Issue影響分析 (${new Date().toISOString()})
-- Issue ID: ${issueId}
-- Impact Score: ${analysisResult.impactScore.toFixed(2)}
-- Should Close: ${analysisResult.shouldClose}
-- Suggested Priority: ${analysisResult.suggestedPriority}
-- Impacted Components: ${analysisResult.impactedComponents.join(', ') || 'None'}
-`;
-
-  const compiledPrompt = compile(updateStatePromptModule, {
-    currentState,
-    newInfo
-  });
-
+  const compiledPrompt = compile(analyzeImpactPromptModule, analysisContext);
   const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
+  // 意図: 構造化出力は必須（ワークフローの前提条件）
   if (result.structuredOutput) {
-    const output = result.structuredOutput as { updatedState: string };
-    if (output.updatedState) {
-      return output.updatedState;
-    }
+    return result.structuredOutput as ImpactAnalysisResult;
   }
 
-  // フォールバック: 単純に追加
-  return currentState + '\n' + newInfo;
+  throw new Error('AI分析結果の取得に失敗しました');
 }
 
 /**
  * Issueの更新を構築
+ * 意図: AI分析結果に基づいて必要な更新のみを生成（無駄なDB書き込みを避ける）
  */
-export function buildIssueUpdates(
-  issue: Issue,
-  analysis: ImpactAnalysisResult
-): Partial<Issue> {
+export function buildIssueUpdates(issue: Issue, analysis: ImpactAnalysisResult): Partial<Issue> {
   const updates: Partial<Issue> = {};
   const timestamp = new Date();
 
   // ステータス変更
+  // 意図: AIがクローズ可能と判定し、まだクローズされていない場合のみ
   if (analysis.shouldClose && issue.status !== 'closed') {
     updates.status = 'closed';
     updates.updates = [
@@ -114,6 +75,7 @@ export function buildIssueUpdates(
   }
 
   // 優先度変更
+  // 意図: 微小な変更を避け、意味のある差（10ポイント以上）のみ更新
   const currentPriority = issue.priority || 0;
   if (Math.abs(currentPriority - analysis.suggestedPriority) > 10) {
     updates.priority = analysis.suggestedPriority;
@@ -129,13 +91,16 @@ export function buildIssueUpdates(
   }
 
   // 関係性の追加
+  // 意図: 重複Issueが検出された場合、関係性を明示的に記録
   if (analysis.shouldMergeWith.length > 0) {
     updates.relations = [
       ...(issue.relations || []),
-      ...analysis.shouldMergeWith.map((targetId): IssueRelation => ({
-        type: 'duplicates',
-        targetIssueId: targetId,
-      })),
+      ...analysis.shouldMergeWith.map(
+        (targetId): IssueRelation => ({
+          type: 'duplicates',
+          targetIssueId: targetId,
+        })
+      ),
     ];
   }
 
@@ -144,6 +109,7 @@ export function buildIssueUpdates(
 
 /**
  * 後続イベントの発行
+ * 意図: イベント駆動アーキテクチャで他のワークフローをトリガー
  */
 export function emitFollowupEvents(
   emitter: WorkflowEventEmitterInterface,
@@ -155,6 +121,7 @@ export function emitFollowupEvents(
   const emittedEvents: string[] = [];
 
   // 知識抽出可能な場合
+  // 意図: 解決済みIssueや重要な情報を含むIssueから知識を抽出
   if (analysis.hasKnowledge || (analysis.shouldClose && issue.updates.length > 2)) {
     emitter.emit({
       type: 'KNOWLEDGE_EXTRACTABLE',
@@ -176,6 +143,7 @@ export function emitFollowupEvents(
   }
 
   // 高優先度検出
+  // 意図: 緊急対応が必要なIssueをシステム全体に通知
   if (analysis.suggestedPriority > 80 || analysis.impactScore > 0.8) {
     emitter.emit({
       type: 'HIGH_PRIORITY_DETECTED',

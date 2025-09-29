@@ -3,86 +3,8 @@ import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '..
 import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
 import type { Issue } from '@sebas-chan/shared-types';
-import { compile } from '@moduler-prompt/core';
 import { RecordType } from '../recorder.js';
-import { analyzeImpactPromptModule, type ImpactAnalysisContext } from './analyze-issue-impact-prompts.js';
-import {
-  type ImpactAnalysisResult,
-  calculateImpactScoreWithAI,
-  updateContextState,
-  buildIssueUpdates,
-  emitFollowupEvents
-} from './analyze-issue-impact-helpers.js';
-
-/**
- * Issueとその関連情報を取得
- */
-async function fetchIssueData(
-  event: AgentEvent,
-  storage: WorkflowContextInterface['storage']
-): Promise<{ issue: Issue; issueId: string } | null> {
-  if (event.type !== 'ISSUE_CREATED' && event.type !== 'ISSUE_UPDATED') {
-    return null;
-  }
-
-  const payload = event.payload as { issueId: string; issue?: Issue };
-  const issueId = payload.issueId;
-  const issue = payload.issue || await storage.getIssue(issueId);
-
-  if (!issue) {
-    return null;
-  }
-
-  return { issue, issueId };
-}
-
-/**
- * AI分析を実行
- */
-async function analyzeIssueWithAI(
-  context: WorkflowContextInterface,
-  issue: Issue,
-  relatedIssues: Issue[]
-): Promise<ImpactAnalysisResult> {
-  const driver = await context.createDriver({
-    requiredCapabilities: ['reasoning'],
-    preferredCapabilities: ['japanese', 'structured'],
-  });
-
-  const analysisContext: ImpactAnalysisContext = {
-    issue,
-    otherRelatedIssues: relatedIssues,
-    currentState: context.state
-  };
-
-  const compiledPrompt = compile(analyzeImpactPromptModule, analysisContext);
-  // 構造化出力を有効にするためにmetadataを設定
-  compiledPrompt.metadata = {
-    outputSchema: {
-      type: 'object',
-      properties: {
-        impactScore: { type: 'number' },
-        urgency: { type: 'string', enum: ['immediate', 'high', 'medium', 'low'] },
-        affectedComponents: { type: 'array', items: { type: 'string' } },
-        suggestedAction: { type: 'string', enum: ['escalate', 'monitor', 'defer', 'merge'] },
-        relatedIssueIds: { type: 'array', items: { type: 'string' } },
-        hasKnowledge: { type: 'boolean' },
-        shouldClose: { type: 'boolean' },
-        suggestedPriority: { type: 'number' },
-        updatedState: { type: 'string' }
-      },
-      required: ['impactScore', 'urgency', 'affectedComponents', 'suggestedAction', 'relatedIssueIds', 'hasKnowledge', 'shouldClose', 'suggestedPriority', 'updatedState']
-    }
-  };
-  const result = await driver.query(compiledPrompt, { temperature: 0.3 });
-
-  if (result.structuredOutput) {
-    return result.structuredOutput as ImpactAnalysisResult;
-  }
-
-  // 構造化出力が得られない場合はエラー
-  throw new Error('AI分析結果の取得に失敗しました');
-}
+import { analyzeIssue, buildIssueUpdates, emitFollowupEvents } from './actions.js';
 
 /**
  * A-2: ANALYZE_ISSUE_IMPACT ワークフロー実行関数
@@ -95,8 +17,12 @@ async function executeAnalyzeIssueImpact(
   const { storage, recorder } = context;
 
   // 1. Issueデータの取得
-  const issueData = await fetchIssueData(event, storage);
-  if (!issueData) {
+  // 意図: payloadに含まれている場合は再取得を避ける（パフォーマンス最適化）
+  const payload = event.payload as { issueId: string; issue?: Issue };
+  const issueId = payload.issueId;
+  const issue = payload.issue || (await storage.getIssue(issueId));
+
+  if (!issue) {
     recorder.record(RecordType.ERROR, {
       workflowName: 'AnalyzeIssueImpact',
       error: 'Issue not found',
@@ -108,9 +34,8 @@ async function executeAnalyzeIssueImpact(
     };
   }
 
-  const { issue, issueId } = issueData;
-
   // 処理開始を記録
+  // TODO: recorder.recordのschemaは別途決める必要がありそうですね。「なんでもあり」はよくなさそう。
   recorder.record(RecordType.INPUT, {
     workflowName: 'AnalyzeIssueImpact',
     event: event.type,
@@ -120,27 +45,36 @@ async function executeAnalyzeIssueImpact(
   });
 
   try {
-    // 2. 関連Issueの検索
+    // 2. ドライバーの作成
+    // 意図: 単一インスタンスで全処理を実行（作成コスト削減）
+    const driver = await context.createDriver({
+      requiredCapabilities: ['reasoning'],
+      preferredCapabilities: ['japanese', 'structured'],
+    });
+
+    // 3. 関連Issueの検索
+    // 意図: 重複や類似Issueの検出のため、説明文でベクトル検索
     recorder.record(RecordType.INFO, {
       step: 'searchRelatedIssues',
       query: issue.description.substring(0, 100),
     });
 
     const relatedIssues = await storage.searchIssues(issue.description);
-    const otherRelatedIssues = relatedIssues.filter(i => i.id !== issueId);
+    const otherRelatedIssues = relatedIssues.filter((i: Issue) => i.id !== issueId);
 
     recorder.record(RecordType.DB_QUERY, {
       type: 'searchIssues',
       relatedCount: otherRelatedIssues.length,
     });
 
-    // 3. AI分析実行
+    // 4. AI分析実行
+    // 意図: 1回のAI呼び出しで分析とState更新を同時に実行（効率化）
     recorder.record(RecordType.AI_CALL, {
       step: 'analyzeImpact',
       model: 'reasoning-structured',
     });
 
-    const analysis = await analyzeIssueWithAI(context, issue, otherRelatedIssues);
+    const analysis = await analyzeIssue(driver, issue, otherRelatedIssues, context.state);
 
     recorder.record(RecordType.INFO, {
       step: 'analysisComplete',
@@ -150,7 +84,8 @@ async function executeAnalyzeIssueImpact(
       impactScore: analysis.impactScore,
     });
 
-    // 4. Issueの更新
+    // 5. Issueの更新
+    // 意図: AI判定に基づいて必要な場合のみDB更新（無駄な更新を避ける）
     const updates = buildIssueUpdates(issue, analysis);
 
     if (Object.keys(updates).length > 0) {
@@ -176,27 +111,9 @@ async function executeAnalyzeIssueImpact(
       }
     }
 
-    // 5. 後続イベントの発行
-    const emittedEvents = emitFollowupEvents(
-      emitter,
-      recorder,
-      analysis,
-      issueId,
-      issue
-    );
-
-    // 6. State更新
-    const driver = await context.createDriver({
-      requiredCapabilities: ['fast'],
-      preferredCapabilities: ['structured'],
-    });
-
-    const updatedState = await updateContextState(
-      driver,
-      context.state,
-      analysis,
-      issueId
-    );
+    // 6. 後続イベントの発行
+    // 意図: 他のワークフローをトリガー（イベント駆動アーキテクチャ）
+    const emittedEvents = emitFollowupEvents(emitter, recorder, analysis, issueId, issue);
 
     // 処理完了を記録
     recorder.record(RecordType.OUTPUT, {
@@ -211,7 +128,7 @@ async function executeAnalyzeIssueImpact(
       success: true,
       context: {
         ...context,
-        state: updatedState,
+        state: analysis.updatedState, // 意図: AIが生成した新しいStateで更新
       },
       output: {
         issueId,
@@ -251,9 +168,11 @@ export const analyzeIssueImpactWorkflow: WorkflowDefinition = {
       if (event.type === 'ISSUE_UPDATED') {
         const payload = event.payload as any;
         // updates配列への追加、priority変更、status変更の場合のみ
-        return payload.updates?.changedFields?.includes('priority') ||
-               payload.updates?.changedFields?.includes('status') ||
-               payload.updates?.changedFields?.includes('updates');
+        return (
+          payload.updates?.changedFields?.includes('priority') ||
+          payload.updates?.changedFields?.includes('status') ||
+          payload.updates?.changedFields?.includes('updates')
+        );
       }
       return true;
     },
