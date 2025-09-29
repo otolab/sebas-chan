@@ -78,6 +78,14 @@ const baseIngestInputModule: PromptModule<InputAnalysisContext> = {
     'JSON形式で応答してください。'
   ],
 
+  // materials: data大セクションに分類（参考情報）
+  materials: [
+    (ctx: InputAnalysisContext) => ctx.relatedIssues.length > 0 ? '既存のIssue:' : null,
+    (ctx: InputAnalysisContext) => ctx.relatedIssues.map(issue =>
+      `  - [${issue.id}] ${issue.title}\n    status: ${issue.status}\n    priority: ${issue.priority || 'none'}\n    labels: ${issue.labels.join(', ') || 'none'}\n    description: ${issue.description.substring(0, 200)}${issue.description.length > 200 ? '...' : ''}`
+    )
+  ],
+
   // inputs: data大セクションに分類（動的データ）
   inputs: [
     (ctx: InputAnalysisContext) => `データソース: ${ctx.source}`,
@@ -85,14 +93,6 @@ const baseIngestInputModule: PromptModule<InputAnalysisContext> = {
     '',
     '内容:',
     (ctx: InputAnalysisContext) => ctx.content.split('\n').map(line => `  ${line}`)
-  ],
-
-  // materials: data大セクションに分類（参考情報）
-  materials: [
-    (ctx: InputAnalysisContext) => ctx.relatedIssues.length > 0 ? '既存のIssue:' : null,
-    (ctx: InputAnalysisContext) => ctx.relatedIssues.map(issue =>
-      `  - [${issue.id}] ${issue.title}\n    status: ${issue.status}\n    priority: ${issue.priority || 'none'}\n    labels: ${issue.labels.join(', ') || 'none'}\n    description: ${issue.description.substring(0, 200)}${issue.description.length > 200 ? '...' : ''}`
-    )
   ],
 
   // schemaセクション（output大セクションに分類）

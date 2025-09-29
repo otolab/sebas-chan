@@ -123,14 +123,11 @@ async function executeIngestInput(
 
     const createdIssueIds = createdIssueId ? [createdIssueId] : [];
 
-    // 7. エラー検出イベントの発行（深刻度が高い場合）
-    emitErrorDetection(
+    // 7. 高優先度イベントの発行（深刻度が高い場合）
+    emitHighPriorityEvent(
       emitter,
       recorder,
       analysis,
-      pondEntryId,
-      payload.content,
-      payload.source,
       createdIssueId || updatedIssueIds[0]
     );
 
