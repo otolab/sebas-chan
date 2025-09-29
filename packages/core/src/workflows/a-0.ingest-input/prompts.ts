@@ -80,10 +80,19 @@ const baseIngestInputModule: PromptModule<InputAnalysisContext> = {
 
   // materials: data大セクションに分類（参考情報）
   materials: [
-    (ctx: InputAnalysisContext) => ctx.relatedIssues.length > 0 ? '既存のIssue:' : null,
-    (ctx: InputAnalysisContext) => ctx.relatedIssues.map(issue =>
-      `  - [${issue.id}] ${issue.title}\n    status: ${issue.status}\n    priority: ${issue.priority || 'none'}\n    labels: ${issue.labels.join(', ') || 'none'}\n    description: ${issue.description.substring(0, 200)}${issue.description.length > 200 ? '...' : ''}`
-    )
+    (ctx: InputAnalysisContext) =>
+      ctx.relatedIssues.map((issue) => ({
+        type: 'material' as const,
+        id: `issue-${issue.id}`,
+        title: `既存Issue: ${issue.title}`,
+        content: [
+          `ID: ${issue.id}`,
+          `ステータス: ${issue.status}`,
+          `優先度: ${issue.priority || '未設定'}`,
+          `ラベル: ${issue.labels.join(', ') || 'なし'}`,
+          `説明: ${issue.description}`,
+        ].join('\n'),
+      })),
   ],
 
   // inputs: data大セクションに分類（動的データ）

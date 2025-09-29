@@ -70,11 +70,12 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
     // materials: data大セクションに分類（参考情報）
     materials: [
       (ctx: KnowledgeExtractionContext) =>
-        ctx.existingKnowledge.length > 0 ? '既存の関連知識:' : null,
-      (ctx: KnowledgeExtractionContext) =>
-        ctx.existingKnowledge.slice(0, 3).map(k =>
-          `  - ${k.content.substring(0, 100)}...`
-        )
+        ctx.existingKnowledge.map((knowledge) => ({
+          type: 'material' as const,
+          id: `knowledge-${knowledge.id}`,
+          title: `既存の知識: ${knowledge.type}`,
+          content: knowledge.content,
+        })),
     ],
 
     // inputs: data大セクションに分類（動的データ）

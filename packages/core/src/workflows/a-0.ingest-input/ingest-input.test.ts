@@ -138,11 +138,12 @@ describe('IngestInput Workflow (Functional)', () => {
       }),
     });
 
-    // 高severity時にERROR_DETECTEDイベントも発行される
+    // 高severity時にHIGH_PRIORITY_DETECTEDイベントも発行される
     expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'ERROR_DETECTED',
+      type: 'HIGH_PRIORITY_DETECTED',
       payload: expect.objectContaining({
-        severity: 'high',
+        priority: 70,
+        entityType: 'issue',
       }),
     });
   });
@@ -252,12 +253,13 @@ describe('IngestInput Workflow (Functional)', () => {
     expect(result.success).toBe(true);
     expect((result.output as any).severity).toBe('critical');
 
-    // ERROR_DETECTEDイベントが発行されることを確認
+    // HIGH_PRIORITY_DETECTEDイベントが発行されることを確認
     expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'ERROR_DETECTED',
+      type: 'HIGH_PRIORITY_DETECTED',
       payload: expect.objectContaining({
-        severity: 'critical',
-        affectedComponent: 'slack',
+        priority: 90,
+        entityType: 'issue',
+        reason: 'High severity critical issue detected',
       }),
     });
   });

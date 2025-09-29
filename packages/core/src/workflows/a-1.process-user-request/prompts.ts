@@ -72,6 +72,30 @@ const outputSchema = {
 } as const;
 
 /**
+ * 利用可能なイベントタイプ定義
+ */
+const availableEventTypes = [
+  '- DATA_ARRIVED: 外部データ到着（Pond自動保存）',
+  '- ISSUE_CREATED: 新Issue作成',
+  '- ISSUE_UPDATED: Issue更新',
+  '- ISSUE_STATUS_CHANGED: Issueステータス変更',
+  '- ERROR_DETECTED: エラー検出',
+  '- PATTERN_FOUND: パターン発見',
+  '- KNOWLEDGE_EXTRACTABLE: 知識抽出可能',
+  '- HIGH_PRIORITY_DETECTED: 高優先度検出',
+  '- SCHEDULE_TRIGGERED: スケジュール実行',
+].join('\n');
+
+/**
+ * アクションタイプ定義
+ */
+const actionTypes = [
+  '- create: 新規作成（issue/knowledge/pond）',
+  '- update: 更新（issue/knowledge）',
+  '- search: 検索（issue/knowledge/pond）'
+].join('\n');
+
+/**
  * ProcessUserRequestワークフローのプロンプトモジュール
  */
 const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
@@ -110,35 +134,51 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
 
   // materials: data大セクションに分類（参考情報）
   materials: [
-    (ctx: RequestAnalysisContext) => `既存Issues (${ctx.relatedIssues.length}件):`,
-    (ctx: RequestAnalysisContext) => ctx.relatedIssues.slice(0, 5).map(issue =>
-      `  - [${issue.id}] ${issue.title} (status: ${issue.status}, priority: ${issue.priority || 'none'})`
-    ),
-    (ctx: RequestAnalysisContext) => ctx.relatedIssues.length > 5 ? '  ...' : '',
-    '',
-    (ctx: RequestAnalysisContext) => `関連Knowledge (${ctx.relatedKnowledge.length}件):`,
-    (ctx: RequestAnalysisContext) => ctx.relatedKnowledge.slice(0, 3).map(knowledge =>
-      `  - ${knowledge.content.substring(0, 100)}...`
-    ),
-    (ctx: RequestAnalysisContext) => ctx.relatedKnowledge.length > 3 ? '  ...' : '',
-    '',
-    (ctx: RequestAnalysisContext) => `関連Pondエントリ (${ctx.relatedPondEntries.length}件)`,
-    '',
-    '利用可能なイベントタイプ:',
-    '- DATA_ARRIVED: 外部データ到着（Pond自動保存）',
-    '- ISSUE_CREATED: 新Issue作成',
-    '- ISSUE_UPDATED: Issue更新',
-    '- ISSUE_STATUS_CHANGED: Issueステータス変更',
-    '- ERROR_DETECTED: エラー検出',
-    '- PATTERN_FOUND: パターン発見',
-    '- KNOWLEDGE_EXTRACTABLE: 知識抽出可能',
-    '- HIGH_PRIORITY_DETECTED: 高優先度検出',
-    '- SCHEDULE_TRIGGERED: スケジュール実行',
-    '',
-    'アクションタイプ:',
-    '- create: 新規作成（issue/knowledge/pond）',
-    '- update: 更新（issue/knowledge）',
-    '- search: 検索（issue/knowledge/pond）'
+    // 既存Issues
+    (ctx: RequestAnalysisContext) =>
+      ctx.relatedIssues.map((issue) => ({
+        type: 'material' as const,
+        id: `issue-${issue.id}`,
+        title: `既存Issue: ${issue.title}`,
+        content: [
+          `ID: ${issue.id}`,
+          `ステータス: ${issue.status}`,
+          `優先度: ${issue.priority || '未設定'}`,
+          `ラベル: ${issue.labels.join(', ') || 'なし'}`,
+        ].join('\n'),
+      })),
+
+    // 関連Knowledge
+    (ctx: RequestAnalysisContext) =>
+      ctx.relatedKnowledge.map((knowledge) => ({
+        type: 'material' as const,
+        id: `knowledge-${knowledge.id}`,
+        title: `関連Knowledge: ${knowledge.type}`,
+        content: knowledge.content,
+      })),
+
+    // 関連Pondエントリ
+    (ctx: RequestAnalysisContext) =>
+      ctx.relatedPondEntries.map((entry) => ({
+        type: 'material' as const,
+        id: `pond-${entry.id}`,
+        title: `Pondエントリ: ${entry.metadata?.source || 'unknown'}`,
+        content: entry.content,
+      })),
+
+    // イベントタイプとアクションタイプ
+    {
+      type: 'material' as const,
+      id: 'event-types',
+      title: '利用可能なイベントタイプ',
+      content: availableEventTypes,
+    },
+    {
+      type: 'material' as const,
+      id: 'action-types',
+      title: 'アクションタイプ',
+      content: actionTypes,
+    },
   ],
 
   // inputs: data大セクションに分類（動的データ）
