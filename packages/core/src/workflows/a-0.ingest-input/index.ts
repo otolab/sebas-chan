@@ -80,7 +80,7 @@ async function executeIngestInput(
     // 4. AIによる分析とState更新を同時に実行（意図: 1回のAI呼び出しで完結）
     recorder.record(RecordType.AI_CALL, {
       step: 'analyzeInput',
-      model: driver.modelId,
+      model: 'structured-japanese',
       temperature: 0.3,
     });
 
