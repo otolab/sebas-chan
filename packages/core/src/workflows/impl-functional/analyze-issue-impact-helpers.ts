@@ -36,17 +36,6 @@ export async function calculateImpactScoreWithAI(
     issueContent,
     relatedIssuesCount
   });
-  // 構造化出力を有効にするためにmetadataを設定
-  compiledPrompt.metadata = {
-    outputSchema: {
-      type: 'object',
-      properties: {
-        impactScore: { type: 'number' },
-        reasoning: { type: 'string' }
-      },
-      required: ['impactScore', 'reasoning']
-    }
-  };
 
   const result = await driver.query(compiledPrompt, { temperature: 0.2 });
 
@@ -87,16 +76,6 @@ export async function updateContextState(
     currentState,
     newInfo
   });
-  // 構造化出力を有効にするためにmetadataを設定
-  compiledPrompt.metadata = {
-    outputSchema: {
-      type: 'object',
-      properties: {
-        updatedState: { type: 'string' }
-      },
-      required: ['updatedState']
-    }
-  };
 
   const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 

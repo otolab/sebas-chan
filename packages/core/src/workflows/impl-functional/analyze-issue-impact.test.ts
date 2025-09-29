@@ -55,9 +55,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
         responses: [JSON.stringify({
           impactScore: 0.8,
           urgency: 'high',
-          affectedComponents: ['ユーザー管理', '認証'],
+          impactedComponents: ['ユーザー管理', '認証'],
           suggestedAction: 'escalate',
-          relatedIssueIds: [],
+          shouldMergeWith: [],
           hasKnowledge: false,
           shouldClose: false,
           suggestedPriority: 80,
@@ -124,9 +124,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
       responses: [JSON.stringify({
         impactScore: 0.9,
         urgency: 'immediate',
-        affectedComponents: ['system', 'database'],
+        impactedComponents: ['system', 'database'],
         suggestedAction: 'escalate',
-        relatedIssueIds: [],
+        shouldMergeWith: [],
         hasKnowledge: true,
         shouldClose: false,
         suggestedPriority: 90,
@@ -156,9 +156,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
       responses: [JSON.stringify({
         impactScore: 0.7,
         urgency: 'high',
-        affectedComponents: [],
+        impactedComponents: [],
         suggestedAction: 'monitor',
-        relatedIssueIds: [],
+        shouldMergeWith: [],
         hasKnowledge: false,
         shouldClose: false,
         suggestedPriority: 85,
@@ -187,9 +187,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
       responses: [JSON.stringify({
         impactScore: 0.5,
         urgency: 'medium',
-        affectedComponents: [],
+        impactedComponents: [],
         suggestedAction: 'monitor',
-        relatedIssueIds: [],
+        shouldMergeWith: [],
         hasKnowledge: false,
         shouldClose: false,
         suggestedPriority: 50,
@@ -206,9 +206,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
       responses: [JSON.stringify({
         impactScore: 0.9,
         urgency: 'immediate',
-        affectedComponents: ['core', 'api'],
+        impactedComponents: ['core', 'api'],
         suggestedAction: 'escalate',
-        relatedIssueIds: [],
+        shouldMergeWith: [],
         hasKnowledge: true,
         shouldClose: false,
         suggestedPriority: 90,
@@ -228,7 +228,10 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     expect(result.context.state).toContain('Issue影響分析');
     expect(result.context.state).toContain('Issue ID:');
     expect(result.context.state).toContain('Impact Score:');
-    expect(result.context.state).toContain('Related Issues: 1');
+    expect(result.context.state).toContain('Urgency: high');
+
+    // Related issues countは outputに含まれる
+    expect((result.output as any).relatedIssuesCount).toBe(1);
   });
 
   it('should handle missing issue in payload', async () => {
@@ -259,9 +262,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
       responses: [JSON.stringify({
         impactScore: 0.5,
         urgency: 'medium',
-        affectedComponents: [],
+        impactedComponents: [],
         suggestedAction: 'merge',
-        relatedIssueIds: ['issue-456'],
+        shouldMergeWith: ['issue-456'],
         hasKnowledge: false,
         shouldClose: false,
         suggestedPriority: 50,
@@ -279,7 +282,7 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
       expect.objectContaining({
         relations: expect.arrayContaining([
           {
-            type: 'duplicate_of',
+            type: 'duplicates',
             targetIssueId: 'issue-456',
           },
         ]),
