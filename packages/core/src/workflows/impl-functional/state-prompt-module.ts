@@ -1,6 +1,6 @@
 import { merge, type PromptModule } from '@moduler-prompt/core';
 
-interface Context {
+export interface Context {
   currentState: string;
 }
 

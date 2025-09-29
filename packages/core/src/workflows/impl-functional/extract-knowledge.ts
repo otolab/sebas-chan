@@ -219,6 +219,17 @@ async function executeExtractKnowledge(
 
     // コンパイル
     const compiledPrompt = compile(extractKnowledgePromptModule, extractionContext);
+    // 構造化出力を有効にするためにmetadataを設定
+    compiledPrompt.metadata = {
+      outputSchema: {
+        type: 'object',
+        properties: {
+          extractedKnowledge: { type: 'string' },
+          updatedState: { type: 'string' }
+        },
+        required: ['extractedKnowledge', 'updatedState']
+      }
+    };
     const result = await driver.query(compiledPrompt, { temperature: 0.2 });
 
     // 構造化出力を取得

@@ -12,7 +12,7 @@ import { statePromptModule } from './state-prompt-module.js';
 export interface ImpactAnalysisContext {
   issue: Issue;
   otherRelatedIssues: Issue[];
-  state: string; // statePromptModuleと統合するため追加
+  currentState: string; // statePromptModuleのContextインターフェースに合わせる
 }
 
 /**
@@ -22,7 +22,7 @@ const baseAnalyzeImpactModule: PromptModule<ImpactAnalysisContext> = {
   createContext: () => ({
     issue: {} as Issue,
     otherRelatedIssues: [],
-    state: ''
+    currentState: ''
   }),
 
   // objective: instructions大セクションに分類

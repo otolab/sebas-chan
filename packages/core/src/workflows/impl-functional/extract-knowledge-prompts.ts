@@ -20,14 +20,12 @@ export interface KnowledgeExtractionContext {
 /**
  * ExtractKnowledgeワークフローのプロンプトモジュール
  */
-export const extractKnowledgePromptModule: PromptModule<KnowledgeExtractionContext> = merge(
-  statePromptModule,
-  {
+const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
     createContext: () => ({
       sourceType: '',
       confidence: 0.5,
       content: '',
-      existingKnowledge: [],
+      existingKnowledge: [] as Knowledge[],
       currentState: ''
     }),
 
@@ -93,5 +91,9 @@ export const extractKnowledgePromptModule: PromptModule<KnowledgeExtractionConte
         required: ['extractedKnowledge', 'updatedState']
       })
     ]
-  }
+};
+
+export const extractKnowledgePromptModule = merge(
+  statePromptModule,
+  baseExtractKnowledgeModule
 );

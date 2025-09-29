@@ -190,6 +190,22 @@ async function executeIngestInput(
 
     // コンパイル
     const compiledPrompt = compile(ingestInputPromptModule, analysisContext);
+    // 構造化出力を有効にするためにmetadataを設定
+    compiledPrompt.metadata = {
+      outputSchema: {
+        type: 'object',
+        properties: {
+          relatedIssueIds: { type: 'array', items: { type: 'string' } },
+          needsNewIssue: { type: 'boolean' },
+          newIssueTitle: { type: 'string' },
+          severity: { type: 'string', enum: ['low', 'medium', 'high', 'critical'] },
+          updateContent: { type: 'string' },
+          labels: { type: 'array', items: { type: 'string' } },
+          updatedState: { type: 'string' }
+        },
+        required: ['relatedIssueIds', 'needsNewIssue', 'severity', 'labels', 'updatedState']
+      }
+    };
     const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
     // 構造化出力を取得（必須）

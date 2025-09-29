@@ -52,10 +52,28 @@ async function analyzeIssueWithAI(
   const analysisContext: ImpactAnalysisContext = {
     issue,
     otherRelatedIssues: relatedIssues,
-    state: context.state
+    currentState: context.state
   };
 
   const compiledPrompt = compile(analyzeImpactPromptModule, analysisContext);
+  // 構造化出力を有効にするためにmetadataを設定
+  compiledPrompt.metadata = {
+    outputSchema: {
+      type: 'object',
+      properties: {
+        impactScore: { type: 'number' },
+        urgency: { type: 'string', enum: ['immediate', 'high', 'medium', 'low'] },
+        affectedComponents: { type: 'array', items: { type: 'string' } },
+        suggestedAction: { type: 'string', enum: ['escalate', 'monitor', 'defer', 'merge'] },
+        relatedIssueIds: { type: 'array', items: { type: 'string' } },
+        hasKnowledge: { type: 'boolean' },
+        shouldClose: { type: 'boolean' },
+        suggestedPriority: { type: 'number' },
+        updatedState: { type: 'string' }
+      },
+      required: ['impactScore', 'urgency', 'affectedComponents', 'suggestedAction', 'relatedIssueIds', 'hasKnowledge', 'shouldClose', 'suggestedPriority', 'updatedState']
+    }
+  };
   const result = await driver.query(compiledPrompt, { temperature: 0.3 });
 
   if (result.structuredOutput) {

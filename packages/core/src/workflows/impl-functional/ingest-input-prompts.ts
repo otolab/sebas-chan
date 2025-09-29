@@ -20,14 +20,12 @@ export interface InputAnalysisContext {
 /**
  * IngestInputワークフローのプロンプトモジュール
  */
-export const ingestInputPromptModule: PromptModule<InputAnalysisContext> = merge(
-  statePromptModule,
-  {
+const baseIngestInputModule: PromptModule<InputAnalysisContext> = {
     createContext: () => ({
       source: '',
-      format: undefined,
+      format: undefined as string | undefined,
       content: '',
-      relatedIssues: [],
+      relatedIssues: [] as Issue[],
       currentState: ''
     }),
 
@@ -104,5 +102,9 @@ export const ingestInputPromptModule: PromptModule<InputAnalysisContext> = merge
       required: ['relatedIssueIds', 'needsNewIssue', 'severity', 'labels', 'updatedState']
     })
   ]
-  }
+};
+
+export const ingestInputPromptModule = merge(
+  statePromptModule,
+  baseIngestInputModule
 );

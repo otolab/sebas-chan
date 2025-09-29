@@ -52,7 +52,17 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
         updateKnowledge: vi.fn(),
       },
       createDriver: async () => new TestDriver({
-        responses: ['影響範囲: システム全体に影響。優先度: 高。緊急対応が必要です。']
+        responses: [JSON.stringify({
+          impactScore: 0.8,
+          urgency: 'high',
+          affectedComponents: ['ユーザー管理', '認証'],
+          suggestedAction: 'escalate',
+          relatedIssueIds: [],
+          hasKnowledge: false,
+          shouldClose: false,
+          suggestedPriority: 80,
+          updatedState: 'Initial state\nIssue影響分析\nIssue ID: issue-123\nImpact Score: 0.8\nUrgency: high'
+        })]
       }),
       recorder: new WorkflowRecorder('test'),
     };
@@ -112,13 +122,15 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     // AIが高影響度と判定するモック
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
+        impactScore: 0.9,
+        urgency: 'immediate',
+        affectedComponents: ['system', 'database'],
+        suggestedAction: 'escalate',
+        relatedIssueIds: [],
+        hasKnowledge: true,
         shouldClose: false,
         suggestedPriority: 90,
-        shouldMergeWith: [],
-        impactedComponents: ['system', 'database'],
-        hasKnowledge: true,
-        knowledgeSummary: 'Critical system issue',
-        impactScore: 0.9,
+        updatedState: 'Initial state\nCritical issue detected\nHigh priority event triggered'
       })]
     });
 
@@ -142,12 +154,15 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     // AIが優先度変更を推奨するモック
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
-        shouldClose: false,
-        suggestedPriority: 85,  // 大幅な優先度変更
-        shouldMergeWith: [],
-        impactedComponents: [],
-        hasKnowledge: false,
         impactScore: 0.7,
+        urgency: 'high',
+        affectedComponents: [],
+        suggestedAction: 'monitor',
+        relatedIssueIds: [],
+        hasKnowledge: false,
+        shouldClose: false,
+        suggestedPriority: 85,
+        updatedState: 'Initial state\nPriority updated to 85'
       })]
     });
 
@@ -170,12 +185,15 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     // 通常の影響度
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
+        impactScore: 0.5,
+        urgency: 'medium',
+        affectedComponents: [],
+        suggestedAction: 'monitor',
+        relatedIssueIds: [],
+        hasKnowledge: false,
         shouldClose: false,
         suggestedPriority: 50,
-        shouldMergeWith: [],
-        impactedComponents: [],
-        hasKnowledge: false,
-        impactScore: 0.5,
+        updatedState: 'Initial state\nImpact score: 0.5'
       })]
     });
 
@@ -186,12 +204,15 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     // 高影響度
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
+        impactScore: 0.9,
+        urgency: 'immediate',
+        affectedComponents: ['core', 'api'],
+        suggestedAction: 'escalate',
+        relatedIssueIds: [],
+        hasKnowledge: true,
         shouldClose: false,
         suggestedPriority: 90,
-        shouldMergeWith: [],
-        impactedComponents: ['core', 'api'],
-        hasKnowledge: true,
-        impactScore: 0.9,
+        updatedState: 'Initial state\nHigh impact score: 0.9'
       })]
     });
 
@@ -236,12 +257,15 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     // AIがマージを推奨するモック
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
+        impactScore: 0.5,
+        urgency: 'medium',
+        affectedComponents: [],
+        suggestedAction: 'merge',
+        relatedIssueIds: ['issue-456'],
+        hasKnowledge: false,
         shouldClose: false,
         suggestedPriority: 50,
-        shouldMergeWith: ['issue-456'],
-        impactedComponents: [],
-        hasKnowledge: false,
-        impactScore: 0.5,
+        updatedState: 'Initial state\nDuplicate detected: issue-456'
       })]
     });
 

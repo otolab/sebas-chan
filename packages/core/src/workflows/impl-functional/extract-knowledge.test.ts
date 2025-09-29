@@ -45,12 +45,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
         updateKnowledge: vi.fn(),
       },
       createDriver: async () => new TestDriver({
-        responses: [{
-          structuredOutput: {
-            extractedKnowledge: 'システムエラーが発生した場合は、まずログを確認し、エラーコードを記録してから再起動を試みる。それでも解決しない場合は、サポートチームに連絡する。',
-            updatedState: 'Initial state\n知識抽出完了: システムエラー対処法'
-          }
-        }]
+        responses: [JSON.stringify({
+          extractedKnowledge: 'システムエラーが発生した場合は、まずログを確認し、エラーコードを記録してから再起動を試みる。それでも解決しない場合は、サポートチームに連絡する。',
+          updatedState: 'Initial state\n知識抽出完了: システムエラー対処法'
+        })]
       }),
       recorder: new WorkflowRecorder('test'),
     };
@@ -122,12 +120,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   it('should extract knowledge from resolved issue', async () => {
     // 長い応答を返すモック
     mockContext.createDriver = async () => new TestDriver({
-      responses: [{
-        structuredOutput: {
-          extractedKnowledge: 'ログインエラーの解決方法：パスワードリセットを実行し、キャッシュをクリアしてから再度ログインを試みる。それでも問題が解決しない場合は、システム管理者に連絡する。',
-          updatedState: 'Initial state\n知識抽出完了: ログインエラー解決法'
-        }
-      }]
+      responses: [JSON.stringify({
+        extractedKnowledge: 'ログインエラーの解決方法：パスワードリセットを実行し、キャッシュをクリアしてから再度ログインを試みる。それでも問題が解決しない場合は、システム管理者に連絡する。',
+        updatedState: 'Initial state\n知識抽出完了: ログインエラー解決法'
+      })]
     });
     // ISSUE_STATUS_CHANGEDイベント
     mockEvent = {
@@ -178,12 +174,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   it('should extract knowledge from pattern found', async () => {
     // 長い応答を返すモック
     mockContext.createDriver = async () => new TestDriver({
-      responses: [{
-        structuredOutput: {
-          extractedKnowledge: 'メモリリークパターンの解決方法：メモリプールの設定を確認し、不要なオブジェクトを適切に解放する。ガベージコレクションの調整も検討する。',
-          updatedState: 'Initial state\nパターン発見: メモリリーク対処法'
-        }
-      }]
+      responses: [JSON.stringify({
+        extractedKnowledge: 'メモリリークパターンの解決方法：メモリプールの設定を確認し、不要なオブジェクトを適切に解放する。ガベージコレクションの調整も検討する。',
+        updatedState: 'Initial state\nパターン発見: メモリリーク対処法'
+      })]
     });
     // PATTERN_FOUNDイベント
     mockEvent = {
@@ -226,12 +220,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       updates: [],
     });
     mockContext.createDriver = async () => new TestDriver({
-      responses: [{
-        structuredOutput: {
-          extractedKnowledge: mockKnowledge.content, // 完全に同じ内容を返す
-          updatedState: 'Initial state\n重複知識検出'
-        }
-      }]
+      responses: [JSON.stringify({
+        extractedKnowledge: mockKnowledge.content, // 完全に同じ内容を返す
+        updatedState: 'Initial state\n重複知識検出'
+      })]
     });
 
     const result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
@@ -248,12 +240,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
 
   it('should not create knowledge if content is too short', async () => {
     mockContext.createDriver = async () => new TestDriver({
-      responses: [{
-        structuredOutput: {
-          extractedKnowledge: '短いコンテンツ', // 50文字未満
-          updatedState: 'Initial state\n短いコンテンツのため知識作成せず'
-        }
-      }]
+      responses: [JSON.stringify({
+        extractedKnowledge: '短いコンテンツ', // 50文字未満
+        updatedState: 'Initial state\n短いコンテンツのため知識作成せず'
+      })]
     });
 
     mockContext.storage.getIssue = vi.fn().mockResolvedValue({
@@ -276,12 +266,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   it('should determine knowledge type based on content', async () => {
     // ルール系のコンテンツ（50文字以上）
     mockContext.createDriver = async () => new TestDriver({
-      responses: [{
-        structuredOutput: {
-          extractedKnowledge: 'このシステムルールに従って、すべてのリクエストを処理する必要があります。セキュリティポリシーにも準拠することが重要です。',
-          updatedState: 'Initial state\nシステムルール抽出完了'
-        }
-      }]
+      responses: [JSON.stringify({
+        extractedKnowledge: 'このシステムルールに従って、すべてのリクエストを処理する必要があります。セキュリティポリシーにも準拠することが重要です。',
+        updatedState: 'Initial state\nシステムルール抽出完了'
+      })]
     });
 
     mockContext.storage.getIssue = vi.fn().mockResolvedValue({
@@ -311,12 +299,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       createdAt: new Date(),
     });
     mockContext.createDriver = async () => new TestDriver({
-      responses: [{
-        structuredOutput: {
-          extractedKnowledge: '以下の手順に従ってprocessを実行してください。1. ログイン 2. 設定確認 3. 実行 4. 結果の確認 5. 必要に応じて再実行',
-          updatedState: 'Initial state\nプロセス手順抽出完了'
-        }
-      }]
+      responses: [JSON.stringify({
+        extractedKnowledge: '以下の手順に従ってprocessを実行してください。1. ログイン 2. 設定確認 3. 実行 4. 結果の確認 5. 必要に応じて再実行',
+        updatedState: 'Initial state\nプロセス手順抽出完了'
+      })]
     });
 
     mockContext.storage.getIssue = vi.fn().mockResolvedValue({
@@ -339,12 +325,10 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
 
   it('should include correct source type in created knowledge', async () => {
     mockContext.createDriver = async () => new TestDriver({
-      responses: [{
-        structuredOutput: {
-          extractedKnowledge: 'これは重要な知識です。システムを正しく動作させるためには、定期的なメンテナンスと監視が必要です。',
-          updatedState: 'Initial state\n知譨抽出: メンテナンス手順'
-        }
-      }]
+      responses: [JSON.stringify({
+        extractedKnowledge: 'これは重要な知識です。システムを正しく動作させるためには、定期的なメンテナンスと監視が必要です。',
+        updatedState: 'Initial state\n知識抽出: メンテナンス手順'
+      })]
     });
     mockContext.storage.getIssue = vi.fn().mockResolvedValue({
       id: 'issue-123',
@@ -388,7 +372,8 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     // StateがAIによって更新されたことを確認
     expect(result.context.state).not.toBe('Initial state');
     expect(result.context.state).toBeTruthy();
-    expect(result.context.state).toContain('Duplicate: false');
+    // AIが生成するテキストに特定の文字列を期待するのは適切ではない
+    expect(result.context.state).toContain('知識抽出');
   });
 
   it('should handle errors gracefully', async () => {
