@@ -12,7 +12,7 @@ import {
   analyzeInput,
   updateRelatedIssues,
   createNewIssue,
-  emitErrorDetection,
+  emitHighPriorityEvent,
 } from './actions.js';
 
 /**

@@ -64,26 +64,6 @@ export function extractIssueTitle(content: string): string {
   return firstLine.substring(0, 50) + (firstLine.length > 50 ? '...' : '');
 }
 
-/**
- * ラベルを決定
- * 意図: ソースとコンテンツからIssueの分類ラベルを生成
- */
-export function determineLabels(source: string, content: string): string[] {
-  const labels: string[] = [`source:${source}`];
-
-  const lowerContent = content.toLowerCase();
-  if (lowerContent.includes('error') || lowerContent.includes('エラー')) {
-    labels.push('error');
-  }
-  if (lowerContent.includes('performance') || lowerContent.includes('パフォーマンス')) {
-    labels.push('performance');
-  }
-  if (lowerContent.includes('security') || lowerContent.includes('セキュリティ')) {
-    labels.push('security');
-  }
-
-  return labels;
-}
 
 /**
  * 深刻度から優先度を決定
@@ -181,7 +161,7 @@ export async function createNewIssue(
     title: analysis.newIssueTitle || extractIssueTitle(content),
     description: content,
     status: 'open' as const,
-    labels: analysis.labels || determineLabels(source, content),
+    labels: analysis.labels || [`source:${source}`],
     priority: determinePriority(analysis.severity),
     sourceInputIds: [pondEntryId],
     updates: [],
@@ -213,36 +193,30 @@ export async function createNewIssue(
 }
 
 /**
- * エラー検出イベントを発行
+ * 高優先度イベントを発行
  * 意図: 深刻度が高い問題を即座にシステム全体に通知
  */
-export function emitErrorDetection(
+export function emitHighPriorityEvent(
   emitter: WorkflowEventEmitterInterface,
   recorder: any,
   analysis: InputAnalysisResult,
-  pondEntryId: string,
-  content: string,
-  source: string,
   issueId?: string
 ): void {
   if (analysis.severity === 'critical' || analysis.severity === 'high') {
     emitter.emit({
-      type: 'ERROR_DETECTED',
+      type: 'HIGH_PRIORITY_DETECTED',
       payload: {
-        errorType: 'application',
-        severity: analysis.severity,
-        message: analysis.updateContent || content.substring(0, 200),
-        affectedComponent: source,
-        sourceData: {
-          pondEntryId: pondEntryId,
-          issueId: issueId,
-        },
+        entityType: 'issue',
+        entityId: issueId || `pending-${Date.now()}`,
+        priority: determinePriority(analysis.severity),
+        reason: `High severity ${analysis.severity} issue detected`,
+        requiredAction: analysis.updateContent || 'Immediate attention required',
       },
     });
 
     recorder.record(RecordType.INFO, {
       step: 'eventEmitted',
-      eventType: 'ERROR_DETECTED',
+      eventType: 'HIGH_PRIORITY_DETECTED',
       severity: analysis.severity,
     });
   }

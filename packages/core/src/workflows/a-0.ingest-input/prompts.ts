@@ -18,6 +18,32 @@ export interface InputAnalysisContext {
 }
 
 /**
+ * 出力スキーマ定義
+ */
+const outputSchema = {
+  type: 'object',
+  properties: {
+    relatedIssueIds: {
+      type: 'array' as const,
+      items: { type: 'string' as const }
+    },
+    needsNewIssue: { type: 'boolean' as const },
+    newIssueTitle: { type: 'string' as const },
+    severity: {
+      type: 'string' as const,
+      enum: ['critical', 'high', 'medium', 'low']
+    },
+    updateContent: { type: 'string' as const },
+    labels: {
+      type: 'array' as const,
+      items: { type: 'string' as const }
+    },
+    // updatedStateはupdateStatePromptModuleから自動的に提供される
+  },
+  required: ['relatedIssueIds', 'needsNewIssue', 'severity', 'labels']
+} as const;
+
+/**
  * IngestInputワークフローのプロンプトモジュール
  */
 const baseIngestInputModule: PromptModule<InputAnalysisContext> = {
@@ -58,48 +84,22 @@ const baseIngestInputModule: PromptModule<InputAnalysisContext> = {
     (ctx: InputAnalysisContext) => `データ形式: ${ctx.format || '不明'}`,
     '',
     '内容:',
-    (ctx: InputAnalysisContext) => {
-      const lines = ctx.content.split('\n').slice(0, 10);
-      return lines.map(line => `  ${line}`);
-    },
-    (ctx: InputAnalysisContext) => ctx.content.split('\n').length > 10 ? '  ...' : ''
+    (ctx: InputAnalysisContext) => ctx.content.split('\n').map(line => `  ${line}`)
   ],
 
   // materials: data大セクションに分類（参考情報）
   materials: [
-    (ctx: InputAnalysisContext) => `既存のIssue (${ctx.relatedIssues.length}件):`,
-    (ctx: InputAnalysisContext) => ctx.relatedIssues.slice(0, 10).map(issue =>
-      `  - [${issue.id}] ${issue.title} (status: ${issue.status})`
-    ),
-    (ctx: InputAnalysisContext) => ctx.relatedIssues.length > 10 ? '  ...' : ''
+    (ctx: InputAnalysisContext) => ctx.relatedIssues.length > 0 ? '既存のIssue:' : null,
+    (ctx: InputAnalysisContext) => ctx.relatedIssues.map(issue =>
+      `  - [${issue.id}] ${issue.title}\n    status: ${issue.status}\n    priority: ${issue.priority || 'none'}\n    labels: ${issue.labels.join(', ') || 'none'}\n    description: ${issue.description.substring(0, 200)}${issue.description.length > 200 ? '...' : ''}`
+    )
   ],
 
   // schemaセクション（output大セクションに分類）
   schema: [
     {
       type: 'json',
-      content: {
-        type: 'object',
-        properties: {
-          relatedIssueIds: {
-            type: 'array' as const,
-            items: { type: 'string' as const }
-          },
-          needsNewIssue: { type: 'boolean' as const },
-          newIssueTitle: { type: 'string' as const },
-          severity: {
-            type: 'string' as const,
-            enum: ['critical', 'high', 'medium', 'low']
-          },
-          updateContent: { type: 'string' as const },
-          labels: {
-            type: 'array' as const,
-            items: { type: 'string' as const }
-          },
-          // updatedStateはupdateStatePromptModuleから自動的に提供される
-        },
-        required: ['relatedIssueIds', 'needsNewIssue', 'severity', 'labels']
-      }
+      content: outputSchema
     }
   ]
 };
