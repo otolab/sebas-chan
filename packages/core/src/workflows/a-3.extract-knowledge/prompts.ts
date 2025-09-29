@@ -18,6 +18,21 @@ export interface KnowledgeExtractionContext {
 }
 
 /**
+ * 出力スキーマ定義
+ */
+const outputSchema = {
+  type: 'object',
+  properties: {
+    extractedKnowledge: {
+      type: 'string' as const,
+      description: '抽出された知識の内容'
+    },
+    // updatedStateはupdateStatePromptModuleから自動的に提供される
+  },
+  required: ['extractedKnowledge']
+} as const;
+
+/**
  * ExtractKnowledgeワークフローのプロンプトモジュール
  */
 const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
@@ -31,14 +46,14 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
 
     // objective: instructions大セクションに分類
     objective: [
-      '情報から再利用可能な知識を抽出し、構造化する'
+      '- 情報から再利用可能な知識を抽出し、構造化する'
     ],
 
     // terms: instructions大セクションに分類
     terms: [
-      '知識: 再利用可能な情報やノウハウ',
-      'ベストプラクティス: 推奨される方法や手順',
-      '解決方法: 問題に対する具体的な対処法'
+      '- 知識: 再利用可能な情報やノウハウ',
+      '- ベストプラクティス: 推奨される方法や手順',
+      '- 解決方法: 問題に対する具体的な対処法'
     ],
 
     // instructions標準セクション: instructions大セクションに分類
@@ -50,6 +65,16 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
       '4. 注意点',
       '',
       '簡潔にまとめてください。'
+    ],
+
+    // materials: data大セクションに分類（参考情報）
+    materials: [
+      (ctx: KnowledgeExtractionContext) =>
+        ctx.existingKnowledge.length > 0 ? '既存の関連知識:' : null,
+      (ctx: KnowledgeExtractionContext) =>
+        ctx.existingKnowledge.slice(0, 3).map(k =>
+          `  - ${k.content.substring(0, 100)}...`
+        )
     ],
 
     // inputs: data大セクションに分類（動的データ）
@@ -64,31 +89,11 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
       }
     ],
 
-    // materials: data大セクションに分類（参考情報）
-    materials: [
-      (ctx: KnowledgeExtractionContext) =>
-        ctx.existingKnowledge.length > 0 ? '既存の関連知識:' : null,
-      (ctx: KnowledgeExtractionContext) =>
-        ctx.existingKnowledge.slice(0, 3).map(k =>
-          `  - ${k.content.substring(0, 100)}...`
-        )
-    ],
-
     // schemaセクション（output大セクションに分類）
     schema: [
       {
         type: 'json',
-        content: {
-          type: 'object',
-          properties: {
-            extractedKnowledge: {
-              type: 'string' as const,
-              description: '抽出された知識の内容'
-            },
-            // updatedStateはupdateStatePromptModuleから自動的に提供される
-          },
-          required: ['extractedKnowledge']
-        }
+        content: outputSchema
       }
     ]
 };
@@ -105,6 +110,6 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
  * - これにより1回のAI呼び出しで知識抽出とState更新を同時に実行可能
  */
 export const extractKnowledgePromptModule = merge(
-  updateStatePromptModule,
+  updateStatePromptModule, // TODO: これが必要かは要検討
   baseExtractKnowledgeModule
 );

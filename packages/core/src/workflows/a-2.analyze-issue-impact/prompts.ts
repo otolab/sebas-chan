@@ -64,10 +64,10 @@ const baseAnalyzeImpactModule: PromptModule<ImpactAnalysisContext> = {
 
   // terms: 用語定義
   terms: [
-    'Issue: 解決すべき問題やタスク',
-    'close判定: Issueが解決済みかどうかの判定',
-    '優先度: タスクの緊急度（0-100）',
-    '影響範囲: 問題が影響するコンポーネントやシステム部分',
+    '- Issue: 解決すべき問題やタスク',
+    '- close判定: Issueが解決済みかどうかの判定',
+    '- 優先度: タスクの緊急度（0-100）',
+    '- 影響範囲: 問題が影響するコンポーネントやシステム部分',
   ],
 
   // instructions: 具体的な処理指示
@@ -80,6 +80,23 @@ const baseAnalyzeImpactModule: PromptModule<ImpactAnalysisContext> = {
     '5. 知識として抽出すべき内容があるか',
     '',
     'JSON形式で応答してください。',
+  ],
+
+  // materials: 関連Issueを参考資料として提供
+  materials: [
+    (ctx: ImpactAnalysisContext) =>
+      ctx.otherRelatedIssues.map((issue) => ({
+        type: 'material' as const,
+        id: `issue-${issue.id}`,
+        title: `関連Issue: ${issue.title}`,
+        content: [
+          `ID: ${issue.id}`,
+          `ステータス: ${issue.status}`,
+          `優先度: ${issue.priority || '未設定'}`,
+          `ラベル: ${issue.labels.join(', ') || 'なし'}`,
+          `説明: ${issue.description}`,
+        ].join('\n'),
+      })),
   ],
 
   // inputs: コンテキストに基づく入力情報
@@ -98,23 +115,6 @@ const baseAnalyzeImpactModule: PromptModule<ImpactAnalysisContext> = {
         `## 最新の更新`,
         ...ctx.issue.updates.slice(-3).map((u) => `  - ${u.timestamp}: ${u.content}`),
       ].join('\n'),
-  ],
-
-  // materials: 関連Issueを参考資料として提供
-  materials: [
-    (ctx: ImpactAnalysisContext) =>
-      ctx.otherRelatedIssues.map((issue) => ({
-        type: 'material' as const,
-        id: `issue-${issue.id}`,
-        title: `関連Issue: ${issue.title}`,
-        content: [
-          `ID: ${issue.id}`,
-          `ステータス: ${issue.status}`,
-          `優先度: ${issue.priority || '未設定'}`,
-          `ラベル: ${issue.labels.join(', ') || 'なし'}`,
-          `説明: ${issue.description}`,
-        ].join('\n'),
-      })),
   ],
 
   // schema: 出力形式の定義（JSON形式）

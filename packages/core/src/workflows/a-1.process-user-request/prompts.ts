@@ -19,6 +19,59 @@ export interface RequestAnalysisContext {
 }
 
 /**
+ * 出力スキーマ定義
+ */
+const outputSchema = {
+  type: 'object',
+  properties: {
+    interpretation: {
+      type: 'string' as const,
+      description: 'リクエストの解釈'
+    },
+    requestType: {
+      type: 'string' as const,
+      enum: Object.values(REQUEST_TYPE),
+      description: 'リクエストの分類'
+    },
+    events: {
+      type: 'array' as const,
+      items: {
+        type: 'object' as const,
+        properties: {
+          type: { type: 'string' as const },
+          payload: { type: 'object' as const }
+        },
+        required: ['type', 'payload']
+      },
+      description: '発行するイベント'
+    },
+    actions: {
+      type: 'array' as const,
+      items: {
+        type: 'object' as const,
+        properties: {
+          type: { type: 'string' as const, enum: Object.values(ACTION_TYPE) },
+          target: { type: 'string' as const },
+          details: { type: 'object' as const }
+        },
+        required: ['type', 'target']
+      },
+      description: '実行するアクション'
+    },
+    response: {
+      type: 'string' as const,
+      description: 'ユーザーへの応答'
+    },
+    reasoning: {
+      type: 'string' as const,
+      description: '判断理由'
+    },
+    // updatedStateはupdateStatePromptModuleから自動的に提供される
+  },
+  required: ['interpretation', 'requestType', 'events', 'actions', 'response', 'reasoning']
+} as const;
+
+/**
  * ProcessUserRequestワークフローのプロンプトモジュール
  */
 const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
@@ -55,11 +108,6 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
     'JSON形式で応答してください。'
   ],
 
-  // inputs: data大セクションに分類（動的データ）
-  inputs: [
-    (ctx: RequestAnalysisContext) => `ユーザーリクエスト: ${ctx.content || '（内容なし）'}`,
-  ],
-
   // materials: data大セクションに分類（参考情報）
   materials: [
     (ctx: RequestAnalysisContext) => `既存Issues (${ctx.relatedIssues.length}件):`,
@@ -93,60 +141,16 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
     '- search: 検索（issue/knowledge/pond）'
   ],
 
+  // inputs: data大セクションに分類（動的データ）
+  inputs: [
+    (ctx: RequestAnalysisContext) => `ユーザーリクエスト: ${ctx.content || '（内容なし）'}`,
+  ],
+
   // schemaセクション（output大セクションに分類）
   schema: [
     {
       type: 'json',
-      content: {
-        type: 'object',
-        properties: {
-          interpretation: {
-            type: 'string' as const,
-            description: 'リクエストの解釈'
-          },
-          requestType: {
-            type: 'string' as const,
-            enum: Object.values(REQUEST_TYPE),
-            description: 'リクエストの分類'
-          },
-          events: {
-            type: 'array' as const,
-            items: {
-              type: 'object' as const,
-              properties: {
-                type: { type: 'string' as const },
-                reason: { type: 'string' as const },
-                payload: { type: 'object' as const }
-              },
-              required: ['type', 'reason']
-            }
-          },
-          actions: {
-            type: 'array' as const,
-            items: {
-              type: 'object' as const,
-              properties: {
-                type: {
-                  type: 'string' as const,
-                  enum: Object.values(ACTION_TYPE)
-                },
-                target: {
-                  type: 'string' as const,
-                  enum: ['issue', 'knowledge', 'pond']
-                },
-                details: { type: 'string' as const }
-              },
-              required: ['type', 'target', 'details']
-            }
-          },
-          response: {
-            type: 'string' as const,
-            description: 'ユーザーへの応答メッセージ'
-          },
-          // updatedStateはupdateStatePromptModuleから自動的に提供される
-        },
-        required: ['interpretation', 'requestType', 'response']
-      }
+      content: outputSchema
     }
   ]
 };
@@ -161,6 +165,9 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
  *   - State更新のinstructions
  *   - updatedStateフィールドのschema定義
  * - これにより1回のAI呼び出しで分析とState更新を同時に実行可能
+ *
+ * 重要: updateStatePromptModuleが既にstatePromptModuleを含んでいるため、
+ *       statePromptModuleを別途マージする必要はない
  */
 export const processUserRequestPromptModule = merge(
   updateStatePromptModule,
