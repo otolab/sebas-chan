@@ -133,8 +133,21 @@ export const analysisModule: PromptModule<AnalysisContext> = {
   ],
 
   materials: [
+    // 単純な文字列配列として提供（簡易的な参考資料）
     'リクエスト種類の例: issue, question, action, feedback',
     'イベントタイプの例: ISSUE_CREATED, DATA_ARRIVED',
+
+    // または MaterialElement 型を使用（構造化された資料）
+    // (ctx) => ctx.relatedData.issues.map(issue => ({
+    //   type: 'material' as const,
+    //   id: `issue-${issue.id}`,
+    //   title: `Issue: ${issue.title}`,
+    //   content: [
+    //     `説明: ${issue.description}`,
+    //     `優先度: ${issue.priority}`,
+    //     `ステータス: ${issue.status}`
+    //   ].join('\n')
+    // }))
   ],
 
   // schemaセクション（output大セクションに分類）
@@ -265,6 +278,89 @@ const myWorkflowModule = merge(
 - **責務の分離**: 各モジュールが単一の責任を持つ
 - **再利用性**: 共通モジュール（updateStatePromptModule等）を複数のワークフローで利用
 - **段階的構築**: 複雑なプロンプトも小さなモジュールから構築可能
+
+### MaterialElement型の活用
+
+`materials`セクションでは、文字列配列の他に`MaterialElement`型を使用して構造化された資料を提供できます：
+
+```typescript
+type MaterialElement = {
+  type: 'material';
+  id: string;         // 一意のID
+  title: string;      // 資料のタイトル
+  content: string;    // 資料の内容
+};
+```
+
+**MaterialElementを使用すべき場合**：
+- 詳細な分析対象データ（Issue、Flow、Knowledge等）を提供する時
+- 複数の関連エンティティを個別に識別可能にしたい時
+- AIが参照しやすい構造化データを提供したい時
+
+**実装例**：
+```typescript
+materials: [
+  // 詳細なIssue情報をMaterialElementとして提供
+  // 関数は配列を返し、ModulerPromptが自動的に平坦化する
+  (ctx) => ctx.issues.map(issue => ({
+    type: 'material' as const,
+    id: `issue-${issue.id}`,
+    title: `Issue: ${issue.title}`,
+    content: [
+      `- ID: ${issue.id}`,
+      `- 説明: ${issue.description}`,
+      `- 優先度: ${issue.priority}`,
+      `- ステータス: ${issue.status}`,
+      `- 作成日: ${issue.createdAt}`,
+      issue.labels?.length > 0 ? `- ラベル: ${issue.labels.join(', ')}` : ''
+    ].filter(Boolean).join('\n')
+  })),
+
+  // 別の配列も同様に関数として定義
+  (ctx) => ctx.flows.map(flow => ({
+    type: 'material' as const,
+    id: `flow-${flow.id}`,
+    title: `Flow: ${flow.title}`,
+    content: `観点: ${flow.perspective.description}`
+  })),
+
+  // 単純な文字列も混在可能
+  'その他の参考情報'
+]
+```
+
+**重要な注意点**：
+- 各関数は`MaterialElement[]`を返し、ModulerPromptが自動的に平坦化する
+- `.flat()`は配列定義の外側で使用しない（静的定義の原則）
+- `content`は読みやすさのため`.join('\n')`を使用することを推奨
+- 空の要素は`.filter(Boolean)`で除去する
+
+### 推奨：変換ユーティリティの活用
+
+標準的なエンティティの変換には、専用のユーティリティ関数を使用することを推奨：
+
+```typescript
+import {
+  issuesToMaterials,
+  flowsToMaterials,
+  knowledgesToMaterials
+} from '../shared/material-utils.js';
+
+const myPromptModule: PromptModule<MyContext> = {
+  materials: [
+    // シンプルで読みやすい実装
+    ctx => issuesToMaterials(ctx.issues),
+    ctx => flowsToMaterials(ctx.flows),
+    ctx => knowledgesToMaterials(ctx.knowledgeBase)
+  ]
+};
+```
+
+**ユーティリティの利点**：
+- 一貫性のある出力フォーマット
+- 保守性の向上（変換ロジックの一元管理）
+- 可読性の向上（materialsセクションがシンプルに）
+- 型安全性の保証
 
 ### コンテキストの活用
 

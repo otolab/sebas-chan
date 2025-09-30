@@ -219,8 +219,11 @@ context.recorder.record(RecordType.OUTPUT, { success, output });
 
 3. **正しいセクション選択**:
    - `materials`: 参考資料（関連Issue、ドキュメント等）
+     - 文字列配列または`MaterialElement`型を使用
+     - 詳細な分析対象には`MaterialElement`推奨
    - `chunks`: 分割データ（大量テキストの部分処理等）
    - `inputs`: シンプルな入力データ
+     - 読みやすさのため`.join('\n')`を活用
 
 #### 設計原則
 
@@ -291,14 +294,20 @@ const analysisPromptModule = merge(
 
     inputs: [(ctx: AnalysisContext) => `入力: ${ctx.inputData}`],
 
-    // 関連データは参考資料として
+    // 関連データは参考資料として（MaterialElement型で構造化）
     materials: [
+      // 関数が配列を返し、ModulerPromptが自動的に平坦化
       (ctx: AnalysisContext) =>
         ctx.relatedItems.map((item) => ({
           type: 'material' as const,
           id: `item-${item.id}`,
           title: item.name,
-          content: JSON.stringify(item),
+          content: [
+            `ID: ${item.id}`,
+            `説明: ${item.description}`,
+            `優先度: ${item.priority}`,
+            // その他の重要な属性
+          ].filter(Boolean).join('\n'), // 読みやすい形式で提供
         })),
     ],
 
