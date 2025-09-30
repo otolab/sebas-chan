@@ -168,7 +168,7 @@ interface WorkflowContextInterface {
 
 ```typescript
 interface WorkflowStorageInterface {
-  // Issue操作 - 問題管理の中心
+  // Issue操作 - ユーザーに代わってAIが追跡・管理すべき事項
   getIssue(id: string): Promise<Issue | null>;
   searchIssues(query: string): Promise<Issue[]>;
   createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
@@ -189,15 +189,15 @@ interface WorkflowStorageInterface {
 #### 活用パターン
 
 ```typescript
-// 関連Issueの効率的な検索
+// 関連する追跡事項の効率的な検索
 const relatedIssues = await context.storage.searchIssues(
   `${issue.title} OR (${issue.labels.join(' OR ')})`
 );
 
-// Pondからのパターン発見
-const similarEntries = await context.storage.searchPond(errorMessage);
+// Pondからのパターン発見（繰り返し現れる追跡すべき事項）
+const similarEntries = await context.storage.searchPond(userInput);
 if (similarEntries.length > THRESHOLD) {
-  // パターンとして認識
+  // 繰り返しパターンとして認識し、ユーザーが気づくべき傾向として記録
 }
 
 // 知識の信頼度更新

@@ -17,13 +17,13 @@
 
 ```typescript
 interface WorkflowDefinition {
-  name: string;           // ワークフロー識別子
-  description: string;    // ワークフローの説明
+  name: string; // ワークフロー識別子
+  description: string; // ワークフローの説明
   triggers: {
-    eventTypes: string[];  // トリガーイベント
-    priority?: number;     // 実行優先度
+    eventTypes: string[]; // トリガーイベント
+    priority?: number; // 実行優先度
   };
-  executor: WorkflowExecutor;  // 実行関数
+  executor: WorkflowExecutor; // 実行関数
 }
 ```
 
@@ -41,6 +41,7 @@ interface WorkflowDefinition {
 | **実装状態** | 実装済み |
 
 **Input**:
+
 ```typescript
 interface Input {
   request: {
@@ -48,17 +49,19 @@ interface Input {
     content: string;
     userId?: string;
     timestamp: Date;
-  }
+  };
 }
 ```
 
 **Process**:
+
 1. AIを使用してリクエストを分析
 2. リクエストタイプを分類（issue/question/feedback）
 3. 分類に基づいて後続イベントを決定
 4. 後続イベントを発行
 
 **Output**:
+
 ```typescript
 interface Output {
   requestType: 'issue' | 'question' | 'feedback';
@@ -67,7 +70,8 @@ interface Output {
 ```
 
 **後続イベント（emitter.emit()で発行）**:
-- `ANALYZE_ISSUE_IMPACT`: issue（問題報告）の場合
+
+- `ANALYZE_ISSUE_IMPACT`: issue（追跡事項）の場合
   - payload: `{ issue: request, aiResponse: string }`
 - `EXTRACT_KNOWLEDGE`: question（質問）の場合
   - payload: `{ question: request.content, context: aiResponse }`
@@ -78,7 +82,7 @@ interface Output {
 
 ### A-1: IngestInput
 
-**目的**: 入力データをPondに取り込み、エラーキーワードを検出して必要に応じて分析を起動
+**目的**: 入力データをPondに取り込み、追跡すべき事項を検出して必要に応じて分析を起動
 
 **仕様**:
 | 項目 | 内容 |
@@ -88,33 +92,37 @@ interface Output {
 | **実装状態** | 実装済み |
 
 **Input**:
+
 ```typescript
 interface Input {
   input: {
     source: string;
     content: string;
     metadata?: Record<string, unknown>;
-  }
+  };
 }
 ```
 
 **Process**:
+
 1. 入力データをPondに保存
-2. エラーキーワードの検出（error, exception, failed等）
-3. エラーが検出された場合、Issue作成
+2. 追跡すべき事項の検出（期限、重要度、繰り返しパターン等）
+3. 追跡が必要と判断された場合、Issue作成
 4. 影響分析イベントを発行
 
 **Output**:
+
 ```typescript
 interface Output {
   pondEntryId: string;
   containsError: boolean;
-  issueId?: string;  // エラー検出時のみ
+  issueId?: string; // 追跡事項検出時のみ
 }
 ```
 
 **後続イベント（emitter.emit()で発行）**:
-- `ANALYZE_ISSUE_IMPACT`: エラー検出時
+
+- `ANALYZE_ISSUE_IMPACT`: 追跡事項検出時
   - payload: `{ issue: { id, content, description, inputId }, pondEntryId: string }`
 
 ---
@@ -131,6 +139,7 @@ interface Output {
 | **実装状態** | 実装済み |
 
 **Input**:
+
 ```typescript
 interface Input {
   issueId: string;
@@ -138,6 +147,7 @@ interface Input {
 ```
 
 **Process**:
+
 1. IssueをDBから取得
 2. 関連するPondエントリを検索
 3. AIで影響範囲と重要度を分析
@@ -145,6 +155,7 @@ interface Input {
 5. 高影響度の場合、知識抽出を起動
 
 **Output**:
+
 ```typescript
 interface Output {
   impactScore: number;
@@ -155,6 +166,7 @@ interface Output {
 ```
 
 **後続イベント（emitter.emit()で発行）**:
+
 - `EXTRACT_KNOWLEDGE`: 影響度スコア > 80の場合
   - payload: `{ issueId: string, impactAnalysis: string, source: 'high_impact_issue' }`
 
@@ -172,14 +184,16 @@ interface Output {
 | **実装状態** | 実装済み |
 
 **Input**:
+
 ```typescript
 interface Input {
-  sourceId: string;  // IssueまたはPondエントリのID
+  sourceId: string; // IssueまたはPondエントリのID
   sourceType: 'issue' | 'pond';
 }
 ```
 
 **Process**:
+
 1. ソースデータを取得
 2. AIで知識を抽出・構造化
 3. カテゴリーとタグを自動生成
@@ -187,6 +201,7 @@ interface Input {
 5. 関連Issueとのリンクを作成
 
 **Output**:
+
 ```typescript
 interface Output {
   knowledgeId: string;
@@ -213,17 +228,19 @@ interface Output {
 | **実装状態** | 未実装 |
 
 **Input**:
+
 ```typescript
 interface Input {
   timeRange?: {
     start: Date;
     end: Date;
   };
-  minClusterSize?: number;  // デフォルト: 3
+  minClusterSize?: number; // デフォルト: 3
 }
 ```
 
 **Process**:
+
 1. 指定期間内の全Issueを取得
 2. ベクトル埋め込みで類似度計算
 3. クラスタリングアルゴリズムを適用
@@ -231,6 +248,7 @@ interface Input {
 5. Flow提案を生成
 
 **Output**:
+
 ```typescript
 interface Output {
   clusters: Array<{
@@ -243,6 +261,7 @@ interface Output {
 ```
 
 **後続イベント**:
+
 - `CREATE_FLOW`: 高信頼度クラスターの場合
 
 ---
@@ -259,13 +278,15 @@ interface Output {
 | **実装状態** | 未実装 |
 
 **Input**:
+
 ```typescript
 interface Input {
-  flowId?: string;  // 特定のFlowのみ更新する場合
+  flowId?: string; // 特定のFlowのみ更新する場合
 }
 ```
 
 **Process**:
+
 1. 対象Flowを取得
 2. Flowのdescriptionを解析
 3. 関連Issueを検索・マッチング
@@ -273,6 +294,7 @@ interface Input {
 5. DBの関係性を更新
 
 **Output**:
+
 ```typescript
 interface Output {
   updatedFlows: number;
@@ -295,6 +317,7 @@ interface Output {
 | **実装状態** | 未実装 |
 
 **Input**:
+
 ```typescript
 interface Input {
   factors?: {
@@ -306,12 +329,14 @@ interface Input {
 ```
 
 **Process**:
+
 1. 全Flowの現在状態を取得
 2. 各要因のスコアを計算
 3. 重み付け合計で最終スコアを決定
 4. 優先度を更新
 
 **Output**:
+
 ```typescript
 interface Output {
   updatedFlows: Array<{
@@ -337,20 +362,23 @@ interface Output {
 | **実装状態** | 未実装 |
 
 **Input**:
+
 ```typescript
 interface Input {
   searchPatterns?: string[];
-  maxAge?: number;  // 日数
+  maxAge?: number; // 日数
 }
 ```
 
 **Process**:
+
 1. Pondから未処理エントリを取得
 2. パターンマッチングとクラスタリング
 3. 価値判定アルゴリズムを適用
 4. 発見された情報を分類
 
 **Output**:
+
 ```typescript
 interface Output {
   discoveries: Array<{
@@ -363,6 +391,7 @@ interface Output {
 ```
 
 **後続イベント**:
+
 - `CREATE_KNOWLEDGE`: knowledge typeの場合
 - `CREATE_ISSUE`: issue typeの場合
 
@@ -380,20 +409,23 @@ interface Output {
 | **実装状態** | 未実装 |
 
 **Input**:
+
 ```typescript
 interface Input {
   userId: string;
-  context?: string;  // 現在の作業コンテキスト
+  context?: string; // 現在の作業コンテキスト
 }
 ```
 
 **Process**:
+
 1. ユーザーの作業履歴を分析
 2. 未完了Flowの優先度を取得
 3. コンテキストマッチング
 4. 推奨Flowリストを生成
 
 **Output**:
+
 ```typescript
 interface Output {
   suggestions: Array<{
@@ -401,7 +433,7 @@ interface Output {
     flowName: string;
     reason: string;
     priority: number;
-    estimatedTime: number;  // 分
+    estimatedTime: number; // 分
   }>;
 }
 ```
@@ -420,6 +452,7 @@ interface Output {
 | **実装状態** | 未実装 |
 
 **Input**:
+
 ```typescript
 interface Input {
   issueId: string;
@@ -427,19 +460,21 @@ interface Input {
 ```
 
 **Process**:
+
 1. Issue詳細と履歴を取得
 2. 類似Issue の解決パターンを検索
 3. Knowledge DBから関連情報を取得
 4. AIで具体的アクションを生成
 
 **Output**:
+
 ```typescript
 interface Output {
   actions: Array<{
     description: string;
     type: 'investigate' | 'fix' | 'escalate' | 'close';
     confidence: number;
-    references: string[];  // 参考Knowledge/Issue ID
+    references: string[]; // 参考Knowledge/Issue ID
   }>;
 }
 ```
@@ -471,27 +506,30 @@ graph TD
 
 ### 優先度レベル
 
-| レベル | 範囲 | ワークフロー | 用途 |
-|--------|------|--------------|------|
-| 高 | 50-100 | A-0 (60) | ユーザー応答、緊急処理 |
-| 標準 | 20-49 | A-1 (40), A-2 (30), C-1/C-2 (25), A-3 (20) | 通常業務処理 |
-| 低 | 0-19 | B-2/B-3 (15), B-1 (10), B-4 (5) | バックグラウンド処理 |
+| レベル | 範囲   | ワークフロー                               | 用途                   |
+| ------ | ------ | ------------------------------------------ | ---------------------- |
+| 高     | 50-100 | A-0 (60)                                   | ユーザー応答、緊急処理 |
+| 標準   | 20-49  | A-1 (40), A-2 (30), C-1/C-2 (25), A-3 (20) | 通常業務処理           |
+| 低     | 0-19   | B-2/B-3 (15), B-1 (10), B-4 (5)            | バックグラウンド処理   |
 
 ## 6. データフロー分析
 
 ### 入力ソース
+
 1. **ユーザーリクエスト**: Web UI、API経由
 2. **Reporters**: 外部システムからの自動収集
 3. **内部イベント**: ワークフローチェーン
 4. **スケジュール**: 定期実行（将来実装）
 
 ### データストア
+
 1. **Pond**: 生データの永続化、ベクトル検索
-2. **Issue DB**: 構造化された問題管理
+2. **Issue DB**: 構造化された追跡事項管理
 3. **Knowledge DB**: 再利用可能な知識
 4. **Flow DB**: ワークフロー状態管理
 
 ### 出力先
+
 1. **ユーザー通知**: 提案、アラート
 2. **後続ワークフロー**: イベント発行
 3. **外部システム**: API、Webhook（将来実装）
@@ -499,12 +537,14 @@ graph TD
 ## 7. 機能の過不足分析
 
 ### 充足している機能
+
 ✅ 基本的なデータ取り込み（A-1）
 ✅ エラー検出と影響分析（A-2）
 ✅ 知識抽出（A-3）
 ✅ ユーザーリクエスト処理（A-0）
 
 ### 不足している機能
+
 ❌ Flow管理系（B-1, B-2, B-3）
 ❌ 提案系（C-1, C-2）
 ❌ 自動クリーンアップ（B-4）
@@ -512,6 +552,7 @@ graph TD
 ❌ 定期実行スケジューラー
 
 ### 改善が必要な機能
+
 ⚠️ Moduler Prompt統合の完全化
 ⚠️ エラーハンドリングの強化
 ⚠️ テストカバレッジの向上
@@ -520,16 +561,19 @@ graph TD
 ## 8. 実装優先順位
 
 ### Phase 1（即座に実施）
+
 1. 既存ワークフローのModuler Prompt統合
 2. WorkflowTriggerのcondition機能実装
 3. 基本的なテスト整備
 
 ### Phase 2（基本機能確立後）
+
 1. B-1: ClusterIssues実装
 2. C-1/C-2: 提案系ワークフロー実装
 3. 統合テスト環境構築
 
 ### Phase 3（拡張機能）
+
 1. B-2/B-3: Flow管理系実装
 2. B-4: Pondサルベージ実装
 3. D系: システム自己調整機能
@@ -537,12 +581,12 @@ graph TD
 
 ## 9. リスクと対策
 
-| リスク | 影響度 | 対策 |
-|--------|--------|------|
-| ワークフロー間の無限ループ | 高 | イベント履歴追跡、最大実行回数制限 |
-| パフォーマンス劣化 | 中 | 優先度制御、同時実行数制限 |
-| データ不整合 | 高 | トランザクション管理、状態検証 |
-| AI処理コスト | 中 | キャッシュ、バッチ処理 |
+| リスク                     | 影響度 | 対策                               |
+| -------------------------- | ------ | ---------------------------------- |
+| ワークフロー間の無限ループ | 高     | イベント履歴追跡、最大実行回数制限 |
+| パフォーマンス劣化         | 中     | 優先度制御、同時実行数制限         |
+| データ不整合               | 高     | トランザクション管理、状態検証     |
+| AI処理コスト               | 中     | キャッシュ、バッチ処理             |
 
 ## 10. 成功指標
 

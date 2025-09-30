@@ -20,31 +20,31 @@ sebas-chanのデータベーススキーマとデータ型の正式仕様を定�
 
 課題管理の中核となるテーブル。
 
-| フィールド名 | Python型 | TypeScript型 | 説明 | 必須 | デフォルト値 |
-|------------|----------|--------------|------|------|------------|
-| id | string | string | ユニークID | ✓ | - |
-| title | string | string | タイトル | ✓ | - |
-| description | string | string | 詳細説明（ベクトル化対象） | ✓ | - |
-| status | string | 'open' \| 'closed' | ステータス | ✓ | 'open' |
-| priority | int32 | number | 優先度（0-100） | × | undefined |
-| labels | list[string] | string[] | ラベル配列 | ✓ | [] |
-| updates | string (JSON) | IssueUpdate[] | 更新履歴 | ✓ | [] |
-| relations | string (JSON) | IssueRelation[] | 他Issueとの関係 | ✓ | [] |
-| source_input_ids | list[string] | string[] | ソースInput ID | ✓ | [] |
-| created_at | timestamp(ms) | Date | 作成日時 | ✓ | - |
-| updated_at | timestamp(ms) | Date | 更新日時 | ✓ | - |
-| vector | list[float32, 256] | number[] | ベクトル表現 | ✓ | - |
+| フィールド名     | Python型           | TypeScript型       | 説明                       | 必須 | デフォルト値 |
+| ---------------- | ------------------ | ------------------ | -------------------------- | ---- | ------------ |
+| id               | string             | string             | ユニークID                 | ✓    | -            |
+| title            | string             | string             | タイトル                   | ✓    | -            |
+| description      | string             | string             | 詳細説明（ベクトル化対象） | ✓    | -            |
+| status           | string             | 'open' \| 'closed' | ステータス                 | ✓    | 'open'       |
+| priority         | int32              | number             | 優先度（0-100）            | ×    | undefined    |
+| labels           | list[string]       | string[]           | ラベル配列                 | ✓    | []           |
+| updates          | string (JSON)      | IssueUpdate[]      | 更新履歴                   | ✓    | []           |
+| relations        | string (JSON)      | IssueRelation[]    | 他Issueとの関係            | ✓    | []           |
+| source_input_ids | list[string]       | string[]           | ソースInput ID             | ✓    | []           |
+| created_at       | timestamp(ms)      | Date               | 作成日時                   | ✓    | -            |
+| updated_at       | timestamp(ms)      | Date               | 更新日時                   | ✓    | -            |
+| vector           | list[float32, 256] | number[]           | ベクトル表現               | ✓    | -            |
 
 #### 優先度定数
 
 ```typescript
 const PRIORITY = {
-  CRITICAL: 90,  // 緊急
-  HIGH: 70,      // 高
-  MEDIUM: 50,    // 中
-  LOW: 30,       // 低
-  NONE: 10       // なし
-}
+  CRITICAL: 90, // 緊急
+  HIGH: 70, // 高
+  MEDIUM: 50, // 中
+  LOW: 30, // 低
+  NONE: 10, // なし
+};
 ```
 
 #### IssueUpdate型
@@ -53,7 +53,7 @@ const PRIORITY = {
 interface IssueUpdate {
   timestamp: Date;
   content: string;
-  author: 'user' | 'ai';  // ユーザーのメモか、AIの提案か
+  author: 'user' | 'ai'; // ユーザーのメモか、AIの提案か
 }
 ```
 
@@ -70,15 +70,15 @@ interface IssueRelation {
 
 すべてのイベントとInputが保存されるベクトル化ストア。
 
-| フィールド名 | Python型 | TypeScript型 | 説明 | 必須 | デフォルト値 |
-|------------|----------|--------------|------|------|------------|
-| id | string | string | ユニークID | ✓ | - |
-| content | string | string | コンテンツ本文 | ✓ | - |
-| source | string | string | データソース | ✓ | - |
-| context | string | string? | 自然言語コンテキスト | × | null |
-| metadata | string (JSON) | Record<string, unknown>? | メタデータ | × | null |
-| timestamp | timestamp(ms) | Date | タイムスタンプ | ✓ | - |
-| vector | list[float32, 256] | number[] | ベクトル表現 | ✓ | - |
+| フィールド名 | Python型           | TypeScript型             | 説明                 | 必須 | デフォルト値 |
+| ------------ | ------------------ | ------------------------ | -------------------- | ---- | ------------ |
+| id           | string             | string                   | ユニークID           | ✓    | -            |
+| content      | string             | string                   | コンテンツ本文       | ✓    | -            |
+| source       | string             | string                   | データソース         | ✓    | -            |
+| context      | string             | string?                  | 自然言語コンテキスト | ×    | null         |
+| metadata     | string (JSON)      | Record<string, unknown>? | メタデータ           | ×    | null         |
+| timestamp    | timestamp(ms)      | Date                     | タイムスタンプ       | ✓    | -            |
+| vector       | list[float32, 256] | number[]                 | ベクトル表現         | ✓    | -            |
 
 #### sourceの値
 
@@ -96,26 +96,26 @@ interface IssueRelation {
 
 抽出・蒸留された永続的な知識。
 
-| フィールド名 | Python型 | TypeScript型 | 説明 | 必須 | デフォルト値 |
-|------------|----------|--------------|------|------|------------|
-| id | string | string | ユニークID | ✓ | - |
-| type | string | KnowledgeType | 知識タイプ | ✓ | - |
-| content | string | string | 知識本文 | ✓ | - |
-| upvotes | int32 | number | ポジティブ評価 | ✓ | 0 |
-| downvotes | int32 | number | ネガティブ評価 | ✓ | 0 |
-| sources | string (JSON) | KnowledgeSource[] | 情報源 | ✓ | [] |
-| created_at | timestamp(ms) | Date | 作成日時 | ✓ | - |
-| vector | list[float32, 256] | number[] | ベクトル表現 | ✓ | - |
+| フィールド名 | Python型           | TypeScript型      | 説明           | 必須 | デフォルト値 |
+| ------------ | ------------------ | ----------------- | -------------- | ---- | ------------ |
+| id           | string             | string            | ユニークID     | ✓    | -            |
+| type         | string             | KnowledgeType     | 知識タイプ     | ✓    | -            |
+| content      | string             | string            | 知識本文       | ✓    | -            |
+| upvotes      | int32              | number            | ポジティブ評価 | ✓    | 0            |
+| downvotes    | int32              | number            | ネガティブ評価 | ✓    | 0            |
+| sources      | string (JSON)      | KnowledgeSource[] | 情報源         | ✓    | []           |
+| created_at   | timestamp(ms)      | Date              | 作成日時       | ✓    | -            |
+| vector       | list[float32, 256] | number[]          | ベクトル表現   | ✓    | -            |
 
 #### KnowledgeType
 
 ```typescript
 type KnowledgeType =
-  | 'system_rule'      // AIの振る舞いを定義するルール
-  | 'process_manual'   // 定型的な業務フローや手順書
-  | 'entity_profile'   // 特定の人物、組織、プロジェクトに関する情報
-  | 'curated_summary'  // 特定のトピックについて横断的に集められた要約情報
-  | 'factoid';         // 再利用可能な単一の事実や情報
+  | 'system_rule' // AIの振る舞いを定義するルール
+  | 'process_manual' // 定型的な業務フローや手順書
+  | 'entity_profile' // 特定の人物、組織、プロジェクトに関する情報
+  | 'curated_summary' // 特定のトピックについて横断的に集められた要約情報
+  | 'factoid'; // 再利用可能な単一の事実や情報
 ```
 
 #### KnowledgeSource
@@ -132,98 +132,98 @@ type KnowledgeSource =
 
 スケジュール管理テーブル。
 
-| フィールド名 | Python型 | TypeScript型 | 説明 | 必須 | デフォルト値 |
-|------------|----------|--------------|------|------|------------|
-| id | string | string | ユニークID | ✓ | - |
-| issue_id | string | string | 関連Issue ID | ✓ | - |
-| request | string | string | 元の自然言語リクエスト | ✓ | - |
-| action | string | ScheduleAction | アクションタイプ | ✓ | - |
-| next_run | timestamp(ms) | Date \| null | 次回実行時刻 | × | null |
-| last_run | timestamp(ms) | Date \| null | 最終実行時刻 | × | null |
-| pattern | string | string? | 繰り返しパターン | × | null |
-| occurrences | int32 | number | 実行回数 | ✓ | 0 |
-| max_occurrences | int32 | number? | 最大実行回数 | × | null |
-| dedupe_key | string | string? | 重複防止キー | × | null |
-| status | string | 'active' \| 'completed' \| 'cancelled' | ステータス | ✓ | 'active' |
-| created_at | timestamp(ms) | Date | 作成日時 | ✓ | - |
-| updated_at | timestamp(ms) | Date | 更新日時 | ✓ | - |
+| フィールド名    | Python型      | TypeScript型                           | 説明                   | 必須 | デフォルト値 |
+| --------------- | ------------- | -------------------------------------- | ---------------------- | ---- | ------------ |
+| id              | string        | string                                 | ユニークID             | ✓    | -            |
+| issue_id        | string        | string                                 | 関連Issue ID           | ✓    | -            |
+| request         | string        | string                                 | 元の自然言語リクエスト | ✓    | -            |
+| action          | string        | ScheduleAction                         | アクションタイプ       | ✓    | -            |
+| next_run        | timestamp(ms) | Date \| null                           | 次回実行時刻           | ×    | null         |
+| last_run        | timestamp(ms) | Date \| null                           | 最終実行時刻           | ×    | null         |
+| pattern         | string        | string?                                | 繰り返しパターン       | ×    | null         |
+| occurrences     | int32         | number                                 | 実行回数               | ✓    | 0            |
+| max_occurrences | int32         | number?                                | 最大実行回数           | ×    | null         |
+| dedupe_key      | string        | string?                                | 重複防止キー           | ×    | null         |
+| status          | string        | 'active' \| 'completed' \| 'cancelled' | ステータス             | ✓    | 'active'     |
+| created_at      | timestamp(ms) | Date                                   | 作成日時               | ✓    | -            |
+| updated_at      | timestamp(ms) | Date                                   | 更新日時               | ✓    | -            |
 
 #### ScheduleAction
 
 ```typescript
 type ScheduleAction =
-  | 'reminder'       // リマインダー通知
-  | 'escalate'       // エスカレーション
-  | 'auto_close'     // 自動クローズ
-  | 'follow_up'      // フォローアップ
-  | 'check_progress';// 進捗確認
+  | 'reminder' // リマインダー通知
+  | 'escalate' // エスカレーション
+  | 'auto_close' // 自動クローズ
+  | 'follow_up' // フォローアップ
+  | 'check_progress'; // 進捗確認
 ```
 
 ### 5. Flows テーブル
 
 複数のIssueをまとめた作業単位。
 
-| フィールド名 | Python型 | TypeScript型 | 説明 | 必須 | デフォルト値 |
-|------------|----------|--------------|------|------|------------|
-| id | string | string | ユニークID | ✓ | - |
-| title | string | string | タイトル | ✓ | - |
-| description | string | string | 説明 | ✓ | - |
-| status | string | FlowStatus | ステータス | ✓ | 'backlog' |
-| priority_score | float32 | number | 優先度スコア（0.0-1.0） | ✓ | 0.5 |
-| issue_ids | list[string] | string[] | 関連Issue ID | ✓ | [] |
-| created_at | timestamp(ms) | Date | 作成日時 | ✓ | - |
-| updated_at | timestamp(ms) | Date | 更新日時 | ✓ | - |
+| フィールド名   | Python型      | TypeScript型 | 説明                    | 必須 | デフォルト値 |
+| -------------- | ------------- | ------------ | ----------------------- | ---- | ------------ |
+| id             | string        | string       | ユニークID              | ✓    | -            |
+| title          | string        | string       | タイトル                | ✓    | -            |
+| description    | string        | string       | 説明                    | ✓    | -            |
+| status         | string        | FlowStatus   | ステータス              | ✓    | 'backlog'    |
+| priority_score | float32       | number       | 優先度スコア（0.0-1.0） | ✓    | 0.5          |
+| issue_ids      | list[string]  | string[]     | 関連Issue ID            | ✓    | []           |
+| created_at     | timestamp(ms) | Date         | 作成日時                | ✓    | -            |
+| updated_at     | timestamp(ms) | Date         | 更新日時                | ✓    | -            |
 
 #### FlowStatus
 
 ```typescript
 type FlowStatus =
-  | 'focused'               // 最優先で集中
-  | 'active'                // アクティブ
-  | 'monitoring'            // 監視中
-  | 'blocked'               // ブロック中
+  | 'focused' // 最優先で集中
+  | 'active' // アクティブ
+  | 'monitoring' // 監視中
+  | 'blocked' // ブロック中
   | 'pending_user_decision' // ユーザー判断待ち
-  | 'pending_review'        // レビュー待ち
-  | 'backlog'               // バックログ
-  | 'paused'                // 一時停止
-  | 'someday'               // いつかやる
-  | 'completed'             // 完了
-  | 'cancelled'             // キャンセル
-  | 'archived';             // アーカイブ済み
+  | 'pending_review' // レビュー待ち
+  | 'backlog' // バックログ
+  | 'paused' // 一時停止
+  | 'someday' // いつかやる
+  | 'completed' // 完了
+  | 'cancelled' // キャンセル
+  | 'archived'; // アーカイブ済み
 ```
 
 ### 6. State テーブル
 
 システム状態管理テーブル。
 
-| フィールド名 | Python型 | TypeScript型 | 説明 | 必須 | デフォルト値 |
-|------------|----------|--------------|------|------|------------|
-| id | string | string | ユニークID（固定: 'system'） | ✓ | - |
-| content | string | string | 状態文書（Markdown） | ✓ | - |
-| updated_at | timestamp(ms) | Date | 更新日時 | ✓ | - |
+| フィールド名 | Python型      | TypeScript型 | 説明                         | 必須 | デフォルト値 |
+| ------------ | ------------- | ------------ | ---------------------------- | ---- | ------------ |
+| id           | string        | string       | ユニークID（固定: 'system'） | ✓    | -            |
+| content      | string        | string       | 状態文書（Markdown）         | ✓    | -            |
+| updated_at   | timestamp(ms) | Date         | 更新日時                     | ✓    | -            |
 
 ## データ型変換規則
 
 ### Python → TypeScript
 
-| Python型 | TypeScript型 | 変換方法 |
-|---------|------------|---------|
-| string | string | そのまま |
-| int32 | number | そのまま |
-| float32 | number | そのまま |
-| list[T] | T[] | 配列変換 |
-| timestamp(ms) | Date | new Date(ms) |
-| string (JSON) | object | JSON.parse() |
+| Python型      | TypeScript型 | 変換方法     |
+| ------------- | ------------ | ------------ |
+| string        | string       | そのまま     |
+| int32         | number       | そのまま     |
+| float32       | number       | そのまま     |
+| list[T]       | T[]          | 配列変換     |
+| timestamp(ms) | Date         | new Date(ms) |
+| string (JSON) | object       | JSON.parse() |
 
 ### TypeScript → Python
 
-| TypeScript型 | Python型 | 変換方法 |
-|------------|---------|---------|
-| string | string | そのまま |
-| number | int32/float32 | 型に応じて変換 |
-| T[] | list[T] | リスト変換 |
-| Date | timestamp(ms) | getTime() |
-| object | string (JSON) | JSON.stringify() |
+| TypeScript型 | Python型      | 変換方法         |
+| ------------ | ------------- | ---------------- |
+| string       | string        | そのまま         |
+| number       | int32/float32 | 型に応じて変換   |
+| T[]          | list[T]       | リスト変換       |
+| Date         | timestamp(ms) | getTime()        |
+| object       | string (JSON) | JSON.stringify() |
 
 ## バリデーション規則
 
@@ -252,21 +252,25 @@ type FlowStatus =
 各テーブルには以下のインデックスが設定されています：
 
 ### Issues
+
 - Primary: `id`
 - Index: `status`, `created_at`, `updated_at`
 - Vector Index: `vector`
 
 ### Pond
+
 - Primary: `id`
 - Index: `source`, `timestamp`
 - Vector Index: `vector`
 
 ### Knowledge
+
 - Primary: `id`
 - Index: `type`, `created_at`
 - Vector Index: `vector`
 
 ### Schedules
+
 - Primary: `id`
 - Index: `issue_id`, `status`, `next_run`
 - Unique: `issue_id` + `dedupe_key`（dedupeKeyが設定されている場合）

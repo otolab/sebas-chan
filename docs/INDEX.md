@@ -50,12 +50,14 @@ docs/
 ## 🎯 目的別ガイド
 
 ### 新規参加者向け
+
 1. [CONCEPT.md](CONCEPT.md) - プロジェクトの理念を理解
 2. [architecture/OVERVIEW.md](architecture/OVERVIEW.md) - システム全体像を把握
 3. [ROADMAP.md](ROADMAP.md) - 開発計画を確認
 4. [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) - 現在の実装状況
 
 ### ワークフロー開発者向け
+
 1. [workflows/EVENT_CATALOG.md](workflows/EVENT_CATALOG.md) - イベント一覧を確認
 2. [workflows/WORKFLOW_PERSPECTIVE.md](workflows/WORKFLOW_PERSPECTIVE.md) - ワークフローの制約と能力
 3. [workflows/SPECIFICATION.md](workflows/SPECIFICATION.md) - 技術仕様を理解
@@ -63,16 +65,19 @@ docs/
 5. [workflows/MODULER_PROMPT_GUIDE.md](workflows/MODULER_PROMPT_GUIDE.md) - AI処理の実装
 
 ### API連携開発者向け
+
 1. [architecture/OVERVIEW.md](architecture/OVERVIEW.md) - システム構成を理解
 2. [architecture/INTERFACES.md](architecture/INTERFACES.md) - API仕様を確認
 3. [architecture/INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md) - データモデルを理解
 
 ### データベース設計者向け
+
 1. [architecture/INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md) - 概念モデル
 2. [architecture/LOW_LEVEL_SCHEMA.md](architecture/LOW_LEVEL_SCHEMA.md) - 物理スキーマ
 3. [phases/phase3/DATABASE_SCHEMA_SPECIFICATION.md](phases/phase3/DATABASE_SCHEMA_SPECIFICATION.md) - 詳細仕様
 
 ### Core開発者向け
+
 1. [architecture/CORE_ENGINE_AGENT_SPEC.md](architecture/CORE_ENGINE_AGENT_SPEC.md) - Core仕様
 2. [architecture/COMPONENTS.md](architecture/COMPONENTS.md) - コンポーネント詳細
 3. [workflows/SPECIFICATION.md](workflows/SPECIFICATION.md) - ワークフロー仕様
@@ -80,25 +85,28 @@ docs/
 ## 🔑 重要な定義
 
 ### 正式定義の場所（Single Source of Truth）
+
 - **WorkflowContextInterface**: [workflows/SPECIFICATION.md](workflows/SPECIFICATION.md#workflowcontext)
 - **WorkflowDefinition**: [workflows/SPECIFICATION.md](workflows/SPECIFICATION.md#workflowdefinition)
 - **Event Types**: [workflows/EVENT_CATALOG.md](workflows/EVENT_CATALOG.md)
 - **Information Model**: [architecture/INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md)
 
 ### 用語集
-| 用語 | 定義 | 詳細 |
-|-----|------|------|
-| **Input** | 外部からの入力データ | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#input) |
-| **Issue** | 問題・課題・タスク | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#issue) |
-| **Knowledge** | 抽出された知識 | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#knowledge) |
-| **Pond** | イベント/入力プール | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#pond) |
-| **Workflow** | イベント駆動処理単位 | [SPECIFICATION.md](workflows/SPECIFICATION.md) |
+
+| 用語            | 定義                   | 詳細                                                                |
+| --------------- | ---------------------- | ------------------------------------------------------------------- |
+| **Input**       | 外部からの入力データ   | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#input)     |
+| **Issue**       | 追跡事項・管理対象     | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#issue)     |
+| **Knowledge**   | 抽出された知識         | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#knowledge) |
+| **Pond**        | イベント/入力プール    | [INFORMATION_MODEL.md](architecture/INFORMATION_MODEL.md#pond)      |
+| **Workflow**    | イベント駆動処理単位   | [SPECIFICATION.md](workflows/SPECIFICATION.md)                      |
 | **Core Engine** | メインサーバープロセス | [CORE_ENGINE_AGENT_SPEC.md](architecture/CORE_ENGINE_AGENT_SPEC.md) |
-| **Core Agent** | 思考エンジン | [CORE_ENGINE_AGENT_SPEC.md](architecture/CORE_ENGINE_AGENT_SPEC.md) |
+| **Core Agent**  | 思考エンジン           | [CORE_ENGINE_AGENT_SPEC.md](architecture/CORE_ENGINE_AGENT_SPEC.md) |
 
 ## 📊 Phase 3の成果物
 
 ### 実装済みワークフロー
+
 - A-0: ProcessUserRequest
 - A-1: IngestInput
 - A-2: AnalyzeIssueImpact
@@ -107,6 +115,7 @@ docs/
 詳細は[Phase 3 README](phases/phase3/README.md)を参照
 
 ### 新規作成ドキュメント
+
 - [EVENT_CATALOG.md](workflows/EVENT_CATALOG.md) - 全イベントの定義
 - [WORKFLOW_PERSPECTIVE.md](workflows/WORKFLOW_PERSPECTIVE.md) - ワークフローの世界観
 - [LOW_LEVEL_SCHEMA.md](architecture/LOW_LEVEL_SCHEMA.md) - PyArrow/LanceDB仕様
@@ -124,4 +133,5 @@ docs/
 4. **定期的な整理**: phase完了時にarchiveへ移動
 
 ---
+
 最終更新: 2025-09-26

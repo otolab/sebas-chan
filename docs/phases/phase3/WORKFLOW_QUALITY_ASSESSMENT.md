@@ -11,6 +11,7 @@
 ### 1. コード品質
 
 #### 良い点 ✅
+
 - **型安全性**: TypeScriptの型定義が適切に使用されている
 - **関数ベース設計**: 純粋関数として実装され、副作用が明確
 - **エラーハンドリング**: try-catchで適切にエラーを捕捉
@@ -19,6 +20,7 @@
 #### 改善が必要な点 ❌
 
 ##### 1.1 recorderの未使用
+
 ```typescript
 // 問題: WorkflowRecorderが一切使われていない
 const { storage, createDriver } = context;
@@ -29,13 +31,15 @@ const { storage, createDriver } = context;
 **影響**: 実行履歴が記録されず、デバッグやトレーサビリティが困難
 
 ##### 1.2 ハードコードされた文字列
+
 ```typescript
 // 問題: マジックストリングが多数存在
-const issueId = `issue-${Date.now()}`;  // IDジェネレーターを使うべき
-author: 'ai' as const;  // 定数化すべき
+const issueId = `issue-${Date.now()}`; // IDジェネレーターを使うべき
+author: 'ai' as const; // 定数化すべき
 ```
 
 ##### 1.3 冗長な条件分岐
+
 ```typescript
 // 問題: JSON解析の失敗時の処理が複雑
 if (result.structuredOutput) {
@@ -52,28 +56,31 @@ if (result.structuredOutput) {
 ### 2. 目的と実装の整合性
 
 #### A-0: ProcessUserRequest
+
 **目的**: ユーザーリクエストの分類とルーティング
 
-| 項目 | 評価 | 詳細 |
-|------|------|------|
-| 分類機能 | ⭐⭐⭐⭐☆ | AI分析は実装済み、ただし分類カテゴリが限定的 |
-| ルーティング | ⭐⭐⭐☆☆ | イベント発行は実装済み、ただし条件が不明確 |
-| Issue連携 | ⭐⭐⭐⭐☆ | 作成・更新は実装済み |
-| 記録 | ⭐☆☆☆☆ | recorderが未使用 |
+| 項目         | 評価      | 詳細                                         |
+| ------------ | --------- | -------------------------------------------- |
+| 分類機能     | ⭐⭐⭐⭐☆ | AI分析は実装済み、ただし分類カテゴリが限定的 |
+| ルーティング | ⭐⭐⭐☆☆  | イベント発行は実装済み、ただし条件が不明確   |
+| Issue連携    | ⭐⭐⭐⭐☆ | 作成・更新は実装済み                         |
+| 記録         | ⭐☆☆☆☆    | recorderが未使用                             |
 
 #### A-1: IngestInput
+
 **目的**: 外部データの取り込みと分析
 
-| 項目 | 評価 | 詳細 |
-|------|------|------|
-| データ取り込み | ⭐⭐⭐⭐☆ | Pond保存は実装済み |
-| 関連Issue特定 | ⭐⭐⭐⭐☆ | 検索と関連付けは実装済み |
-| 優先度判定 | ⭐⭐⭐☆☆ | severity判定はあるが、基準が不明確 |
-| イベント発行 | ⭐⭐⭐⭐☆ | 適切にイベントを発行 |
+| 項目           | 評価      | 詳細                               |
+| -------------- | --------- | ---------------------------------- |
+| データ取り込み | ⭐⭐⭐⭐☆ | Pond保存は実装済み                 |
+| 関連Issue特定  | ⭐⭐⭐⭐☆ | 検索と関連付けは実装済み           |
+| 優先度判定     | ⭐⭐⭐☆☆  | severity判定はあるが、基準が不明確 |
+| イベント発行   | ⭐⭐⭐⭐☆ | 適切にイベントを発行               |
 
 ### 3. 開発のお手本として不足している点
 
 #### 3.1 ドキュメンテーション不足
+
 ```typescript
 // 現状: コメントがほぼない
 async function executeProcessUserRequest(
@@ -102,6 +109,7 @@ async function executeProcessUserRequest(
 ```
 
 #### 3.2 テストカバレッジ
+
 ```typescript
 // 現状のテスト
 describe('ProcessUserRequest', () => {
@@ -118,9 +126,10 @@ describe('ProcessUserRequest', () => {
 ```
 
 #### 3.3 設定の外部化
+
 ```typescript
 // 現状: ハードコード
-const limit = 10;  // relatedIssues.slice(0, 10)
+const limit = 10; // relatedIssues.slice(0, 10)
 const temperature = 0.3;
 
 // 改善案: 設定オブジェクトから取得
@@ -130,34 +139,36 @@ const temperature = config.aiTemperature;
 ```
 
 #### 3.4 ログ記録の実装
+
 ```typescript
 // 必要な記録ポイント
 context.recorder.record(RecordType.INPUT, {
   content: payload.content,
-  userId: payload.userId
+  userId: payload.userId,
 });
 
 context.recorder.record(RecordType.DB_QUERY, {
   type: 'searchIssues',
   query: payload.content,
-  resultCount: relatedIssues.length
+  resultCount: relatedIssues.length,
 });
 
 context.recorder.record(RecordType.AI_CALL, {
   model: driver.modelId,
   prompt: promptModule,
-  temperature: 0.3
+  temperature: 0.3,
 });
 
 context.recorder.record(RecordType.OUTPUT, {
-  eventsEmitted: analysis.events?.map(e => e.type),
-  actionsExecuted: executedActions
+  eventsEmitted: analysis.events?.map((e) => e.type),
+  actionsExecuted: executedActions,
 });
 ```
 
 ### 4. 推奨される改善アクション
 
 #### 優先度: 高 🔴
+
 1. **WorkflowRecorderの実装**
    - 全ワークフローでrecorderを使用
    - 重要な処理ポイントで記録を追加
@@ -174,6 +185,7 @@ context.recorder.record(RecordType.OUTPUT, {
    - インテグレーションテストの強化
 
 #### 優先度: 中 🟡
+
 4. **コード整理**
    - ユーティリティ関数の抽出
    - 定数の外部化
@@ -190,6 +202,7 @@ context.recorder.record(RecordType.OUTPUT, {
    - バッチ処理の実装
 
 #### 優先度: 低 🟢
+
 7. **リファクタリング**
    - 関数の分割（1関数200行以下）
    - 命名規則の統一
@@ -203,22 +216,26 @@ context.recorder.record(RecordType.OUTPUT, {
 ## 結論
 
 ### 現状の適性
+
 - **プロトタイプ**: ✅ 適している
 - **本番環境**: ⚠️ 追加作業が必要
 - **開発のお手本**: ❌ 改善が必要
 
 ### 次のステップ
+
 1. WorkflowRecorderの実装を最優先で実施
 2. 1つのワークフロー（推奨: ProcessUserRequest）を「お手本」レベルまで改善
 3. 改善したパターンを他のワークフローに適用
 4. ドキュメントとテストを充実させる
 
 ### 期待される効果
+
 - **開発効率**: 30-40%向上（明確なパターンにより）
 - **バグ削減**: 50%削減（テストカバレッジ向上により）
 - **保守性**: 大幅向上（ドキュメントと記録により）
 
 ---
+
 評価日: 2025-09-26
 評価者: Phase 3.5 アセスメント
 
@@ -229,6 +246,7 @@ context.recorder.record(RecordType.OUTPUT, {
 #### ProcessUserRequest（A-0）の改善完了
 
 **実施内容**:
+
 1. **関数分割**: 300行以上の巨大関数を適切なサイズに分割
    - `process-user-request-helpers.ts`: ヘルパー関数群
    - `process-user-request-ai.ts`: AI処理専用モジュール
@@ -251,6 +269,7 @@ context.recorder.record(RecordType.OUTPUT, {
    - RecordTypeの正しい使用
 
 **結果**: ⭐⭐⭐ (3/5) - 基本的な改善は完了したが、以下の問題が残存：
+
 - 不要な定数定義の削除が不十分だった
 - 仕様確認が不十分（ISSUE_STATUSなど）
 - 「作らなければ壊れない」原則の違反
@@ -258,6 +277,7 @@ context.recorder.record(RecordType.OUTPUT, {
 ### 2025-09-26 追加修正
 
 **実施内容**:
+
 1. **不要な定数の削除**:
    - ISSUE_STATUS、RECORD_TYPE、DEFAULT_LABELS、DATA_SOURCE、AUTHOR_TYPEなど削除
    - 既にshared-typesや他で定義されているものを重複定義しない

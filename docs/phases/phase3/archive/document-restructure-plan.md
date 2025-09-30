@@ -3,6 +3,7 @@
 ## 実施日: 2025-09-19
 
 ## 1. 現在の構造の問題点
+
 - ワークフロー関連ドキュメントが散在
 - テスト関連ドキュメントが散在
 - アーキテクチャ関連ドキュメントが散在
@@ -54,16 +55,19 @@ docs/
 ## 3. 移動対象ファイル
 
 ### workflows/ディレクトリへ
+
 - `WORKFLOW_ARCHITECTURE.md` → `workflows/ARCHITECTURE.md`
 - `WORKFLOW_LOGGING_SPEC.md` → `workflows/LOGGING_SPEC.md`
 - `COGNITIVE_WORKFLOWS.md` → `workflows/COGNITIVE_WORKFLOWS.md`
 
 ### testing/ディレクトリへ
+
 - `TESTING_STRATEGY.md` → `testing/STRATEGY.md`
 - `TEST_SPECIFICATIONS.md` → `testing/SPECIFICATIONS.md`
 - `TEST_ANALYSIS.md` → `testing/ANALYSIS.md`
 
 ### architecture/ディレクトリへ
+
 - `ARCHITECTURE.md` → `architecture/ARCHITECTURE.md`
 - `SYSTEM_DESIGN.md` → `architecture/SYSTEM_DESIGN.md`
 - `INTERFACES.md` → `architecture/INTERFACES.md`
@@ -71,6 +75,7 @@ docs/
 - `CORE_ENGINE_AGENT_SPEC.md` → `architecture/CORE_ENGINE_AGENT_SPEC.md`
 
 ### features/ディレクトリへ
+
 - `pond-filtering-spec.md` → `features/pond-filtering-spec.md`
 
 ## 4. 更新が必要な参照

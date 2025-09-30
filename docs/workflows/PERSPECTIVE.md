@@ -55,6 +55,7 @@ triggers: {
 WorkflowContextInterfaceの詳細定義については[ワークフロー技術仕様書](./SPECIFICATION.md#workflowcontext)を参照してください。
 
 主要なプロパティ：
+
 - `state: string` - システム状態（読み取り専用の文字列）
 - `storage: WorkflowStorageInterface` - データベースアクセス
 - `createDriver: DriverFactory` - AI処理能力
@@ -71,7 +72,7 @@ WorkflowContextInterfaceの詳細定義については[ワークフロー技術�
 #### Issue管理
 
 ```typescript
-// Issue: 問題・課題・タスクを表現
+// Issue: ユーザーに代わってAIが追跡・管理すべき事項
 interface Issue {
   id: string;
   title: string;
@@ -100,11 +101,13 @@ storage.updateIssue(id: string, update: Partial<Issue>): Promise<Issue>
 ```
 
 **ワークフローが知ることができること**:
+
 - Issueの現在の状態と履歴
 - 他のIssueとの関係性
 - 優先度とラベル
 
 **できないこと**:
+
 - 直接的な削除（論理削除のみ）
 - 他のワークフローの実行状態
 
@@ -132,6 +135,7 @@ storage.addPondEntry(entry: PondEntryInput): Promise<PondEntry>
 ```
 
 **特徴**:
+
 - Pondは追記専用（immutable）
 - ベクトル検索が可能
 - 生データの完全な保存
@@ -178,12 +182,12 @@ async function findRelatedIssues(
   const keywordMatches = await storage.searchIssues(currentIssue.title);
 
   // 2. ラベルでフィルタリング
-  const labelMatches = keywordMatches.filter(issue =>
-    issue.labels.some(label => currentIssue.labels.includes(label))
+  const labelMatches = keywordMatches.filter((issue) =>
+    issue.labels.some((label) => currentIssue.labels.includes(label))
   );
 
   // 3. 時間的近接性を考慮
-  const recentMatches = labelMatches.filter(issue => {
+  const recentMatches = labelMatches.filter((issue) => {
     const daysDiff = (Date.now() - issue.createdAt.getTime()) / (1000 * 60 * 60 * 24);
     return daysDiff < 30;
   });
@@ -202,14 +206,14 @@ interface DriverFactory {
 }
 
 interface DriverConfig {
-  requiredCapabilities: string[];  // 必須能力
+  requiredCapabilities: string[]; // 必須能力
   preferredCapabilities?: string[]; // 推奨能力
 }
 
 // 利用例
 const driver = await context.createDriver({
   requiredCapabilities: ['structured_output'],
-  preferredCapabilities: ['japanese', 'fast']
+  preferredCapabilities: ['japanese', 'fast'],
 });
 ```
 
@@ -224,13 +228,13 @@ async function analyzeWithAI(
   input: string
 ): Promise<StructuredOutput> {
   const driver = await context.createDriver({
-    requiredCapabilities: ['structured_output']
+    requiredCapabilities: ['structured_output'],
   });
 
   const promptModule = {
     objective: ['入力を分析する'],
     instructions: ['重要な情報を抽出'],
-    schema: OutputSchema  // JSONSchema
+    schema: OutputSchema, // JSONSchema
   };
 
   const compiled = compile(promptModule);
@@ -246,10 +250,7 @@ async function analyzeWithAI(
 
 ```typescript
 interface WorkflowEventEmitterInterface {
-  emit(event: {
-    type: string;
-    payload: unknown;
-  }): void;
+  emit(event: { type: string; payload: unknown }): void;
 }
 ```
 
@@ -266,24 +267,24 @@ async function handleIssueUpdate(
   update: IssueUpdate
 ): Promise<void> {
   const issue = await storage.updateIssue(issueId, {
-    updates: [...issue.updates, update]
+    updates: [...issue.updates, update],
   });
 
   // 状態変化に応じて異なるイベントを発行
   if (update.statusChange?.to === 'resolved') {
     emitter.emit({
       type: 'ISSUE_RESOLVED',
-      payload: { issueId, resolution: update.content }
+      payload: { issueId, resolution: update.content },
     });
   } else if (update.priorityChange?.to > 80) {
     emitter.emit({
       type: 'HIGH_PRIORITY_ISSUE',
-      payload: { issueId, priority: update.priorityChange.to }
+      payload: { issueId, priority: update.priorityChange.to },
     });
   } else {
     emitter.emit({
       type: 'ISSUE_UPDATED',
-      payload: { issueId, updateType: 'general' }
+      payload: { issueId, updateType: 'general' },
     });
   }
 }
@@ -294,6 +295,7 @@ async function handleIssueUpdate(
 ### 6.1 他のワークフローの存在
 
 ワークフローは他のワークフローの存在を直接知りません：
+
 - どのワークフローが実行中か
 - 次にどのワークフローが実行されるか
 - 自分が発行したイベントを誰が処理するか
@@ -301,6 +303,7 @@ async function handleIssueUpdate(
 ### 6.2 システムの全体状態
 
 ワークフローは部分的な視点しか持ちません：
+
 - システム全体のパフォーマンス
 - 他のユーザーの活動
 - インフラストラクチャの状態
@@ -308,6 +311,7 @@ async function handleIssueUpdate(
 ### 6.3 未来の情報
 
 ワークフローは現在と過去のみを知ります：
+
 - 将来のスケジュール（別途管理）
 - 予定されたメンテナンス
 - 他のワークフローの計画
@@ -318,10 +322,7 @@ async function handleIssueUpdate(
 
 ```typescript
 // 良い例：必要な情報のみを取得
-async function processIssue(
-  event: AgentEvent,
-  context: WorkflowContextInterface
-): Promise<void> {
+async function processIssue(event: AgentEvent, context: WorkflowContextInterface): Promise<void> {
   const { issueId } = event.payload as { issueId: string };
 
   // 1. 必要な情報のみ取得
@@ -329,16 +330,14 @@ async function processIssue(
   if (!issue) return;
 
   // 2. 関連情報を効率的に検索
-  const relatedIssues = await context.storage.searchIssues(
-    issue.labels.join(' OR ')
-  );
+  const relatedIssues = await context.storage.searchIssues(issue.labels.join(' OR '));
 
   // 3. 処理結果を記録
   await context.storage.updateIssue(issueId, {
     metadata: {
       relatedCount: relatedIssues.length,
-      processedAt: new Date().toISOString()
-    }
+      processedAt: new Date().toISOString(),
+    },
   });
 }
 ```
@@ -358,8 +357,8 @@ function emitMeaningfulEvents(
       payload: {
         issueId: analysis.issueId,
         severity: analysis.severity,
-        requiredAction: analysis.suggestedAction
-      }
+        requiredAction: analysis.suggestedAction,
+      },
     });
   }
 
@@ -369,8 +368,8 @@ function emitMeaningfulEvents(
       type: 'PATTERN_DISCOVERED',
       payload: {
         patterns: analysis.patterns,
-        confidence: analysis.confidence
-      }
+        confidence: analysis.confidence,
+      },
     });
   }
 }
@@ -400,20 +399,20 @@ async function resilientWorkflow(
     return {
       success: true,
       context,
-      output: analysis
+      output: analysis,
     };
   } catch (error) {
     // エラーを適切に記録
     await context.recorder.log({
       level: 'error',
       message: `Workflow failed: ${error.message}`,
-      workflowName: 'resilientWorkflow'
+      workflowName: 'resilientWorkflow',
     });
 
     return {
       success: false,
       context,
-      error: error as Error
+      error: error as Error,
     };
   }
 }
@@ -429,6 +428,7 @@ async function resilientWorkflow(
 4. **出力**: イベント発行による次の処理のトリガー
 
 この制約された環境により：
+
 - **予測可能性**: 副作用が限定的
 - **テスト可能性**: 依存関係が明確
 - **保守性**: 責任範囲が明確

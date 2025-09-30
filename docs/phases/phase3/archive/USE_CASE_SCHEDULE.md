@@ -9,11 +9,13 @@
 ### シナリオ1: 会議の予定追加と準備
 
 #### 状況
+
 ユーザー: 「明日の14時から山田さんとプロジェクトレビューの会議があります。資料の準備が必要です。」
 
 #### ワークフローの動作
 
 ##### 1. A-0: PROCESS_USER_REQUEST（初期処理）
+
 ```typescript
 // Input
 {
@@ -46,6 +48,7 @@
 ```
 
 ##### 2. A-2: ANALYZE_ISSUE_IMPACT（影響分析）
+
 ```typescript
 // 関連Issue検索結果
 - 過去の山田さんとの会議記録
@@ -80,6 +83,7 @@
 ```
 
 ##### 3. C-2: SUGGEST_NEXT_ACTION（アクション提案）
+
 ```typescript
 // 提案されるアクション
 {
@@ -89,32 +93,30 @@
       description: 'カレンダーに予定を登録',
       steps: ['カレンダーアプリを開く', '14:00-15:00でブロック'],
       estimatedEffort: 2,
-      tools: ['calendar']
+      tools: ['calendar'],
     },
     {
       type: 'planned',
       description: '資料作成',
-      steps: [
-        '前回の会議資料を確認',
-        '進捗データを更新',
-        'スライド作成'
-      ],
+      steps: ['前回の会議資料を確認', '進捗データを更新', 'スライド作成'],
       estimatedEffort: 60,
       prerequisites: ['前回の議事録'],
-      relatedKnowledge: ['project-review-template']
-    }
-  ]
+      relatedKnowledge: ['project-review-template'],
+    },
+  ];
 }
 ```
 
 ### シナリオ2: 定期的な予定の処理
 
 #### 状況
+
 毎週火曜日の定例会議があり、複数の関連タスクが発生
 
 #### ワークフローの連携
 
 ##### B-1: CLUSTER_ISSUES（Issue群のクラスタリング）
+
 ```typescript
 // 定期実行により関連Issueを発見
 {
@@ -133,6 +135,7 @@
 ```
 
 ##### A-3: EXTRACT_KNOWLEDGE（Knowledge抽出）
+
 ```typescript
 // 定例会議パターンから知識を抽出
 {
@@ -142,26 +145,28 @@
       content: '火曜定例会議の標準準備手順',
       confidence: 0.9,
       tags: ['meeting', 'recurring', 'tuesday'],
-      applicableContexts: ['weekly_meeting_prep']
+      applicableContexts: ['weekly_meeting_prep'],
     },
     {
       type: 'insight',
       content: '月曜日の夕方に準備リマインダーが有効',
       confidence: 0.85,
-      tags: ['timing', 'reminder']
-    }
-  ]
+      tags: ['timing', 'reminder'],
+    },
+  ];
 }
 ```
 
 ### シナリオ3: 競合する予定の調整
 
 #### 状況
+
 複数の予定が重なり、優先順位付けが必要
 
 #### ワークフローの動作
 
 ##### B-3: UPDATE_FLOW_PRIORITIES（優先度更新）
+
 ```typescript
 // 競合検出
 {
@@ -172,22 +177,21 @@
       suggestedPriority: 80,
       factors: [
         { factor: '締切が本日', impact: +20 },
-        { factor: '他の予定と競合', impact: +10 }
-      ]
+        { factor: '他の予定と競合', impact: +10 },
+      ],
     },
     {
       flowId: 'flow-202',
       currentPriority: 60,
       suggestedPriority: 30,
-      factors: [
-        { factor: '延期可能', impact: -30 }
-      ]
-    }
-  ]
+      factors: [{ factor: '延期可能', impact: -30 }],
+    },
+  ];
 }
 ```
 
 ##### C-1: SUGGEST_NEXT_FLOW（次のFlow提案）
+
 ```typescript
 // 時間帯と優先度を考慮した提案
 {
@@ -199,21 +203,23 @@
       confidence: 0.9,
       alternativeIf: {
         condition: '会議が延長した場合',
-        alternativeFlowId: 'flow-203'
-      }
-    }
-  ]
+        alternativeFlowId: 'flow-203',
+      },
+    },
+  ];
 }
 ```
 
 ### シナリオ4: 過去の予定からの学習
 
 #### 状況
+
 完了した予定から、将来の改善点を抽出
 
 #### ワークフローの動作
 
 ##### B-4: SALVAGE_FROM_POND（Pondからのサルベージ）
+
 ```typescript
 // 過去の会議メモから価値ある情報を発見
 {
@@ -255,31 +261,37 @@
 ### エッジケース
 
 #### ケース1: 曖昧な入力
+
 ```
 入力: 「来週どこかで山田さんと話す」
 ```
 
 **対応:**
+
 - A-0が`needsFollowUp: true`を設定
 - C-2が「詳細確認が必要」とアクション提案
 - ユーザーに確認を促す
 
 #### ケース2: 大量の予定
+
 ```
 状況: 1日に10件以上の予定
 ```
 
 **対応:**
+
 - B-1がクラスタリングで整理
 - B-3が動的に優先度調整
 - C-1が実行可能な順序を提案
 
 #### ケース3: 予定の変更
+
 ```
 状況: 会議が急遽キャンセル
 ```
 
 **対応:**
+
 - Issue更新イベント → A-2が影響分析
 - B-2が関連Flowを更新
 - C-1が代替タスクを提案
@@ -323,12 +335,14 @@
 設計したワークフローは、スケジュール管理の基本的な要求を満たしています：
 
 ✅ **強み**
+
 - 自然言語からの予定抽出
 - 優先度の動的管理
 - 過去の経験からの学習
 - 具体的なアクション提案
 
 ⚠️ **改善の余地**
+
 - 時間表現の解釈精度
 - 外部カレンダーとの連携
 - リアルタイムな変更通知

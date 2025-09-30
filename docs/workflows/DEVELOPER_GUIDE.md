@@ -549,7 +549,71 @@ context.recorder.record(RecordType.OUTPUT, {
 
 分析結果に応じて異なるイベントを発行
 
-## 11. トラブルシューティング
+## 11. Issueの概念と実装例
+
+### Issueとは
+
+**Issue = ユーザーに代わってAIが追跡・管理すべき事項**
+
+システムの課題やバグではなく、ユーザーが忘れたくない・追跡したい事項全般を表します。
+
+### 具体例
+
+#### 良い例（ユーザーの追跡事項）
+```typescript
+// ミーティングの準備
+const meetingIssue = await storage.createIssue({
+  title: '月曜日の企画会議の準備',
+  description: 'プレゼン資料の作成と参加者への事前共有が必要',
+  labels: ['meeting', 'preparation'],
+  priority: 70,
+});
+
+// プロジェクトの進捗
+const projectIssue = await storage.createIssue({
+  title: 'プロジェクトXのマイルストーン確認',
+  description: '今月末までに第一段階を完了させる必要がある',
+  labels: ['project', 'milestone'],
+  priority: 60,
+});
+
+// 個人的なタスク
+const personalIssue = await storage.createIssue({
+  title: '健康診断の予約',
+  description: '来月中に健康診断を受ける必要がある',
+  labels: ['personal', 'health'],
+  priority: 40,
+});
+```
+
+#### 避けるべき例（システムの技術的問題）
+```typescript
+// ❌ これらはsebas-chanのIssueではありません
+// システムバグ → GitHubのIssueなどで管理すべき
+// const bugIssue = await storage.createIssue({
+//   title: 'APIのエラー処理が不適切',
+//   description: 'エラーコード500が返される',
+// });
+```
+
+### ワークフローでのIssue処理パターン
+
+```typescript
+// ユーザーの入力から追跡すべき事項を判定
+async function analyzeUserInput(content: string): Promise<boolean> {
+  // AIがユーザーにとって重要で追跡すべきかを判断
+  const analysis = await ai.analyze(content);
+
+  // 追跡すべき事項の特徴：
+  // - 締切や期限がある
+  // - 後で確認が必要
+  // - 繰り返し発生する可能性がある
+  // - 忘れると困る
+  return analysis.shouldTrack;
+}
+```
+
+## 12. トラブルシューティング
 
 ### ワークフローがトリガーされない場合
 

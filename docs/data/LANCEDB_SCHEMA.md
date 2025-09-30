@@ -31,14 +31,14 @@ sebas-chanのデータベース実装における低レベルスキーマの詳�
 
 ### 1. 型マッピング規則
 
-| PyArrow型 | TypeScript型 | 説明 |
-|-----------|-------------|------|
-| `pa.string()` | `string` | UTF-8文字列 |
-| `pa.int32()` | `number` | 32ビット整数 |
-| `pa.float32()` | `number` | 32ビット浮動小数点 |
-| `pa.timestamp('ms')` | `Date` | ミリ秒精度のタイムスタンプ |
-| `pa.list_(pa.string())` | `string[]` | 文字列配列 |
-| `pa.list_(pa.float32(), N)` | `number[]` | 固定長ベクトル |
+| PyArrow型                   | TypeScript型 | 説明                       |
+| --------------------------- | ------------ | -------------------------- |
+| `pa.string()`               | `string`     | UTF-8文字列                |
+| `pa.int32()`                | `number`     | 32ビット整数               |
+| `pa.float32()`              | `number`     | 32ビット浮動小数点         |
+| `pa.timestamp('ms')`        | `Date`       | ミリ秒精度のタイムスタンプ |
+| `pa.list_(pa.string())`     | `string[]`   | 文字列配列                 |
+| `pa.list_(pa.float32(), N)` | `number[]`   | 固定長ベクトル             |
 
 ### 2. Issues Tableスキーマ
 
@@ -63,6 +63,7 @@ def get_issues_schema(vector_dimension: int = 256) -> pa.Schema:
 #### JSON文字列フィールドの構造
 
 **updates (IssueUpdate[])**:
+
 ```json
 [
   {
@@ -74,6 +75,7 @@ def get_issues_schema(vector_dimension: int = 256) -> pa.Schema:
 ```
 
 **relations (IssueRelation[])**:
+
 ```json
 [
   {
@@ -130,10 +132,10 @@ def get_knowledge_schema(vector_dimension: int = 256) -> pa.Schema:
 
 ```json
 [
-  {"type": "issue", "issueId": "issue-123"},
-  {"type": "pond", "pondEntryId": "pond-456"},
-  {"type": "user_direct"},
-  {"type": "knowledge", "knowledgeId": "know-789"}
+  { "type": "issue", "issueId": "issue-123" },
+  { "type": "pond", "pondEntryId": "pond-456" },
+  { "type": "user_direct" },
+  { "type": "knowledge", "knowledgeId": "know-789" }
 ]
 ```
 

@@ -7,12 +7,15 @@
 ## 設計方針
 
 ### 1. コンテキストベースの記録管理
+
 - WorkflowContextにrecorderインスタンスを含める
 - 各ワークフロー実行ごとに専用のrecorderインスタンスを生成
 - recorderインスタンス自体が実行IDを保持
 
 ### 2. 記録する情報
+
 ワークフローの入力と出力を再現できる最小限の情報：
+
 - **入力データ**: イベント、パラメータ
 - **DB操作**: クエリ、取得したID一覧（データ本体は不要）
 - **AI呼び出し**: プロンプト、パラメータ、レスポンス
@@ -20,24 +23,25 @@
 - **メタデータ**: タイムスタンプ、実行時間、エラー情報
 
 ### 3. 記録スキーマ
+
 ```typescript
 interface WorkflowRecord {
-  executionId: string;      // 実行ID（UUID）
-  workflowName: string;     // ワークフロー名
-  type: RecordType;        // 記録タイプ
-  timestamp: Date;         // タイムスタンプ（自動生成）
-  data: unknown;           // 記録データ（type毎に型が決まる）
+  executionId: string; // 実行ID（UUID）
+  workflowName: string; // ワークフロー名
+  type: RecordType; // 記録タイプ
+  timestamp: Date; // タイムスタンプ（自動生成）
+  data: unknown; // 記録データ（type毎に型が決まる）
 }
 
 enum RecordType {
-  INPUT = 'input',         // 入力データ
-  OUTPUT = 'output',       // 出力データ
-  ERROR = 'error',         // エラー情報
-  DB_QUERY = 'db_query',   // DB操作
-  AI_CALL = 'ai_call',     // AI呼び出し
-  INFO = 'info',           // 一般情報
-  DEBUG = 'debug',         // デバッグ情報
-  WARN = 'warn'            // 警告
+  INPUT = 'input', // 入力データ
+  OUTPUT = 'output', // 出力データ
+  ERROR = 'error', // エラー情報
+  DB_QUERY = 'db_query', // DB操作
+  AI_CALL = 'ai_call', // AI呼び出し
+  INFO = 'info', // 一般情報
+  DEBUG = 'debug', // デバッグ情報
+  WARN = 'warn', // 警告
 }
 ```
 
@@ -46,6 +50,7 @@ enum RecordType {
 ## インターフェース設計
 
 ### WorkflowRecorder
+
 ```typescript
 interface WorkflowRecorder {
   // 実行ID（自動生成）
@@ -64,6 +69,7 @@ interface WorkflowRecorder {
 WorkflowContextInterfaceの詳細定義については[ワークフロー技術仕様書](./SPECIFICATION.md#workflowcontext)を参照してください。
 
 主要なプロパティ：
+
 - `recorder: WorkflowRecorder` - ワークフロー記録システム
 - `storage: WorkflowStorageInterface` - データストレージアクセス
 - `createDriver: DriverFactory` - AIドライバーファクトリ
@@ -72,6 +78,7 @@ WorkflowContextInterfaceの詳細定義については[ワークフロー技術�
 ## 記録の流れ
 
 ### 1. Recorder生成（Engine側）
+
 ```typescript
 // Engineがワークフロー実行時に生成
 const recorder = new WorkflowRecorder(workflow.name);
@@ -80,11 +87,12 @@ const context = createWorkflowContext(
   stateManager,
   dbClient,
   driverFactory,
-  recorder  // ここでコンテキストに渡される
+  recorder // ここでコンテキストに渡される
 );
 ```
 
 ### 2. 記録の収集（ワークフロー側）
+
 ```typescript
 executor: async (event, context, emitter) => {
   // 自動的に入力を記録
@@ -94,7 +102,7 @@ executor: async (event, context, emitter) => {
     // DB操作を記録
     context.recorder.record(RecordType.DB_QUERY, {
       operation: 'searchIssues',
-      query: 'エラー'
+      query: 'エラー',
     });
     const issues = await context.storage.searchIssues('エラー');
 
@@ -102,7 +110,7 @@ executor: async (event, context, emitter) => {
     context.recorder.record(RecordType.INFO, {
       message: 'Issues found',
       count: issues.length,
-      ids: issues.map(i => i.id)  // IDのみ記録
+      ids: issues.map((i) => i.id), // IDのみ記録
     });
 
     // AI呼び出しを記録
@@ -110,7 +118,7 @@ executor: async (event, context, emitter) => {
     const prompt = 'エラーを分析';
     context.recorder.record(RecordType.AI_CALL, {
       prompt,
-      modelId: 'claude-3.5-sonnet'
+      modelId: 'claude-3.5-sonnet',
     });
     const response = await driver.query(prompt);
 
@@ -123,14 +131,15 @@ executor: async (event, context, emitter) => {
     // エラーを記録
     context.recorder.record(RecordType.ERROR, {
       error: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
     throw error;
   }
-}
+};
 ```
 
 ### 3. 記録の永続化（Engine側）
+
 ```typescript
 // ワークフロー完了後にEngineが実行
 const records = recorder.getBuffer();
@@ -140,6 +149,7 @@ await dbClient.saveWorkflowRecords(records);
 ## 記録データの型詳細
 
 ### INPUT
+
 ```typescript
 {
   type: RecordType.INPUT,
@@ -154,6 +164,7 @@ await dbClient.saveWorkflowRecords(records);
 ```
 
 ### DB_QUERY
+
 ```typescript
 {
   type: RecordType.DB_QUERY,
@@ -166,6 +177,7 @@ await dbClient.saveWorkflowRecords(records);
 ```
 
 ### AI_CALL
+
 ```typescript
 {
   type: RecordType.AI_CALL,
@@ -180,6 +192,7 @@ await dbClient.saveWorkflowRecords(records);
 ```
 
 ### ERROR
+
 ```typescript
 {
   type: RecordType.ERROR,
@@ -194,12 +207,14 @@ await dbClient.saveWorkflowRecords(records);
 ## 実装ガイドライン
 
 ### DO
+
 - ✅ 実行の開始と終了を必ず記録
 - ✅ DB操作は操作名とIDのみ記録（データ本体は不要）
 - ✅ エラーは詳細に記録（スタックトレース含む）
 - ✅ AI呼び出しは入力と出力を記録
 
 ### DON'T
+
 - ❌ データ本体を記録しない（IDで参照可能）
 - ❌ パスワードやトークンを記録しない
 - ❌ 大量のデータを記録しない（要約やカウントに留める）
@@ -207,6 +222,7 @@ await dbClient.saveWorkflowRecords(records);
 ## 検証ツール
 
 ### ワークフロー実行の再現
+
 ```typescript
 async function replayWorkflow(executionId: string) {
   const records = await dbClient.getWorkflowRecords(executionId);
@@ -218,11 +234,12 @@ async function replayWorkflow(executionId: string) {
 ```
 
 ### 実行パスの可視化
+
 ```typescript
 function visualizeExecutionPath(records: WorkflowRecord[]) {
   const path = records
-    .filter(r => r.type === RecordType.INFO)
-    .map(r => r.data.step)
+    .filter((r) => r.type === RecordType.INFO)
+    .map((r) => r.data.step)
     .filter(Boolean);
 
   return path.join(' → ');

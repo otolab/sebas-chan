@@ -3,15 +3,18 @@
 ## Core Engine（@sebas-chan/server）
 
 ### 役割
+
 Core Agentのラッパーとして機能し、システム全体の制御層を提供
 
 ### 主要機能
+
 - **REST API提供**: 外部システムとの統一インターフェース
 - **ワークフロー管理**: ワークフローの登録と実行制御
 - **イベントキュー**: 優先度付きイベントの管理
 - **ロギング**: システム全体のログ収集と管理
 
 ### 主要エンドポイント
+
 ```typescript
 // ヘルス・状態管理
 GET  /api/health              // ヘルスチェック
@@ -29,6 +32,7 @@ POST /api/request             // 自然言語リクエスト処理
 ```
 
 ### 内部構成
+
 ```typescript
 class CoreEngine {
   private eventQueue: PriorityQueue<Event>;
@@ -43,15 +47,18 @@ class CoreEngine {
 ## Core Agent（@sebas-chan/core）
 
 ### 役割
+
 イベント駆動型の思考エンジン
 
 ### 主要機能
+
 - **イベントループ**: 継続的なイベント処理
 - **ワークフロー実行**: 登録されたワークフローの実行
 - **LLM統合**: AI処理の実行
 - **状態管理**: State文書による短期記憶管理
 
 ### 実装詳細
+
 ```typescript
 class CoreAgent {
   private state: StateDocument;
@@ -63,11 +70,13 @@ class CoreAgent {
 ```
 
 ### WorkflowContext
+
 ワークフローからDB操作を行うための統一インターフェース
 
 WorkflowContextInterfaceの詳細定義については[ワークフロー技術仕様書](../workflows/SPECIFICATION.md#workflowcontext)を参照してください。
 
 主要なコンポーネント：
+
 - `storage` - データベース操作インターフェース（Issue、Pond、Knowledge管理）
 - `recorder` - ワークフロー実行記録
 - `createDriver` - AIドライバーファクトリ
@@ -76,9 +85,11 @@ WorkflowContextInterfaceの詳細定義については[ワークフロー技術�
 ## DB Bridge（@sebas-chan/db）
 
 ### 役割
+
 TypeScriptとPython/LanceDBを繋ぐブリッジ層
 
 ### 構成
+
 ```
 TypeScript側（親プロセス）
     ↓ JSON-RPC over stdio
@@ -88,12 +99,14 @@ LanceDB（ベクトルDB）
 ```
 
 ### 主要機能
+
 - **ベクトル検索**: 日本語対応（ruri-v3モデル、256次元）
 - **SQLクエリ**: DataFusion SQLサポート
 - **イベントストア**: 全イベントの永続化
 - **トランザクション制御**: ACID特性の保証
 
 ### TypeScript側インターフェース
+
 ```typescript
 class DBBridge {
   async search(query: string, options?: SearchOptions): Promise<SearchResult[]>;
@@ -104,6 +117,7 @@ class DBBridge {
 ```
 
 ### Python側実装
+
 ```python
 class LanceDBWorker:
     def search(self, query: str, **kwargs) -> List[Dict]:
@@ -119,9 +133,11 @@ class LanceDBWorker:
 ## Reporters
 
 ### 役割
+
 外部情報源からの情報収集
 
 ### 共通インターフェース
+
 ```typescript
 interface Reporter {
   name: string;
@@ -141,6 +157,7 @@ interface Reporter {
 ### 実装例
 
 #### Gmail Reporter
+
 ```typescript
 class GmailReporter implements Reporter {
   name = 'gmail';
@@ -148,36 +165,37 @@ class GmailReporter implements Reporter {
 
   async collect(): Promise<Input[]> {
     const emails = await gmail.getUnreadEmails();
-    return emails.map(email => ({
+    return emails.map((email) => ({
       type: 'email',
       source: this.name,
       content: email.body,
       metadata: {
         from: email.from,
         subject: email.subject,
-        date: email.date
-      }
+        date: email.date,
+      },
     }));
   }
 }
 ```
 
 #### Slack Reporter
+
 ```typescript
 class SlackReporter implements Reporter {
   name = 'slack';
 
   async collect(): Promise<Input[]> {
     const messages = await slack.getNewMessages();
-    return messages.map(msg => ({
+    return messages.map((msg) => ({
       type: 'message',
       source: this.name,
       content: msg.text,
       metadata: {
         channel: msg.channel,
         user: msg.user,
-        timestamp: msg.ts
-      }
+        timestamp: msg.ts,
+      },
     }));
   }
 }
@@ -186,14 +204,17 @@ class SlackReporter implements Reporter {
 ## Web UI（@sebas-chan/web-ui）
 
 ### 役割
+
 管理インターフェースとデータ可視化
 
 ### 技術スタック
+
 - **フレームワーク**: SvelteKit
 - **スタイリング**: TailwindCSS
 - **API通信**: REST APIクライアント
 
 ### 主要画面
+
 ```
 /                     # ダッシュボード
 /pond                 # Pond検索・管理
@@ -205,6 +226,7 @@ class SlackReporter implements Reporter {
 ```
 
 ### コンポーネント構成
+
 ```
 src/
 ├── routes/           # ページコンポーネント
@@ -218,14 +240,17 @@ src/
 ## MCP Server（Phase 4で実装予定）
 
 ### 役割
+
 外部AIエージェントとの標準化された通信インターフェース
 
 ### 設計方針
+
 - **独立実行可能**: スタンドアロンコマンドとして動作
 - **stdio通信**: JSON-RPCプロトコル
 - **REST APIクライアント**: sebas-chanの機能を外部に公開
 
 ### 予定される機能
+
 ```typescript
 interface MCPServer {
   // MCPプロトコル実装

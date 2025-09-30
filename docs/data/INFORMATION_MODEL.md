@@ -7,13 +7,14 @@ sebas-chanは、情報を段階的に洗練させながら管理するシステ�
 ## コアコンセプト
 
 ### イベント駆動アーキテクチャ
+
 すべての情報処理はイベント（AgentEvent）を通じて行われます。
 
 ```typescript
 interface AgentEvent {
-  type: string;              // イベントタイプ（INGEST_INPUT等）
+  type: string; // イベントタイプ（INGEST_INPUT等）
   priority: 'high' | 'normal' | 'low';
-  payload: unknown;          // イベント固有のデータ
+  payload: unknown; // イベント固有のデータ
   timestamp: Date;
 }
 ```
@@ -27,13 +28,14 @@ Reporterから送られてくる情報の最小単位。
 ```typescript
 interface Input {
   id: string;
-  source: string;     // "slack", "gmail", "manual"
-  content: string;    // 生のテキストデータ
+  source: string; // "slack", "gmail", "manual"
+  content: string; // 生のテキストデータ
   timestamp: Date;
 }
 ```
 
 **処理フロー**:
+
 1. Reporterが外部ソースから情報を取得
 2. InputとしてシステムにPOST
 3. INGEST_INPUTイベントが発火
@@ -46,18 +48,19 @@ interface Input {
 ```typescript
 interface PondEntry {
   id: string;
-  content: string;           // イベントまたはInputの内容
-  source: string;           // イベントタイプまたはReporter名（'slack', 'teams', 'email', 'webhook', 'user_request' など）
-  context?: string;         // 自然言語的なコンテキスト（例: "work: ECサイト開発", "personal: タスク管理"）
+  content: string; // イベントまたはInputの内容
+  source: string; // イベントタイプまたはReporter名（'slack', 'teams', 'email', 'webhook', 'user_request' など）
+  context?: string; // 自然言語的なコンテキスト（例: "work: ECサイト開発", "personal: タスク管理"）
   metadata?: Record<string, unknown>; // 追加のメタデータ（channel、userId、sessionId など）
   timestamp: Date;
-  vector?: number[];         // ベクトル化された表現（256次元）
-  score?: number;           // 検索時の類似度スコア（0〜1）
-  distance?: number;        // 検索時のベクトル距離
+  vector?: number[]; // ベクトル化された表現（256次元）
+  score?: number; // 検索時の類似度スコア（0〜1）
+  distance?: number; // 検索時のベクトル距離
 }
 ```
 
 **特徴**:
+
 - **ベクトル検索**: 日本語対応（intfloat/multilingual-e5-small使用）
 - **セマンティック検索**: 意味的に類似した情報を発見
 - **コンテキスト対応検索**: contextフィールドを含めたベクトル生成で検索精度向上
@@ -66,24 +69,25 @@ interface PondEntry {
 - **完全な履歴**: すべてのイベントとInputを保存
 
 **実装**:
+
 - DB: LanceDB（ベクトルデータベース）
 - 埋め込みモデル: ruri-v3（日本語特化）
 - 検索API: `/api/pond`エンドポイント
 
-### 3. Issue（課題）
+### 3. Issue（追跡事項）
 
-行動可能な管理単位。GitHubのIssueモデルを採用。
+ユーザーに代わってAIが追跡・管理すべき事項。GitHubのIssueモデルを参考に、ユーザーの認知的負荷を肩代わりする単位として設計。
 
 ```typescript
 interface Issue {
   id: string;
   title: string;
-  description: string;        // 自然言語での詳細。ベクトル化の対象
+  description: string; // 自然言語での詳細。ベクトル化の対象
   status: 'open' | 'closed';
-  priority?: number;          // 優先度（0-100）
+  priority?: number; // 優先度（0-100）
   labels: string[];
-  updates: IssueUpdate[];      // 履歴
-  relations: IssueRelation[];  // 他のIssueとの関係性
+  updates: IssueUpdate[]; // 履歴
+  relations: IssueRelation[]; // 他のIssueとの関係性
   sourceInputIds: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -92,7 +96,7 @@ interface Issue {
 interface IssueUpdate {
   timestamp: Date;
   content: string;
-  author: 'user' | 'ai';  // ユーザーのメモか、AIの提案か
+  author: 'user' | 'ai'; // ユーザーのメモか、AIの提案か
 }
 
 interface IssueRelation {
@@ -102,6 +106,7 @@ interface IssueRelation {
 ```
 
 **ワークフロー**:
+
 - `PROCESS_USER_REQUEST`: リクエストを分類してIssue作成
 - `ANALYZE_ISSUE_IMPACT`: 影響範囲を分析
 
@@ -113,40 +118,43 @@ interface IssueRelation {
 interface Knowledge {
   id: string;
   type: KnowledgeType;
-  content: string;           // 知識の本体（自然言語）
+  content: string; // 知識の本体（自然言語）
   reputation: {
-    upvotes: number;         // ポジティブ評価の累積
-    downvotes: number;       // ネガティブ評価の累積
+    upvotes: number; // ポジティブ評価の累積
+    downvotes: number; // ネガティブ評価の累積
   };
   sources: KnowledgeSource[]; // この知識を構成する情報源（複数）
 }
 
 type KnowledgeType =
-  | 'system_rule'         // AIの振る舞いを定義するルール
-  | 'process_manual'      // 定型的な業務フローや手順書
-  | 'entity_profile'      // 特定の人物、組織、プロジェクトに関する情報
-  | 'curated_summary'     // 特定のトピックについて横断的に集められた要約情報
-  | 'factoid';            // 再利用可能な単一の事実や情報
+  | 'system_rule' // AIの振る舞いを定義するルール
+  | 'process_manual' // 定型的な業務フローや手順書
+  | 'entity_profile' // 特定の人物、組織、プロジェクトに関する情報
+  | 'curated_summary' // 特定のトピックについて横断的に集められた要約情報
+  | 'factoid'; // 再利用可能な単一の事実や情報
 
 type KnowledgeSource =
   | { type: 'issue'; issueId: string }
   | { type: 'pond'; pondEntryId: string }
   | { type: 'user_direct' }
-  | { type: 'knowledge'; knowledgeId: string };  // 他のKnowledgeを参照
+  | { type: 'knowledge'; knowledgeId: string }; // 他のKnowledgeを参照
 ```
 
 **評価システム**:
+
 - **upvotes**: 有用と判断された回数
 - **downvotes**: 不正確・陳腐化と判断された回数
 - **信頼度スコア**: `upvotes / (upvotes + downvotes)`で計算可能
 
 **抽出元**:
+
 - Closedになったissueからの学習
 - Pondからのパターン発見
 - ユーザーによる直接入力
 - 他のKnowledgeからの派生
 
 **ワークフロー**:
+
 - `EXTRACT_KNOWLEDGE`: Issueから知識を抽出
 
 ### 5. Flow（作業の流れ）
@@ -157,25 +165,25 @@ type KnowledgeSource =
 interface Flow {
   id: string;
   title: string;
-  description: string;       // このフローの目的や依存関係。自然言語で記述
+  description: string; // このフローの目的や依存関係。自然言語で記述
   status: FlowStatus;
-  priorityScore: number;      // 0.0 ~ 1.0 AIが動的に評価
+  priorityScore: number; // 0.0 ~ 1.0 AIが動的に評価
   issueIds: string[];
 }
 
 type FlowStatus =
-  | 'focused'               // 最優先で集中
-  | 'active'                // アクティブ
-  | 'monitoring'            // 監視中
-  | 'blocked'               // ブロック中
+  | 'focused' // 最優先で集中
+  | 'active' // アクティブ
+  | 'monitoring' // 監視中
+  | 'blocked' // ブロック中
   | 'pending_user_decision' // ユーザー判断待ち
-  | 'pending_review'        // レビュー待ち
-  | 'backlog'               // バックログ
-  | 'paused'                // 一時停止
-  | 'someday'               // いつかやる
-  | 'completed'             // 完了
-  | 'cancelled'             // キャンセル
-  | 'archived';             // アーカイブ済み
+  | 'pending_review' // レビュー待ち
+  | 'backlog' // バックログ
+  | 'paused' // 一時停止
+  | 'someday' // いつかやる
+  | 'completed' // 完了
+  | 'cancelled' // キャンセル
+  | 'archived'; // アーカイブ済み
 ```
 
 ## データフロー
@@ -227,25 +235,27 @@ graph LR
 ## 検索とクエリ
 
 ### Pond検索
+
 ```typescript
 interface PondSearchParams {
-  q?: string;               // テキスト検索
-  source?: string;          // ソースフィルタ
-  dateFrom?: Date;          // 開始日
-  dateTo?: Date;            // 終了日
-  limit?: number;           // 取得件数
-  offset?: number;          // オフセット
+  q?: string; // テキスト検索
+  source?: string; // ソースフィルタ
+  dateFrom?: Date; // 開始日
+  dateTo?: Date; // 終了日
+  limit?: number; // 取得件数
+  offset?: number; // オフセット
   vectorSearch?: {
-    query: string;          // セマンティック検索クエリ
-    topK: number;           // 上位K件
+    query: string; // セマンティック検索クエリ
+    topK: number; // 上位K件
   };
 }
 ```
 
 ### Issue/Knowledge検索
+
 ```typescript
 interface SearchParams {
-  query?: string;           // 全文検索
+  query?: string; // 全文検索
   filters?: {
     status?: string[];
     type?: string[];
@@ -265,6 +275,7 @@ interface SearchParams {
 ## 実装状況
 
 ### 実装済み
+
 - ✅ PondEntry（ベクトル検索対応）
 - ✅ Issue CRUD操作
 - ✅ Knowledge作成・検索
@@ -273,6 +284,7 @@ interface SearchParams {
 - ✅ Web UI（検索・閲覧機能）
 
 ### 未実装
+
 - ⏳ Flow管理機能
 - ⏳ Knowledge評価システム
 - ⏳ 自動サルベージ機能

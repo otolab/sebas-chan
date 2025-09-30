@@ -108,7 +108,7 @@ export const analysisModule: PromptModule<AnalysisContext> = {
   objective: ['ユーザーリクエストを分析して適切に分類する'],
 
   terms: [
-    'Issue: 解決すべき問題やタスク',
+    'Issue: ユーザーに代わってAIが追跡・管理すべき事項',
     'Pond: 一時的なデータ保管場所',
     'Knowledge: 抽出された知識',
   ],

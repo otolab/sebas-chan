@@ -10,6 +10,7 @@
 ```
 
 **現在の構成**:
+
 - Core Engine（@sebas-chan/server）がREST APIを提供
 - Core Agent（@sebas-chan/core）は思考エンジン
 - DB BridgeはPython/LanceDBとの通信層
@@ -26,16 +27,19 @@ REST APIはすべての外部通信の統一入口として機能します。
 ### エンドポイント一覧
 
 #### コア機能
+
 - `POST /request` - ユーザーからの自然言語リクエストを処理
 - `GET /state` - 現在の状態文書を取得
 - `PUT /state` - 状態文書を更新（Core Agent経由）
 - `GET /stats` - システム統計情報を取得
 
 #### Input管理（Reporter用）
+
 - `POST /inputs` - Reporterからの入力を受付
 - `GET /inputs` - 未処理のInput一覧
 
 #### Issue管理
+
 - `GET /issues` - Issue一覧を取得（フィルタ・検索可能）
 - `GET /issues/:id` - 特定のIssueを取得
 - `POST /issues` - 新規Issue作成
@@ -43,12 +47,14 @@ REST APIはすべての外部通信の統一入口として機能します。
 - `DELETE /issues/:id` - Issue削除
 
 #### Flow管理
+
 - `GET /flows` - Flow一覧を取得
 - `GET /flows/:id` - 特定のFlowを取得
 - `POST /flows` - 新規Flow作成
 - `PUT /flows/:id` - Flow更新
 
 #### Knowledge管理
+
 - `GET /knowledge` - Knowledge一覧を取得
 - `GET /knowledge/:id` - 特定のKnowledgeを取得
 - `POST /knowledge` - 新規Knowledge作成
@@ -59,6 +65,7 @@ REST APIはすべての外部通信の統一入口として機能します。
 MCPサーバーはMCP対応AIエージェントのプラグインとして機能する独立コマンドです。
 
 ### 位置づけ
+
 - **実装形態**: 独立した実行可能コマンド
 - **通信方式**: stdin/stdout（JSON-RPC）
 - **役割**: MCP対応クライアントとREST APIの橋渡し
@@ -70,28 +77,29 @@ MCPサーバーはMCP対応AIエージェントのプラグインとして機能
 // MCPクライアントから呼ばれるメソッド
 interface MCPMethods {
   // 自然言語リクエスト
-  request(prompt: string): Promise<Response>
-  
+  request(prompt: string): Promise<Response>;
+
   // データ取得
-  get(params: GetParams): Promise<any>
-  list(params: ListParams): Promise<any[]>
-  search(params: SearchParams): Promise<SearchResults>
-  
+  get(params: GetParams): Promise<any>;
+  list(params: ListParams): Promise<any[]>;
+  search(params: SearchParams): Promise<SearchResults>;
+
   // State文書操作
-  getStateDocument(): Promise<string>
-  updateStateDocument(content: string): Promise<void>
+  getStateDocument(): Promise<string>;
+  updateStateDocument(content: string): Promise<void>;
 }
 ```
 
 ### 内部実装
-MCPサーバーは受信したリクエストをHTTPリクエストに変換し、REST APIを呼び出します。
 
+MCPサーバーは受信したリクエストをHTTPリクエストに変換し、REST APIを呼び出します。
 
 ## 3. DB Bridge インターフェース
 
 dbパッケージはTypeScriptとPython/LanceDBを繋ぐブリッジ層です。
 
 ### アーキテクチャ
+
 ```
 TypeScript API ←→ JSON-RPC over stdio ←→ Python Worker ←→ LanceDB
 ```
@@ -127,6 +135,7 @@ searchPond(query: string): Promise<PondEntry[]>
 ### Python側RPC仕様
 
 JSON-RPCメソッド:
+
 - `db.search` - ベクトル検索実行
 - `db.get` - ID指定での取得
 - `db.create` - 新規作成
@@ -140,34 +149,36 @@ JSON-RPCメソッド:
 Core APIはビジネスロジックとデータアクセスの中間層として機能します。
 
 ### 責務
+
 - データモデルの管理
 - DB Bridgeとの通信
 - State文書の管理（メモリ/DB）
 - イベントキューの管理（インメモリ）
 
 ### 内部API
+
 ```typescript
 interface CoreAPI {
   // Issue操作
-  getIssue(id: string): Promise<Issue>
-  createIssue(data: CreateIssueDto): Promise<Issue>
-  updateIssue(id: string, data: UpdateIssueDto): Promise<Issue>
-  
+  getIssue(id: string): Promise<Issue>;
+  createIssue(data: CreateIssueDto): Promise<Issue>;
+  updateIssue(id: string, data: UpdateIssueDto): Promise<Issue>;
+
   // Flow操作
-  getFlow(id: string): Promise<Flow>
-  createFlow(data: CreateFlowDto): Promise<Flow>
-  
+  getFlow(id: string): Promise<Flow>;
+  createFlow(data: CreateFlowDto): Promise<Flow>;
+
   // Knowledge操作
-  getKnowledge(id: string): Promise<Knowledge>
-  createKnowledge(data: CreateKnowledgeDto): Promise<Knowledge>
-  
+  getKnowledge(id: string): Promise<Knowledge>;
+  createKnowledge(data: CreateKnowledgeDto): Promise<Knowledge>;
+
   // State文書
-  getState(): string
-  updateState(content: string): void
-  
+  getState(): string;
+  updateState(content: string): void;
+
   // イベントキュー
-  enqueueEvent(event: Event): void
-  dequeueEvent(): Event | null
+  enqueueEvent(event: Event): void;
+  dequeueEvent(): Event | null;
 }
 ```
 
@@ -209,7 +220,7 @@ interface WorkflowDefinition {
 interface WorkflowTrigger {
   eventTypes: string[];
   condition?: (event: AgentEvent) => boolean;
-  priority?: number;  // -100 ~ 100
+  priority?: number; // -100 ~ 100
 }
 
 // 実行関数
@@ -237,14 +248,14 @@ Reportersは外部情報源から情報を収集し、REST API経由でシステ
 ```typescript
 interface Reporter {
   name: string;
-  source: string;  // "gmail", "slack", "calendar", etc.
-  
+  source: string; // "gmail", "slack", "calendar", etc.
+
   // 情報収集実行
   collect(): Promise<Input[]>;
-  
+
   // スケジュール設定（オプション）
   schedule?: CronExpression;
-  
+
   // REST APIへの送信（Reporter SDKが提供）
   submit(inputs: Input[]): Promise<void>;
 }
@@ -259,9 +270,11 @@ interface Input {
 ```
 
 ### Reporter SDK
+
 TypeScriptで実装されたクライアントSDKを提供し、REST APIとの通信を簡素化します。
 
 ### Reporter → REST API通信
+
 各ReporterはREST APIの`POST /inputs`エンドポイントを呼び出してInputを送信します。
 
 ## 7. Web UI インターフェース

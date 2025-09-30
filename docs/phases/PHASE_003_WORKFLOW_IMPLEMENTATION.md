@@ -10,6 +10,7 @@ Phase 3では、sebas-chanのワークフローシステムを関数ベースの
 ### 1. 関数ベースワークフロー
 
 #### 基本構造
+
 ```typescript
 // ワークフロー実行関数の型
 type WorkflowExecutor = (
@@ -33,25 +34,26 @@ interface WorkflowDefinition {
 
 ```typescript
 interface WorkflowContext {
-  state: string;                           // システムの現在状態
-  storage: WorkflowStorage;                // DB操作インターフェース
-  logger: WorkflowLogger;                  // ログ記録
-  createDriver: DriverFactory;             // AIドライバーファクトリ
-  metadata?: Record<string, any>;          // 実行時メタデータ
+  state: string; // システムの現在状態
+  storage: WorkflowStorage; // DB操作インターフェース
+  logger: WorkflowLogger; // ログ記録
+  createDriver: DriverFactory; // AIドライバーファクトリ
+  metadata?: Record<string, any>; // 実行時メタデータ
 }
 
 // ドライバーファクトリの型
 type DriverFactory = (capabilities: DriverCapabilities) => Driver;
 
 interface DriverCapabilities {
-  model: 'fast' | 'standard' | 'large';   // モデルサイズ
-  temperature?: number;                     // 生成温度
-  maxTokens?: number;                      // 最大トークン数
+  model: 'fast' | 'standard' | 'large'; // モデルサイズ
+  temperature?: number; // 生成温度
+  maxTokens?: number; // 最大トークン数
   // その他のcapability設定
 }
 ```
 
 **変更点**:
+
 - `driver`フィールドを`createDriver`ファクトリ関数に変更
 - ドライバーは都度、必要なcapabilitiesを指定して作成
 
@@ -61,11 +63,11 @@ interface DriverCapabilities {
 
 ```typescript
 interface WorkflowLog {
-  executionId: string;      // 実行ID（UUID）
-  workflowName: string;     // ワークフロー名
-  type: LogType;           // ログタイプ
-  timestamp: Date;         // タイムスタンプ（自動生成）
-  data: unknown;           // ログデータ
+  executionId: string; // 実行ID（UUID）
+  workflowName: string; // ワークフロー名
+  type: LogType; // ログタイプ
+  timestamp: Date; // タイムスタンプ（自動生成）
+  data: unknown; // ログデータ
 }
 
 enum LogType {
@@ -76,11 +78,12 @@ enum LogType {
   AI_CALL = 'ai_call',
   INFO = 'info',
   DEBUG = 'debug',
-  WARN = 'warn'
+  WARN = 'warn',
 }
 ```
 
 **重要**:
+
 - サブワークフローや子ロガーの概念は存在しません
 - すべてのログは単一のexecutionIdで管理されます
 - ワークフロー間の連携はイベント発行により実現
@@ -88,17 +91,15 @@ enum LogType {
 ### 4. イベント駆動アーキテクチャ
 
 #### イベント発行
+
 ```typescript
 interface WorkflowEventEmitter {
-  emit(event: {
-    type: string;
-    priority?: 'high' | 'normal' | 'low';
-    payload: unknown;
-  }): void;
+  emit(event: { type: string; priority?: 'high' | 'normal' | 'low'; payload: unknown }): void;
 }
 ```
 
 #### ワークフロー連携
+
 - サブワークフローは使用しません
 - 後続処理が必要な場合は、新しいイベントを発行
 - 各ワークフローは独立して実行され、イベントを介して連携
@@ -115,6 +116,7 @@ export interface WorkflowConfig {}
 ### Phase 3-1: 基盤実装
 
 1. **ドライバーファクトリ実装**
+
    ```typescript
    // DriverFactoryは@moduler-prompt/utilsのDriverSelectionCriteriaを使用
    export type DriverFactory = (criteria: DriverSelectionCriteria) => AIDriver | Promise<AIDriver>;
@@ -123,13 +125,14 @@ export interface WorkflowConfig {}
    ```
 
    注意: @moduler-prompt/utilsのDriverRegistryにはcapabilitiesからモデルを自動選択する機能があります。
+
    ```typescript
    import { DriverRegistry } from '@moduler-prompt/utils';
 
    const registry = new DriverRegistry();
    const result = registry.selectDriver({
      requiredCapabilities: ['fast', 'japanese'],
-     preferredCapabilities: ['streaming']
+     preferredCapabilities: ['streaming'],
    });
    ```
 
@@ -169,6 +172,7 @@ export interface WorkflowConfig {}
 ### クラスベースから関数ベースへ
 
 **Before (廃止)**:
+
 ```typescript
 // 使用しません
 class MyWorkflow extends BaseWorkflow {
@@ -179,6 +183,7 @@ class MyWorkflow extends BaseWorkflow {
 ```
 
 **After (推奨)**:
+
 ```typescript
 const myWorkflow: WorkflowDefinition = {
   name: 'MyWorkflow',
@@ -186,7 +191,7 @@ const myWorkflow: WorkflowDefinition = {
     // ドライバーの作成
     const driver = context.createDriver({
       model: 'standard',
-      temperature: 0.3
+      temperature: 0.3,
     });
 
     // 処理
@@ -196,11 +201,11 @@ const myWorkflow: WorkflowDefinition = {
     emitter.emit({
       type: 'NEXT_WORKFLOW',
       priority: 'normal',
-      payload: result
+      payload: result,
     });
 
     return { success: true, context, output: result };
-  }
+  },
 };
 ```
 
@@ -216,7 +221,7 @@ function createTestDriverFactory(responses: string[]): DriverFactory {
   return (capabilities) => {
     return new TestDriver({
       responses,
-      delay: 0
+      delay: 0,
     });
   };
 }
@@ -227,7 +232,7 @@ const mockContext: WorkflowContext = {
   storage: mockStorage,
   logger: mockLogger,
   createDriver: createTestDriverFactory(['response1', 'response2']),
-  metadata: {}
+  metadata: {},
 };
 ```
 
