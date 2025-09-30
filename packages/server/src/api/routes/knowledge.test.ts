@@ -35,6 +35,7 @@ describe('Knowledge Routes', () => {
           content: 'System requires 8GB RAM minimum',
           reputation: { upvotes: 5, downvotes: 1 },
           sources: [{ type: 'issue', issueId: 'issue-1' }],
+          createdAt: new Date(),
         },
       ];
 
@@ -45,7 +46,10 @@ describe('Knowledge Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
-        data: mockKnowledge,
+        data: mockKnowledge.map(k => ({
+          ...k,
+          createdAt: k.createdAt.toISOString(),
+        })),
       });
       expect(mockCoreEngine.searchKnowledge).toHaveBeenCalledWith('RAM');
     });
@@ -73,6 +77,7 @@ describe('Knowledge Routes', () => {
           { type: 'issue', issueId: 'issue-2' },
           { type: 'issue', issueId: 'issue-3' },
         ],
+        createdAt: new Date(),
       };
 
       vi.mocked(mockCoreEngine.getKnowledge).mockResolvedValue(mockKnowledge);
@@ -82,7 +87,10 @@ describe('Knowledge Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
-        data: mockKnowledge,
+        data: {
+          ...mockKnowledge,
+          createdAt: mockKnowledge.createdAt.toISOString(),
+        },
       });
       expect(mockCoreEngine.getKnowledge).toHaveBeenCalledWith('k1');
     });
@@ -108,6 +116,7 @@ describe('Knowledge Routes', () => {
         id: 'k2',
         ...newKnowledge,
         reputation: { upvotes: 0, downvotes: 0 },
+        createdAt: new Date(),
       };
 
       vi.mocked(mockCoreEngine.createKnowledge).mockResolvedValue(createdKnowledge);
@@ -117,13 +126,17 @@ describe('Knowledge Routes', () => {
       expect(response.status).toBe(201);
       expect(response.body).toMatchObject({
         success: true,
-        data: createdKnowledge,
+        data: {
+          ...createdKnowledge,
+          createdAt: createdKnowledge.createdAt.toISOString(),
+        },
       });
       expect(mockCoreEngine.createKnowledge).toHaveBeenCalledWith({
         type: newKnowledge.type,
         content: newKnowledge.content,
         reputation: { upvotes: 0, downvotes: 0 },
         sources: newKnowledge.sources,
+        createdAt: expect.any(Date),
       });
     });
 
@@ -147,6 +160,7 @@ describe('Knowledge Routes', () => {
         content: 'Test solution',
         reputation: { upvotes: 5, downvotes: 2 },
         sources: [],
+        createdAt: new Date(),
       };
 
       const updatedKnowledge: Knowledge = {
@@ -164,7 +178,10 @@ describe('Knowledge Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
-        data: updatedKnowledge,
+        data: {
+          ...updatedKnowledge,
+          createdAt: updatedKnowledge.createdAt.toISOString(),
+        },
       });
       expect(mockCoreEngine.updateKnowledge).toHaveBeenCalledWith('k1', {
         reputation: { upvotes: 6, downvotes: 2 },
@@ -178,6 +195,7 @@ describe('Knowledge Routes', () => {
         content: 'Test factoid',
         reputation: { upvotes: 3, downvotes: 1 },
         sources: [],
+        createdAt: new Date(),
       };
 
       const updatedKnowledge: Knowledge = {
@@ -195,7 +213,10 @@ describe('Knowledge Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
-        data: updatedKnowledge,
+        data: {
+          ...updatedKnowledge,
+          createdAt: updatedKnowledge.createdAt.toISOString(),
+        },
       });
       expect(mockCoreEngine.updateKnowledge).toHaveBeenCalledWith('k1', {
         reputation: { upvotes: 3, downvotes: 2 },
