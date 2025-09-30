@@ -19,31 +19,23 @@ export interface KnowledgeExtractionResult {
 
 /**
  * 知識タイプを決定
- * 意図: コンテンツとソースから適切な知識カテゴリーを判定
+ * 意図: ソースタイプから適切な知識カテゴリーを判定
  */
 export function determineKnowledgeType(content: string, source?: string): Knowledge['type'] {
-  const lowerContent = content.toLowerCase();
-
-  if (
-    source === 'high_impact_issue' ||
-    lowerContent.includes('ルール') ||
-    lowerContent.includes('rule')
-  ) {
+  // ソースタイプに基づいて判定
+  if (source === 'high_impact_issue' || source === 'resolution') {
     return 'system_rule';
   }
 
-  if (
-    lowerContent.includes('手順') ||
-    lowerContent.includes('process') ||
-    lowerContent.includes('how to')
-  ) {
+  if (source === 'pattern') {
     return 'process_manual';
   }
 
-  if (lowerContent.includes('について') || lowerContent.includes('とは')) {
+  if (source === 'user_direct') {
     return 'curated_summary';
   }
 
+  // デフォルトは factoid
   return 'factoid';
 }
 
@@ -52,7 +44,8 @@ export function determineKnowledgeType(content: string, source?: string): Knowle
  * 意図: 知識の出所を適切に記録
  */
 export function createKnowledgeSource(sourceType: string, sourceId: string): KnowledgeSource {
-  if (sourceType === 'issue' || sourceType === 'resolution') {
+  // issue関連のソースタイプ
+  if (sourceType === 'issue' || sourceType === 'resolution' || sourceType === 'high_impact_issue') {
     return { type: 'issue', issueId: sourceId };
   }
 
@@ -60,6 +53,7 @@ export function createKnowledgeSource(sourceType: string, sourceId: string): Kno
     return { type: 'pond', pondEntryId: sourceId };
   }
 
+  // pattern含むその他はuser_directとして扱う
   return { type: 'user_direct' };
 }
 
@@ -182,8 +176,8 @@ export async function createNewKnowledge(
     type: knowledgeType,
     content: extractedKnowledge,
     reputation: {
-      upvotes: Math.round(confidence * 10), // 初期評価は信頼度に基づく
-      downvotes: 0,
+      upvotes: confidence >= 0 ? Math.round(Math.abs(confidence) * 10) : 0,
+      downvotes: confidence < 0 ? Math.round(Math.abs(confidence) * 10) : 0,
     },
     sources: [knowledgeSource],
   };
@@ -221,7 +215,7 @@ export async function createNewKnowledge(
 
 /**
  * 既存知識を更新
- * 意図: 関連する既存知識の評価を向上
+ * 意図: 関連する既存知識の評価を向上または低下
  */
 export async function updateExistingKnowledge(
   storage: WorkflowStorageInterface,
@@ -233,18 +227,27 @@ export async function updateExistingKnowledge(
 ): Promise<string> {
   const knowledgeSource = createKnowledgeSource(sourceType, sourceId);
 
+  // confidenceが負の場合はdownvotesを増加、正の場合はupvotesを増加
+  const reputationUpdate = confidence >= 0
+    ? {
+        upvotes: targetKnowledge.reputation.upvotes + Math.round(Math.abs(confidence) * 5),
+        downvotes: targetKnowledge.reputation.downvotes,
+      }
+    : {
+        upvotes: targetKnowledge.reputation.upvotes,
+        downvotes: targetKnowledge.reputation.downvotes + Math.round(Math.abs(confidence) * 5),
+      };
+
   await storage.updateKnowledge(targetKnowledge.id, {
-    reputation: {
-      upvotes: targetKnowledge.reputation.upvotes + Math.round(confidence * 5),
-      downvotes: targetKnowledge.reputation.downvotes,
-    },
+    reputation: reputationUpdate,
     sources: [...targetKnowledge.sources, knowledgeSource],
   });
 
   recorder.record(RecordType.DB_QUERY, {
     type: 'updateKnowledge',
     knowledgeId: targetKnowledge.id,
-    action: 'incrementUpvotes',
+    action: confidence >= 0 ? 'incrementUpvotes' : 'incrementDownvotes',
+    confidenceValue: confidence,
   });
 
   return targetKnowledge.id;

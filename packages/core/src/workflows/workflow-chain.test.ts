@@ -198,9 +198,9 @@ describe('Workflow Chain Integration Tests', () => {
 
   describe('A-1 → A-2 Chain (ユーザーリクエスト処理)', () => {
     it('should process user issue request and trigger analysis', async () => {
-      // A-1: PROCESS_USER_REQUEST
+      // A-1: USER_REQUEST_RECEIVED
       const requestEvent: AgentEvent = {
-        type: 'PROCESS_USER_REQUEST',
+        type: 'USER_REQUEST_RECEIVED',
         timestamp: new Date(),
         payload: {
           request: {
@@ -264,9 +264,9 @@ describe('Workflow Chain Integration Tests', () => {
           }),
       };
 
-      // A-1: PROCESS_USER_REQUEST（質問）
+      // A-1: USER_REQUEST_RECEIVED（質問）
       const questionEvent: AgentEvent = {
-        type: 'PROCESS_USER_REQUEST',
+        type: 'USER_REQUEST_RECEIVED',
         timestamp: new Date(),
         payload: {
           request: {

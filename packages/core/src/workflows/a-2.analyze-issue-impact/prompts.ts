@@ -64,10 +64,10 @@ const baseAnalyzeImpactModule: PromptModule<ImpactAnalysisContext> = {
 
   // terms: 用語定義
   terms: [
-    '- Issue: 解決すべき問題やタスク',
+    '- Issue: ユーザーに代わってAIが追跡・管理すべき事項',
     '- close判定: Issueが解決済みかどうかの判定',
-    '- 優先度: タスクの緊急度（0-100）',
-    '- 影響範囲: 問題が影響するコンポーネントやシステム部分',
+    '- 優先度: 追跡事項の重要度（0-100）',
+    '- 影響範囲: 事項が影響するコンポーネントやシステム部分',
   ],
 
   // instructions: 具体的な処理指示

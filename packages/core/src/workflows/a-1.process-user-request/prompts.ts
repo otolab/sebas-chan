@@ -114,10 +114,10 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
 
   // terms: instructions大セクションに分類
   terms: [
-    'Issue: 解決すべき問題やタスク',
+    'Issue: ユーザーに代わってAIが追跡・管理すべき事項',
     'Pond: 一時的なデータ保管場所',
     'Knowledge: 抽出された知識・ノウハウ',
-    'リクエストタイプ: issue（問題報告）、schedule（スケジュール）、search（検索）、question（質問）、action（アクション）、feedback（フィードバック）、other（その他）'
+    'リクエストタイプ: issue（追跡事項）、schedule（スケジュール）、search（検索）、question（質問）、action（アクション）、feedback（フィードバック）、other（その他）'
   ],
 
   // instructions標準セクション: instructions大セクションに分類

@@ -1,3 +1,15 @@
+/**
+ * A-2: ANALYZE_ISSUE_IMPACT ワークフロー
+ *
+ * 追跡事項（Issue）の影響分析と優先度判定を行う。
+ *
+ * このワークフローの役割：
+ * - ユーザーが追跡している事項の現在の状態と影響を分析
+ * - 他の追跡事項との関連性を発見し、重複や依存関係を整理
+ * - 優先度を適切に設定し、ユーザーが注目すべき事項を明確化
+ * - 解決済みかどうかを判定し、必要に応じてクローズを提案
+ */
+
 import type { AgentEvent } from '../../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../workflow-types.js';

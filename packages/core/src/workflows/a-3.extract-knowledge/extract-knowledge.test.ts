@@ -263,21 +263,24 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     expect(mockContext.storage.createKnowledge).not.toHaveBeenCalled();
   });
 
-  it('should determine knowledge type based on content', async () => {
-    // ルール系のコンテンツ（50文字以上）
+  it('should determine knowledge type based on source type', async () => {
+    // high_impact_issue ソースタイプは system_rule になる
+    mockEvent = {
+      type: 'KNOWLEDGE_EXTRACTABLE',
+      payload: {
+        sourceType: 'high_impact_issue',
+        sourceId: 'issue-123',
+        confidence: 0.8,
+        reason: 'High impact issue',
+      },
+      timestamp: new Date(),
+    };
+
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
         extractedKnowledge: 'このシステムルールに従って、すべてのリクエストを処理する必要があります。セキュリティポリシーにも準拠することが重要です。',
         updatedState: 'Initial state\nシステムルール抽出完了'
       })]
-    });
-
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
-      id: 'issue-123',
-      title: 'ルール問題',
-      description: 'ルールについて',
-      status: 'resolved',
-      updates: [],
     });
 
     let result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
@@ -289,7 +292,8 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       })
     );
 
-    // プロセス系のコンテンツ（50文字以上）
+    // pattern ソースタイプは process_manual になる
+    mockEvent.payload.sourceType = 'pattern';
     mockContext.storage.createKnowledge = vi.fn().mockResolvedValue({
       id: 'knowledge-456',
       type: 'process_manual',
@@ -305,13 +309,9 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       })]
     });
 
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
-      id: 'issue-123',
-      title: '手順問題',
-      description: '手順について',
-      status: 'resolved',
-      updates: [],
-    });
+    mockContext.storage.searchPond = vi.fn().mockResolvedValue([
+      { id: 'pond-123', content: 'パターンデータ', metadata: {} },
+    ]);
 
     result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
     expect(result.success).toBe(true);

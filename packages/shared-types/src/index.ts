@@ -18,6 +18,10 @@ export const PRIORITY = {
 
 export type PriorityValue = (typeof PRIORITY)[keyof typeof PRIORITY];
 
+/**
+ * Issue: ユーザーに代わってAIが追跡・管理すべき事項
+ * システムの課題ではなく、ユーザーが忘れたくない・追跡したい事項全般を表す
+ */
 export interface Issue {
   id: string;
   title: string;
@@ -80,6 +84,7 @@ export interface Knowledge {
     downvotes: number;
   };
   sources: KnowledgeSource[]; // この知識を構成する情報源 (複数)
+  createdAt: Date; // 作成日時
 }
 
 export type KnowledgeSource =

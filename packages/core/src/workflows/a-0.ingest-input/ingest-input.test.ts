@@ -1,49 +1,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ingestInputWorkflow } from './index.js';
 import type { AgentEvent } from '../../types.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import {
+  createCustomMockContext,
+  createMockWorkflowEmitter,
+  createMockIssue,
+  createMockPondEntry
+} from '../test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';
-import { WorkflowRecorder } from '../recorder.js';
 
 describe('IngestInput Workflow (Functional)', () => {
-  let mockContext: WorkflowContextInterface;
-  let mockEmitter: WorkflowEventEmitterInterface;
+  // このテストは「ユーザーに代わってAIが追跡すべき事項」を
+  // システムがどう取り込み、Issueとして管理するかを検証します
+  let mockContext: ReturnType<typeof createCustomMockContext>;
+  let mockEmitter: ReturnType<typeof createMockWorkflowEmitter>;
   let mockEvent: AgentEvent;
 
   beforeEach(() => {
     // モックコンテキストの準備
-    mockContext = {
-      state: 'Initial state',
-      storage: {
-        addPondEntry: vi.fn().mockResolvedValue({ id: 'pond-123', content: 'test content' }),
-        searchIssues: vi.fn().mockResolvedValue([]),
-        searchKnowledge: vi.fn().mockResolvedValue([]),
-        searchPond: vi.fn().mockResolvedValue([]),
-        getIssue: vi.fn(),
-        getKnowledge: vi.fn(),
-        createIssue: vi.fn(),
-        updateIssue: vi.fn(),
-        createKnowledge: vi.fn(),
-        updateKnowledge: vi.fn(),
-      },
-      createDriver: async () => new TestDriver({
-        responses: [JSON.stringify({
-          relatedIssueIds: [],
-          needsNewIssue: true,
-          newIssueTitle: 'システムエラー',
-          severity: 'medium',
-          updateContent: 'エラーが発生しました',
-          labels: ['error', 'slack'],
-          updatedState: 'Initial state\nデータ取り込み完了'
-        })]
-      }),
-      recorder: new WorkflowRecorder('test'),
-    };
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
+        relatedIssueIds: [],
+        needsNewIssue: true,
+        newIssueTitle: '来週のミーティング準備',
+        severity: 'medium',
+        updateContent: 'プレゼン資料の作成が必要',
+        labels: ['meeting', 'preparation'],
+        updatedState: 'Initial state\nデータ取り込み完了'
+      })],
+      storageOverrides: {
+        addPondEntry: vi.fn().mockResolvedValue(createMockPondEntry({
+          id: 'pond-123',
+          content: 'test content'
+        })),
+      }
+    });
 
     // モックイベントエミッター
-    mockEmitter = {
-      emit: vi.fn(),
-    };
+    mockEmitter = createMockWorkflowEmitter();
 
     // モックイベント
     mockEvent = {
@@ -51,7 +45,7 @@ describe('IngestInput Workflow (Functional)', () => {
       timestamp: new Date(),
       payload: {
         source: 'slack',
-        content: 'システムでエラーが発生しました',
+        content: '来週の水曜日に重要なミーティングがあるそうです。プレゼン資料を準備しておいてください。',
         format: 'text',
         pondEntryId: 'pond-123',
         timestamp: new Date().toISOString(),
@@ -60,32 +54,26 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should successfully ingest input to pond', async () => {
-    // AIが分析結果を返すモック
+    // ユーザーからの情報をAIが分析し、追跡すべき事項として判断
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
         relatedIssueIds: [],
         needsNewIssue: true,
-        newIssueTitle: 'システムエラー',
+        newIssueTitle: 'プレゼン資料の準備',
         severity: 'medium',
-        updateContent: 'エラーが発生しました',
-        labels: ['error', 'slack'],
-        updatedState: 'Initial state\n新規Issue作成: システムエラー'
+        updateContent: '来週のミーティングまでに作成が必要',
+        labels: ['meeting', 'task'],
+        updatedState: 'Initial state\n新規Issue作成: プレゼン資料の準備'
       })]
     });
 
-    mockContext.storage.createIssue = vi.fn().mockResolvedValue({
+    mockContext.storage.createIssue = vi.fn().mockResolvedValue(createMockIssue({
       id: 'issue-123',
-      title: 'システムエラー',
-      description: 'システムでエラーが発生しました',
-      status: 'open',
-      labels: ['error', 'slack'],
-      priority: 50,
+      title: 'プレゼン資料の準備',
+      description: '来週の水曜日に重要なミーティングがあるそうです。プレゼン資料を準備しておいてください。',
+      labels: ['meeting', 'task'],
       sourceInputIds: ['pond-123'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      updates: [],
-      relations: [],
-    });
+    }));
 
     const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
@@ -98,31 +86,27 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should trigger ISSUE_CREATED event when new issue is created', async () => {
+    // 重要度が高い追跡事項を作成するケース
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
         relatedIssueIds: [],
         needsNewIssue: true,
-        newIssueTitle: 'システムエラー',
+        newIssueTitle: '重要顧客との契約更新',
         severity: 'high',
-        updateContent: 'Critical error detected',
-        labels: ['error', 'critical'],
-        updatedState: 'Initial state\nCritical error detected'
+        updateContent: '今月末までに契約更新の決定が必要',
+        labels: ['contract', 'urgent'],
+        updatedState: 'Initial state\n緊急度の高い追跡事項を作成'
       })]
     });
 
-    mockContext.storage.createIssue = vi.fn().mockResolvedValue({
+    mockContext.storage.createIssue = vi.fn().mockResolvedValue(createMockIssue({
       id: 'issue-123',
-      title: 'システムエラー',
-      description: 'システムでエラーが発生しました',
-      status: 'open',
-      labels: ['error', 'critical'],
+      title: '重要顧客との契約更新',
+      description: '今月末までに契約更新の決定が必要',
+      labels: ['contract', 'urgent'],
       priority: 80,
       sourceInputIds: ['pond-123'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      updates: [],
-      relations: [],
-    });
+    }));
 
     const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
@@ -149,19 +133,14 @@ describe('IngestInput Workflow (Functional)', () => {
   });
 
   it('should update existing issue when related issue found', async () => {
-    const existingIssue = {
+    // 既存の追跡事項に関連情報を追加するケース
+    const existingIssue = createMockIssue({
       id: 'issue-456',
-      title: '既存のエラー',
-      description: '既存のエラー説明',
-      status: 'open',
-      labels: ['error'],
-      priority: 50,
+      title: 'プロジェクトXの進捗',
+      description: 'プロジェクトXの進捗状況を追跡',
+      labels: ['project'],
       sourceInputIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      updates: [],
-      relations: [],
-    };
+    });
 
     mockContext.storage.searchIssues = vi.fn().mockResolvedValue([existingIssue]);
     mockContext.storage.getIssue = vi.fn().mockResolvedValue(existingIssue);
@@ -234,19 +213,14 @@ describe('IngestInput Workflow (Functional)', () => {
       })]
     });
 
-    mockContext.storage.createIssue = vi.fn().mockResolvedValue({
+    mockContext.storage.createIssue = vi.fn().mockResolvedValue(createMockIssue({
       id: 'issue-critical',
       title: 'Critical System Failure',
       description: 'システムでエラーが発生しました',
-      status: 'open',
       labels: ['critical', 'outage'],
       priority: 100,
       sourceInputIds: ['pond-123'],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      updates: [],
-      relations: [],
-    });
+    }));
 
     const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 

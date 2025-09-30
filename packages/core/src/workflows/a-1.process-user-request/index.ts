@@ -1,7 +1,13 @@
 /**
  * A-1: PROCESS_USER_REQUEST ワークフロー
  *
- * ユーザーリクエストを分類し、適切な後続ワークフローへルーティングする
+ * ユーザーリクエストを分類し、適切な後続ワークフローへルーティングする。
+ *
+ * このワークフローの役割：
+ * - ユーザーからの直接的なリクエストを理解し、意図を解釈
+ * - 追跡すべき新しい事項、既存事項への更新、質問などを分類
+ * - 関連する既存の追跡事項や知識を検索して文脈を把握
+ * - 適切なアクションを実行し、必要なイベントを発行
  */
 
 import type { AgentEvent } from '../../types.js';
@@ -188,7 +194,7 @@ export const processUserRequestWorkflow: WorkflowDefinition = {
   name: 'ProcessUserRequest',
   description: 'ユーザーリクエストを分類し、適切な後続ワークフローへルーティングする',
   triggers: {
-    eventTypes: ['PROCESS_USER_REQUEST'],
+    eventTypes: ['USER_REQUEST_RECEIVED'],
     priority: 50, // 高優先度：ユーザー入力の処理
   },
   executor: executeProcessUserRequest,

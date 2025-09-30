@@ -62,7 +62,7 @@ const baseIngestInputModule: PromptModule<InputAnalysisContext> = {
 
   // terms: instructions大セクションに分類
   terms: [
-    'Issue: 解決すべき問題やタスク',
+    'Issue: ユーザーに代わってAIが追跡・管理すべき事項',
     '深刻度: critical（致命的）、high（高）、medium（中）、low（低）',
     'ラベル: Issueを分類するためのタグ'
   ],

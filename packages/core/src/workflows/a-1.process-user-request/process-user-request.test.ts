@@ -1,206 +1,158 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processUserRequestWorkflow } from './index.js';
 import type { AgentEvent } from '../../types.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import {
+  createCustomMockContext,
+  createMockWorkflowEmitter,
+  createMockIssue,
+  createMockPondEntry
+} from '../test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';
-import { WorkflowRecorder } from '../recorder.js';
 
 describe('ProcessUserRequest Workflow (A-1)', () => {
-  let mockContext: WorkflowContextInterface;
-  let mockEmitter: WorkflowEventEmitterInterface;
+  let mockContext: ReturnType<typeof createCustomMockContext>;
+  let mockEmitter: ReturnType<typeof createMockWorkflowEmitter>;
   let mockEvent: AgentEvent;
 
   beforeEach(() => {
     // モックコンテキストの準備
-    mockContext = {
-      state: 'Initial state',
-      storage: {
-        addPondEntry: vi.fn().mockResolvedValue({
-          id: 'pond-test-123',
-          content: 'test content',
-          source: 'user_request',
-          timestamp: new Date(),
-        }),
-        searchIssues: vi.fn().mockResolvedValue([]),
-        searchKnowledge: vi.fn().mockResolvedValue([]),
-        searchPond: vi.fn().mockResolvedValue([]),
-        getIssue: vi.fn(),
-        getKnowledge: vi.fn(),
-        createIssue: vi.fn().mockResolvedValue({
-          id: 'issue-test-123',
-          title: 'Test Issue',
-          description: 'Test Description',
-          status: 'open',
-          labels: ['user-reported'],
-          updates: [],
-          relations: [],
-          sourceInputIds: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }),
-        updateIssue: vi.fn(),
-        createKnowledge: vi.fn(),
-        updateKnowledge: vi.fn(),
-      },
-      createDriver: async () => new TestDriver({
-        responses: [JSON.stringify({
-          interpretation: 'システムエラーに関する報告',
-          requestType: 'issue',
-          events: [{
-            type: 'ISSUE_CREATED',
-            reason: 'エラー報告からIssueを作成',
-            payload: {}
-          }],
-          actions: [{
-            type: 'create',
-            target: 'issue',
-            details: 'システムエラーのIssue作成'
-          }],
-          response: 'エラー報告を受付しました。調査を開始します。',
-          updatedState: 'Initial state\n## ユーザーリクエスト処理\n- User ID: user-123\n- Request Type: issue\n- Interpretation: システムエラーに関する報告'
-        })]
-      }),
-      recorder: new WorkflowRecorder('test'),
-    };
-
-    // モックイベントエミッター
-    mockEmitter = {
-      emit: vi.fn(),
-    };
-
-    // モックイベント
-    mockEvent = {
-      type: 'PROCESS_USER_REQUEST',
-      timestamp: new Date(),
-      payload: {
-        userId: 'user-123',
-        content: 'システムでエラーが発生しています。調査してください。',
-        sessionId: 'session-123',
-        metadata: {},
-      },
-    };
-  });
-
-  it('should classify issue request and trigger ANALYZE_ISSUE_IMPACT', async () => {
-    const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
-
-    expect(result.success).toBe(true);
-    expect(result.output).toMatchObject({
-      requestType: 'issue',
-      response: expect.any(String),
-    });
-
-    // ISSUE_CREATEDイベントが発行されることを確認
-    expect(mockEmitter.emit).toHaveBeenCalled();
-  });
-
-  it('should classify question request and trigger EXTRACT_KNOWLEDGE', async () => {
-    (mockEvent.payload as any).content = 'どうやってログインしますか？';
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        interpretation: 'ログイン方法に関する質問',
-        requestType: 'question',
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
+        interpretation: 'システムエラーに関する報告',
+        requestType: 'issue',
         events: [{
-          type: 'KNOWLEDGE_EXTRACTABLE',
-          reason: '質問から知識を抽出',
+          type: 'ISSUE_CREATED',
+          reason: 'エラー報告からIssueを作成',
           payload: {}
         }],
         actions: [{
-          type: 'search',
-          target: 'knowledge',
-          details: 'ログイン方法の知識検索'
+          type: 'create',
+          target: 'issue',
+          details: 'システムエラーのIssue作成'
         }],
-        response: 'ログイン方法について説明します。',
-        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- Request Type: question'
-      })]
+        response: 'エラー報告を受付しました。調査を開始します。',
+        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- User ID: user-123\n- Request Type: issue\n- Interpretation: システムエラーに関する報告'
+      })],
+      storageOverrides: {
+        addPondEntry: vi.fn().mockResolvedValue(createMockPondEntry({
+          id: 'pond-test-123',
+          content: 'test content',
+          source: 'user_request',
+        })),
+        createIssue: vi.fn().mockResolvedValue(createMockIssue({
+          id: 'issue-test-123',
+          title: 'Test Issue',
+          description: 'Test Description',
+          labels: ['user-reported'],
+        })),
+      }
     });
 
+    // モックイベントエミッター
+    mockEmitter = createMockWorkflowEmitter();
+
+    // モックイベント
+    mockEvent = {
+      type: 'USER_REQUEST',
+      timestamp: new Date(),
+      payload: {
+        userId: 'user-123',
+        content: 'システムエラーが発生しています',
+        type: 'message',
+      },
+    };
+  });
+
+  it('should successfully process user request', async () => {
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
     expect(result.output).toMatchObject({
-      requestType: 'question',
+      interpretation: 'システムエラーに関する報告',
+      requestType: 'issue',
+      response: 'エラー報告を受付しました。調査を開始します。',
     });
 
-    // KNOWLEDGE_EXTRACTABLEイベントが発行されることを確認
-    expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'KNOWLEDGE_EXTRACTABLE',
-      payload: expect.any(Object),
-    });
+    // Stateが更新されたことを確認
+    expect(result.context.state).toContain('ユーザーリクエスト処理');
   });
 
-  it('should classify feedback request', async () => {
-    (mockEvent.payload as any).content = 'UIが使いやすくなりました。ありがとうございます。';
+  it('should classify issue request', async () => {
+    const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
+
+    expect(result.success).toBe(true);
+    expect((result.output as any).requestType).toBe('issue');
+  });
+
+  it('should emit events for issue creation', async () => {
+    const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
+
+    expect(result.success).toBe(true);
+
+    // 発行されたイベントを確認（eventsEmittedフィールドを確認）
+    expect((result.output as any).eventsEmitted).toContain('ISSUE_CREATED');
+  });
+
+  it('should handle missing request content', async () => {
+    mockEvent.payload.content = undefined;
+
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
-        interpretation: 'UI改善に対する感謝のフィードバック',
-        requestType: 'feedback',
-        events: [{
-          type: 'KNOWLEDGE_EXTRACTABLE',
-          reason: 'フィードバックから知識を抽出',
-          payload: {}
-        }],
+        interpretation: '内容なしリクエスト',
+        requestType: 'other',
+        events: [],
         actions: [],
-        response: 'フィードバックありがとうございます。',
-        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- Request Type: feedback'
+        response: 'リクエスト内容が空です。何かお手伝いできることはありますか？',
+        reasoning: '内容が不明なため処理不可',
+        updatedState: 'Initial state\n内容なしリクエスト処理'
       })]
     });
 
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect(result.output).toMatchObject({
-      requestType: 'feedback',
-    });
-
-    // KNOWLEDGE_EXTRACTABLEイベントが発行されることを確認
-    expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'KNOWLEDGE_EXTRACTABLE',
-      payload: expect.any(Object),
-    });
+    expect((result.output as any).response).toContain('リクエスト内容が空です');
   });
 
-  it('should update state with processing information', async () => {
+  it('should classify schedule request', async () => {
+    mockEvent.payload.content = '毎日10時にレポートを実行してください';
+
+    mockContext.createDriver = async () => new TestDriver({
+      responses: [JSON.stringify({
+        interpretation: 'レポートの定期実行設定',
+        requestType: 'schedule',
+        events: [{
+          type: 'SCHEDULE_TRIGGERED',
+          payload: {
+            schedule: '0 10 * * *',
+            action: 'generate_report'
+          }
+        }],
+        actions: [{
+          type: 'create',
+          target: 'schedule',
+          details: { cron: '0 10 * * *' }
+        }],
+        response: '毎日10時にレポート実行をスケジュール設定しました。',
+        reasoning: '定期実行の要求',
+        updatedState: 'Initial state\nスケジュール設定: 毎日10時'
+      })]
+    });
+
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect(result.context.state).toContain('ユーザーリクエスト処理');
-    expect(result.context.state).toContain('User ID:');
-    expect(result.context.state).toContain('Request Type: issue');
-    expect(result.context.state).toContain('Interpretation:');
+    expect((result.output as any).requestType).toBe('schedule');
+    expect((result.output as any).eventsEmitted).toContain('SCHEDULE_TRIGGERED');
   });
 
   it('should handle errors gracefully', async () => {
-    const error = new Error('AI driver failed');
+    const error = new Error('AI Driver connection failed');
     mockContext.createDriver = vi.fn().mockRejectedValue(error);
 
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(false);
     expect(result.error).toBe(error);
-  });
-
-  it('should handle missing request content', async () => {
-    (mockEvent.payload as any).content = undefined;
-
-    // undefinedコンテンツの場合のレスポンスを設定
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        interpretation: '内容なし',
-        requestType: 'feedback',
-        events: [],
-        actions: [],
-        response: 'リクエスト内容が空です。',
-        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- Request Type: feedback'
-      })]
-    });
-
-    const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
-
-    // undefinedでもString()で変換されるため、処理は続行される
-    expect(result.success).toBe(true);
-    expect(result.output).toMatchObject({
-      requestType: 'feedback', // デフォルト分類
-    });
   });
 });

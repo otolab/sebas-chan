@@ -141,7 +141,7 @@ export async function updateRelatedIssues(
 
 /**
  * 新規Issueを作成
- * 意図: 既存Issueで対応できない新しい問題を記録
+ * 意図: 既存Issueで対応できない新しい追跡事項を記録
  */
 export async function createNewIssue(
   storage: any, // WorkflowStorageInterface
@@ -194,7 +194,7 @@ export async function createNewIssue(
 
 /**
  * 高優先度イベントを発行
- * 意図: 深刻度が高い問題を即座にシステム全体に通知
+ * 意図: 深刻度が高い事項を即座にシステム全体に通知
  */
 export function emitHighPriorityEvent(
   emitter: WorkflowEventEmitterInterface,

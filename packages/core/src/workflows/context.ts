@@ -10,16 +10,23 @@ import type { WorkflowRecorder } from './recorder.js';
 // Re-export for convenience
 export type { WorkflowRecorder } from './recorder.js';
 
-// イベントタイプの定義
+// イベントタイプの定義（EVENT_CATALOGに基づく）
 export type WorkflowEventType =
-  | 'INGEST_INPUT'
-  | 'PROCESS_USER_REQUEST'
-  | 'ANALYZE_ISSUE_IMPACT'
-  | 'EXTRACT_KNOWLEDGE'
-  | 'UPDATE_FLOW_PRIORITIES'
-  | 'UPDATE_FLOW_RELATIONS'
-  | 'SALVAGE_FROM_POND'
-  | 'COLLECT_SYSTEM_STATS'
+  // 外部イベント
+  | 'USER_REQUEST_RECEIVED'
+  | 'DATA_ARRIVED'
+  // データイベント
+  | 'ISSUE_CREATED'
+  | 'ISSUE_UPDATED'
+  | 'ISSUE_STATUS_CHANGED'
+  | 'KNOWLEDGE_CREATED'
+  // 分析イベント
+  | 'PATTERN_FOUND'
+  | 'KNOWLEDGE_EXTRACTABLE'
+  | 'HIGH_PRIORITY_ISSUE_DETECTED'
+  | 'HIGH_PRIORITY_FLOW_DETECTED'
+  // システムイベント
+  | 'SCHEDULE_TRIGGERED'
   | string; // 拡張可能
 
 // ドライバーファクトリの型定義
