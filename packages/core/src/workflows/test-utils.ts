@@ -130,9 +130,10 @@ export function createCustomMockContext(overrides?: {
 
   // ドライバーレスポンスのカスタマイズ
   if (overrides?.driverResponses) {
-    baseContext.createDriver = async () => new TestDriver({
-      responses: overrides.driverResponses
-    });
+    baseContext.createDriver = async () =>
+      new TestDriver({
+        responses: overrides.driverResponses,
+      });
   }
 
   // ストレージのカスタマイズ
