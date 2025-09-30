@@ -102,15 +102,15 @@ describe('CoreEngine - CoreAgent Integration', () => {
   });
 
   describe('Event forwarding to CoreAgent', () => {
-    it('should process INGEST_INPUT event through CoreAgent', async () => {
+    it('should process DATA_ARRIVED event through CoreAgent', async () => {
       await engine.initialize();
 
       // ワークフローを登録（CoreEngineのworkflowRegistryに直接登録）
       const testWorkflow = {
-        name: 'test-ingest-input',
-        description: 'Test workflow for INGEST_INPUT',
+        name: 'test-data-arrived',
+        description: 'Test workflow for DATA_ARRIVED',
         triggers: {
-          eventTypes: ['INGEST_INPUT'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: vi.fn().mockResolvedValue({
           success: true,
@@ -125,7 +125,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
       await engine.start();
 
-      // createInputを呼び出してINGEST_INPUTイベントを生成
+      // createInputを呼び出してDATA_ARRIVEDイベントを生成
       const input = await engine.createInput({
         source: 'manual',
         content: 'Test input content',
@@ -140,13 +140,11 @@ describe('CoreEngine - CoreAgent Integration', () => {
         expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledWith(
         expect.any(Object), // workflow
         expect.objectContaining({
-          type: 'INGEST_INPUT',
+          type: 'DATA_ARRIVED',
           payload: expect.objectContaining({
-            input: expect.objectContaining({
-              id: input.id,
-              source: 'manual',
-              content: 'Test input content',
-            }),
+            pondEntryId: input.id,
+            source: 'manual',
+            content: 'Test input content',
           }),
         }),
         expect.any(Object), // context
@@ -368,14 +366,14 @@ describe('CoreEngine - CoreAgent Integration', () => {
   });
 
   describe('Input to Pond flow', () => {
-    it('should complete full flow: createInput -> INGEST_INPUT -> CoreAgent', async () => {
+    it('should complete full flow: createInput -> DATA_ARRIVED -> CoreAgent', async () => {
       await engine.initialize();
 
       // ワークフローを登録
       const testWorkflow = {
-        name: 'test-ingest-input-flow',
-        description: 'Test workflow for INGEST_INPUT flow',
-        triggers: { eventTypes: ['INGEST_INPUT'] },
+        name: 'test-data-arrived-flow',
+        description: 'Test workflow for DATA_ARRIVED flow',
+        triggers: { eventTypes: ['DATA_ARRIVED'] },
         executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
       };
 
@@ -406,12 +404,11 @@ describe('CoreEngine - CoreAgent Integration', () => {
         expect(mockCoreAgent.executeWorkflow).toHaveBeenCalledWith(
         expect.any(Object), // workflow
         expect.objectContaining({
-          type: 'INGEST_INPUT',
+          type: 'DATA_ARRIVED',
           payload: expect.objectContaining({
-            input: expect.objectContaining({
-              id: input.id,
-              content: 'Complete flow test',
-            }),
+            pondEntryId: input.id,
+            content: 'Complete flow test',
+            source: 'manual',
           }),
         }),
         expect.any(Object), // context
@@ -423,11 +420,15 @@ describe('CoreEngine - CoreAgent Integration', () => {
     it('should handle multiple inputs in sequence', async () => {
       await engine.initialize();
 
+      // デフォルトワークフローをクリアして、テスト用ワークフローのみを登録
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.clear();
+
       // ワークフローを登録
       const testWorkflow = {
         name: 'test-multiple-inputs',
         description: 'Test workflow for multiple inputs',
-        triggers: { eventTypes: ['INGEST_INPUT'] },
+        triggers: { eventTypes: ['DATA_ARRIVED'] },
         executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
       };
 
@@ -460,7 +461,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
       // 各イベントの内容を確認
       for (let i = 0; i < 3; i++) {
         const call = mockCoreAgent.executeWorkflow.mock.calls[i];
-        expect(call[1].payload.input.content).toBe(`Input ${i}`);
+        expect(call[1].payload.content).toBe(`Input ${i}`);
       }
     });
   });

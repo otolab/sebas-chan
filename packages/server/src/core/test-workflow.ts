@@ -36,7 +36,8 @@ export class TestWorkflow {
    * 確定的なレスポンスを返す
    */
   async processUserRequest(event: Event): Promise<void> {
-    const { request } = event.payload as { request: string };
+    const payload = event.payload as any; // TODO: 適切な型定義に更新
+    const request = payload.content || payload.request || '';
 
     // テスト用の確定的な処理
     if (request.includes('test')) {
@@ -72,7 +73,12 @@ export class TestWorkflow {
    * 確定的にIssueを生成
    */
   async ingestInput(event: Event): Promise<void> {
-    const { input } = event.payload as { input: { id: string; content: string; source?: string } };
+    const payload = event.payload as any; // TODO: 適切な型定義に更新
+    const input = {
+      id: payload.pondEntryId || 'unknown',
+      content: payload.content || '',
+      source: payload.source || 'unknown',
+    };
 
     // キーワードベースの確定的な分類
     const labels: string[] = [];
@@ -187,6 +193,7 @@ export class TestWorkflow {
         content: `Problem identified: ${issue.description}`,
         reputation: { upvotes: 0, downvotes: 0 },
         sources: [{ type: 'issue', issueId }],
+        createdAt: new Date(),
       });
     }
 
@@ -198,6 +205,7 @@ export class TestWorkflow {
         content: `Solution for: ${issue.title}`,
         reputation: { upvotes: 1, downvotes: 0 },
         sources: [{ type: 'issue', issueId }],
+        createdAt: new Date(),
       });
     }
 
@@ -209,6 +217,7 @@ export class TestWorkflow {
         content: issue.description.substring(0, 200),
         reputation: { upvotes: 0, downvotes: 0 },
         sources: [{ type: 'issue', issueId }],
+        createdAt: new Date(),
       });
     }
 
@@ -284,24 +293,28 @@ export class TestWorkflow {
     console.log('[TestWorkflow] Processing event:', event.type);
 
     switch (event.type) {
-      case 'PROCESS_USER_REQUEST':
+      case 'USER_REQUEST_RECEIVED':
         await this.processUserRequest(event);
         break;
 
-      case 'INGEST_INPUT':
+      case 'DATA_ARRIVED':
         await this.ingestInput(event);
         break;
 
-      case 'ANALYZE_ISSUE_IMPACT':
+      case 'ISSUE_CREATED':
+      case 'ISSUE_UPDATED':
         await this.analyzeIssueImpact(event);
         break;
 
-      case 'EXTRACT_KNOWLEDGE':
+      case 'KNOWLEDGE_EXTRACTABLE':
+      case 'ISSUE_STATUS_CHANGED':
+      case 'PATTERN_FOUND':
         await this.extractKnowledge(event);
         break;
 
-      case 'CLUSTER_ISSUES':
-        await this.clusterIssues(event);
+      case 'HIGH_PRIORITY_ISSUE_DETECTED':
+      case 'HIGH_PRIORITY_FLOW_DETECTED':
+        // TODO: 実装
         break;
 
       default:

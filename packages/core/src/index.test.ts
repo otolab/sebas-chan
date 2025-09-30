@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreAgent, AgentEvent, generateWorkflowRegistry } from './index.js';
-import { createMockWorkflowContext } from './test-utils.js';
+import { createMockWorkflowContext } from './workflows/test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 
 describe('CoreAgent', () => {

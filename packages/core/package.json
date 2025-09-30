@@ -16,7 +16,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@moduler-prompt/core": "^0.1.2",
+    "@moduler-prompt/core": "^0.1.5",
     "@moduler-prompt/driver": "^0.2.1",
     "@moduler-prompt/utils": "^0.1.2",
     "@sebas-chan/shared-types": "*"

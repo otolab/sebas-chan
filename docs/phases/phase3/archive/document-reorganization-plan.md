@@ -9,14 +9,17 @@ Issue #22の作業として、ドキュメントの重複を解消し、役割�
 ### 1. ワークフロー関連
 
 #### 現状
+
 - `WORKFLOW_ARCHITECTURE.md` (402行): 実装例中心、具体的なワークフロー実装
 - `workflows/SPECIFICATION.md` (326行): 仕様定義、インターフェース詳細
 
 #### 問題点
+
 - WorkflowDefinition、WorkflowContext等の型定義が両方に存在
 - 役割分担が不明確
 
 #### 整理方針
+
 - **SPECIFICATION.md**: 正式な仕様書として維持（インターフェース、型定義、要件）
 - **WORKFLOW_ARCHITECTURE.md**: 実装例とパターン集に特化
   - 型定義はSPECIFICATION.mdを参照
@@ -25,26 +28,32 @@ Issue #22の作業として、ドキュメントの重複を解消し、役割�
 ### 2. 設計関連
 
 #### 現状
+
 - `ARCHITECTURE.md`: システム全体のアーキテクチャ
 - `SYSTEM_DESIGN.md`: 詳細設計
 
 #### 問題点
+
 - 内容の重複は少ないが、参照関係が不明確
 
 #### 整理方針
+
 - 現状維持（役割が異なるため）
 - 相互参照を追加
 
 ### 3. 実装状況
 
 #### 現状
+
 - `IMPLEMENTATION_STATUS.md`: プロジェクト全体の実装状況
 - `phases/phase3/implementation-status.md`: Phase 3の詳細
 
 #### 問題点
+
 - Phase 3の情報が2箇所に分散
 
 #### 整理方針
+
 - **IMPLEMENTATION_STATUS.md**: 各フェーズのサマリーのみ
 - **phases/phase3/implementation-status.md**: Phase 3の詳細記録
 

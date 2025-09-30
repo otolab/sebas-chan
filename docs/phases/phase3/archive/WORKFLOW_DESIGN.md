@@ -12,9 +12,11 @@
 ### A-0: PROCESS_USER_REQUEST（ユーザーリクエスト処理）
 
 #### 目的
+
 ユーザーからの自然言語リクエストを解釈し、適切なアクションに変換する。
 
 #### 入力
+
 ```typescript
 {
   request: string;        // ユーザーの自然言語リクエスト
@@ -26,9 +28,11 @@
 ```
 
 #### 手順
+
 1. **リクエスト分析**
    - Moduler Promptでリクエストを分析
    - format(schema)で以下の構造を取得：
+
    ```typescript
    {
      intent: 'create_task' | 'query_info' | 'update_status' | 'schedule' | 'other';
@@ -53,6 +57,7 @@
    - needsFollowUp の場合、FOLLOW_UP_REQUIRED を発行
 
 #### 出力
+
 ```typescript
 {
   processedRequest: {
@@ -67,9 +72,11 @@
 ### A-1: INGEST_INPUT（Input取り込み）
 
 #### 目的
+
 外部ソース（Reporter）からのInputを受け取り、Pondに保存し、必要に応じてIssueを生成する。
 
 #### 入力
+
 ```typescript
 {
   input: {
@@ -86,6 +93,7 @@
 ```
 
 #### 手順
+
 1. **Pondへの永続化**
    - すべてのInputを無条件でPondに保存
    - ベクトル化して検索可能にする
@@ -93,11 +101,12 @@
 2. **即座の処理判断**
    - Moduler Promptで緊急性を判定
    - format(schema)：
+
    ```typescript
    {
      requiresImmediate: boolean;
      category: 'action_required' | 'information' | 'noise';
-     suggestedPriority: number;  // -100 to 100
+     suggestedPriority: number; // -100 to 100
    }
    ```
 
@@ -110,6 +119,7 @@
    - Issue生成時は ISSUE_CREATED を発行
 
 #### 出力
+
 ```typescript
 {
   pondEntry: PondEntry;
@@ -121,9 +131,11 @@
 ### A-2: ANALYZE_ISSUE_IMPACT（Issue影響分析）
 
 #### 目的
+
 新規または更新されたIssueの影響範囲を分析し、関連するFlowを更新する。
 
 #### 入力
+
 ```typescript
 {
   issueId: string;
@@ -132,6 +144,7 @@
 ```
 
 #### 手順
+
 1. **関連Issue検索**
    - Pondからベクトル検索で関連情報を取得
    - 既存Issueとの関連性を判定
@@ -139,6 +152,7 @@
 2. **影響分析**
    - Moduler Promptで影響を分析
    - format(schema)：
+
    ```typescript
    {
      impactLevel: 'critical' | 'high' | 'medium' | 'low';
@@ -164,6 +178,7 @@
    - 関連Issue更新時は ISSUE_RELATION_UPDATED
 
 #### 出力
+
 ```typescript
 {
   analysis: ImpactAnalysis;
@@ -175,9 +190,11 @@
 ### A-3: EXTRACT_KNOWLEDGE（Knowledge抽出）
 
 #### 目的
+
 完了したIssueや蓄積されたデータから再利用可能な知識を抽出する。
 
 #### 入力
+
 ```typescript
 {
   source: {
@@ -188,6 +205,7 @@
 ```
 
 #### 手順
+
 1. **コンテンツ収集**
    - ソースに関連するすべての情報を収集
    - Issue の場合：説明、更新履歴、解決方法
@@ -195,6 +213,7 @@
 2. **知識抽出**
    - Moduler Promptで知識を抽出
    - format(schema)：
+
    ```typescript
    {
      knowledgeItems: {
@@ -217,6 +236,7 @@
    - 将来の利用でupvote/downvote可能
 
 #### 出力
+
 ```typescript
 {
   extractedKnowledge: Knowledge[];
@@ -229,9 +249,11 @@
 ### B-1: CLUSTER_ISSUES（Issue群のクラスタリング）
 
 #### 目的
-関連するIssueをグループ化し、より大きな課題や機会を発見する。
+
+関連するIssueをグループ化し、より大きなパターンや機会を発見する。
 
 #### 入力
+
 ```typescript
 {
   trigger: 'scheduled' | 'threshold_reached';
@@ -243,6 +265,7 @@
 ```
 
 #### 手順
+
 1. **Issue収集**
    - スコープに基づいてIssueを収集
    - ベクトル化して類似度計算の準備
@@ -250,6 +273,7 @@
 2. **クラスタリング分析**
    - Moduler Promptでパターンを発見
    - format(schema)：
+
    ```typescript
    {
      clusters: {
@@ -269,6 +293,7 @@
    - 必要に応じてメタIssueを作成
 
 #### 出力
+
 ```typescript
 {
   clusters: IssueCluster[];
@@ -280,9 +305,11 @@
 ### B-2: UPDATE_FLOW_RELATIONS（Flow関係更新）
 
 #### 目的
+
 FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持する。
 
 #### 入力
+
 ```typescript
 {
   flowId?: string;  // 特定Flow or 全Flow
@@ -291,6 +318,7 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
 ```
 
 #### 手順
+
 1. **現状分析**
    - FlowとそのIssueの現在の状態を確認
    - 完了率、停滞状況を計算
@@ -298,6 +326,7 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
 2. **関係性評価**
    - Moduler Promptで関係性を評価
    - format(schema)：
+
    ```typescript
    {
      flowHealth: 'healthy' | 'needs_attention' | 'stale';
@@ -305,12 +334,14 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
        issueId: string;
        stillRelevant: boolean;
        reason: string;
-     }[];
+     }
+     [];
      suggestedChanges: {
        action: 'remove_issue' | 'add_issue' | 'split_flow' | 'merge_flow';
        target: string;
        rationale: string;
-     }[];
+     }
+     [];
    }
    ```
 
@@ -319,6 +350,7 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
    - Flowのステータス更新
 
 #### 出力
+
 ```typescript
 {
   updatedFlows: Flow[];
@@ -329,9 +361,11 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
 ### B-3: UPDATE_FLOW_PRIORITIES（Flow優先度更新）
 
 #### 目的
+
 外部要因や進捗に基づいてFlowの優先度を動的に調整する。
 
 #### 入力
+
 ```typescript
 {
   trigger: 'scheduled' | 'context_changed';
@@ -343,6 +377,7 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
 ```
 
 #### 手順
+
 1. **優先度要因の収集**
    - 締切、依存関係、停滞期間
    - ユーザーの最近の活動パターン
@@ -350,6 +385,7 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
 2. **優先度計算**
    - Moduler Promptで優先度を再評価
    - format(schema)：
+
    ```typescript
    {
      priorityUpdates: {
@@ -358,9 +394,11 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
        suggestedPriority: number;
        factors: {
          factor: string;
-         impact: number;  // -10 to +10
-       }[];
-     }[];
+         impact: number; // -10 to +10
+       }
+       [];
+     }
+     [];
    }
    ```
 
@@ -369,6 +407,7 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
    - 大幅な変更時は理由を記録
 
 #### 出力
+
 ```typescript
 {
   priorityChanges: PriorityChange[];
@@ -379,20 +418,23 @@ FlowとIssueの関係性を最新状態に保ち、Flowの妥当性を維持す�
 ### B-4: SALVAGE_FROM_POND（Pondからのサルベージ）
 
 #### 目的
+
 Pondに蓄積された未整理情報から、時間経過により価値が顕在化した情報を発見する。
 
 #### 入力
+
 ```typescript
 {
-  trigger: 'scheduled';  // 定期実行
+  trigger: 'scheduled'; // 定期実行
   config: {
-    ageThreshold: number;  // days
+    ageThreshold: number; // days
     sampleSize: number;
   }
 }
 ```
 
 #### 手順
+
 1. **候補選定**
    - 古いが未処理のPondエントリを抽出
    - ランダムサンプリング or スコアベース
@@ -400,6 +442,7 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
 2. **価値評価**
    - 現在のコンテキストで再評価
    - format(schema)：
+
    ```typescript
    {
      evaluations: {
@@ -417,6 +460,7 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
    - 関連付けを設定
 
 #### 出力
+
 ```typescript
 {
   salvagedItems: {
@@ -432,9 +476,11 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
 ### C-1: SUGGEST_NEXT_FLOW（次のFlow提案）
 
 #### 目的
+
 ユーザーの現在の状況とパターンから、次に取り組むべきFlowを提案する。
 
 #### 入力
+
 ```typescript
 {
   trigger: 'flow_completed' | 'user_request' | 'morning_routine';
@@ -447,6 +493,7 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
 ```
 
 #### 手順
+
 1. **コンテキスト分析**
    - 完了したFlow、時間帯、ユーザーの状態
    - 過去の行動パターン
@@ -454,18 +501,20 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
 2. **提案生成**
    - Moduler Promptで次のFlow提案
    - format(schema)：
+
    ```typescript
    {
      suggestions: {
        flowId: string;
        reason: string;
-       estimatedDuration: number;  // minutes
+       estimatedDuration: number; // minutes
        confidence: number;
        alternativeIf: {
          condition: string;
          alternativeFlowId: string;
        }
-     }[];
+     }
+     [];
    }
    ```
 
@@ -473,6 +522,7 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
    - 提案内容と採否を記録（学習用）
 
 #### 出力
+
 ```typescript
 {
   suggestions: FlowSuggestion[];
@@ -483,9 +533,11 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
 ### C-2: SUGGEST_NEXT_ACTION（Issue対応提案）
 
 #### 目的
+
 特定のIssueに対する具体的なアクションを提案する。
 
 #### 入力
+
 ```typescript
 {
   issueId: string;
@@ -494,6 +546,7 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
 ```
 
 #### 手順
+
 1. **Issue分析**
    - Issueの内容、状態、履歴
    - 関連Knowledge検索
@@ -501,6 +554,7 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
 2. **アクション提案**
    - Moduler Promptで具体的アクション生成
    - format(schema)：
+
    ```typescript
    {
      actions: {
@@ -519,6 +573,7 @@ Pondに蓄積された未整理情報から、時間経過により価値が顕�
    - 必要なツール、参考情報をまとめる
 
 #### 出力
+
 ```typescript
 {
   suggestedActions: Action[];

@@ -5,21 +5,25 @@
 ### 1.1 現在の実装の問題点
 
 #### A-0: ProcessUserRequest
+
 - **AI処理が単純**: 単純なプロンプト文字列でAIを呼び出し、構造化されていない
 - **分類ロジックが粗い**: `classifyRequest`が単純な文字列マッチングのみ
 - **エラーハンドリング不足**: AI失敗時の代替処理がない
 
 #### A-1: IngestInput
+
 - **AI未使用**: `shouldTriggerAnalysis`が単純なキーワードマッチのみ
 - **構造化不足**: Inputの内容理解が浅い
 - **メタデータ活用不足**: sourceやmetadataが活用されていない
 
 #### A-2: AnalyzeIssueImpact
+
 - **影響度計算が機械的**: `calculateImpactScore`が単純すぎる
 - **AI出力が非構造化**: 自然言語のみで後続処理が困難
 - **関連性判定が粗い**: 単純な文字列検索のみ
 
 #### A-3: ExtractKnowledge
+
 - **重複判定が単純**: 文字列完全一致のみ
 - **分類が粗い**: `determineKnowledgeType`が単純
 - **構造化不足**: 知識の構造化が不十分
@@ -27,6 +31,7 @@
 ### 1.2 ModulerPrompt活用の不足
 
 現在の実装では：
+
 - 単純な文字列プロンプトを使用
 - 構造化出力（Schema）を活用していない
 - モジュール化による再利用性がない
@@ -37,6 +42,7 @@
 ### 2.1 処理の分離原則
 
 #### AI処理すべき部分
+
 1. **理解・解釈**
    - 自然言語の意図理解
    - コンテキスト依存の判断
@@ -53,6 +59,7 @@
    - 類似性・関連性判定
 
 #### 機械的処理すべき部分
+
 1. **データ操作**
    - DB検索・保存
    - ID生成・管理
@@ -80,11 +87,11 @@ const UserRequestAnalysisSchema: JSONSchema = {
     requestType: {
       type: 'string',
       enum: ['issue', 'question', 'feedback', 'action'],
-      description: 'リクエストの種類'
+      description: 'リクエストの種類',
     },
     intent: {
       type: 'string',
-      description: 'ユーザーの意図'
+      description: 'ユーザーの意図',
     },
     entities: {
       type: 'object',
@@ -92,46 +99,42 @@ const UserRequestAnalysisSchema: JSONSchema = {
         topics: {
           type: 'array',
           items: { type: 'string' },
-          description: '関連トピック'
+          description: '関連トピック',
         },
         references: {
           type: 'array',
           items: { type: 'string' },
-          description: '参照情報'
+          description: '参照情報',
         },
         urgency: {
           type: 'string',
           enum: ['low', 'medium', 'high'],
-          description: '緊急度'
-        }
+          description: '緊急度',
+        },
       },
-      required: ['topics', 'references', 'urgency']
+      required: ['topics', 'references', 'urgency'],
     },
     suggestedWorkflows: {
       type: 'array',
       items: { type: 'string' },
-      description: '推奨されるワークフロー'
+      description: '推奨されるワークフロー',
     },
     confidence: {
       type: 'number',
       minimum: 0,
       maximum: 1,
-      description: '分析の確信度'
-    }
+      description: '分析の確信度',
+    },
   },
-  required: ['requestType', 'intent', 'entities', 'suggestedWorkflows', 'confidence']
+  required: ['requestType', 'intent', 'entities', 'suggestedWorkflows', 'confidence'],
 };
 
 // ModulerPromptモジュール例
 const analyzeRequestModule: PromptModule<RequestContext> = {
   objective: ['ユーザーリクエストを分析し構造化する'],
-  instructions: [
-    'リクエストタイプを特定',
-    '関連エンティティを抽出',
-    '適切なワークフローを提案'
-  ],
-  schema: UserRequestAnalysisSchema,  // JSONSchemaオブジェクト
-  outputFormat: 'json'
+  instructions: ['リクエストタイプを特定', '関連エンティティを抽出', '適切なワークフローを提案'],
+  schema: UserRequestAnalysisSchema, // JSONSchemaオブジェクト
+  outputFormat: 'json',
 };
 ```
 
@@ -207,7 +210,7 @@ const AnalyzeRequestSchema: JSONSchema = {
   properties: {
     requestType: {
       type: 'string',
-      enum: ['issue', 'question', 'feedback', 'action']
+      enum: ['issue', 'question', 'feedback', 'action'],
     },
     intent: { type: 'string' },
     entities: {
@@ -215,14 +218,14 @@ const AnalyzeRequestSchema: JSONSchema = {
       properties: {
         topics: { type: 'array', items: { type: 'string' } },
         references: { type: 'array', items: { type: 'string' } },
-        urgency: { type: 'string', enum: ['low', 'medium', 'high'] }
+        urgency: { type: 'string', enum: ['low', 'medium', 'high'] },
       },
-      required: ['topics', 'references', 'urgency']
+      required: ['topics', 'references', 'urgency'],
     },
     suggestedWorkflows: { type: 'array', items: { type: 'string' } },
-    confidence: { type: 'number', minimum: 0, maximum: 1 }
+    confidence: { type: 'number', minimum: 0, maximum: 1 },
   },
-  required: ['requestType', 'intent', 'entities', 'suggestedWorkflows', 'confidence']
+  required: ['requestType', 'intent', 'entities', 'suggestedWorkflows', 'confidence'],
 };
 
 export const analyzeRequestModule: PromptModule<RequestContext> = {
@@ -232,14 +235,14 @@ export const analyzeRequestModule: PromptModule<RequestContext> = {
     'リクエストの意図を特定',
     '関連するトピックとエンティティを抽出',
     '緊急度を判定',
-    '適切な後続ワークフローを提案'
+    '適切な後続ワークフローを提案',
   ],
 
   schema: AnalyzeRequestSchema,
 
   examples: [
     // 少数ショット学習用の例
-  ]
+  ],
 };
 
 // executor.ts - AI処理と機械的処理の分離
@@ -274,12 +277,12 @@ const AnalyzeContentSchema: JSONSchema = {
   properties: {
     contentType: {
       type: 'string',
-      enum: ['log', 'report', 'alert', 'data']
+      enum: ['log', 'report', 'alert', 'data'],
     },
     hasError: { type: 'boolean' },
     errorSeverity: {
       type: 'string',
-      enum: ['none', 'low', 'medium', 'high', 'critical']
+      enum: ['none', 'low', 'medium', 'high', 'critical'],
     },
     keywords: { type: 'array', items: { type: 'string' } },
     entities: {
@@ -294,18 +297,25 @@ const AnalyzeContentSchema: JSONSchema = {
             properties: {
               name: { type: 'string' },
               value: { type: 'number' },
-              unit: { type: 'string' }
+              unit: { type: 'string' },
             },
-            required: ['name', 'value', 'unit']
-          }
-        }
+            required: ['name', 'value', 'unit'],
+          },
+        },
       },
-      required: ['systems', 'timestamps', 'metrics']
+      required: ['systems', 'timestamps', 'metrics'],
     },
     shouldAnalyze: { type: 'boolean' },
-    suggestedActions: { type: 'array', items: { type: 'string' } }
+    suggestedActions: { type: 'array', items: { type: 'string' } },
   },
-  required: ['contentType', 'hasError', 'keywords', 'entities', 'shouldAnalyze', 'suggestedActions']
+  required: [
+    'contentType',
+    'hasError',
+    'keywords',
+    'entities',
+    'shouldAnalyze',
+    'suggestedActions',
+  ],
 };
 
 export const analyzeContentModule: PromptModule<ContentContext> = {
@@ -315,10 +325,10 @@ export const analyzeContentModule: PromptModule<ContentContext> = {
     'コンテンツのタイプを特定',
     'エラーやアノマリーを検出',
     'キーワードとエンティティを抽出',
-    '処理優先度を判定'
+    '処理優先度を判定',
   ],
 
-  schema: AnalyzeContentSchema
+  schema: AnalyzeContentSchema,
 };
 ```
 
@@ -336,16 +346,23 @@ const AnalyzeImpactSchema: JSONSchema = {
         affectedUsers: { type: 'number' },
         businessImpact: {
           type: 'string',
-          enum: ['none', 'low', 'medium', 'high', 'critical']
+          enum: ['none', 'low', 'medium', 'high', 'critical'],
         },
         technicalComplexity: {
           type: 'string',
-          enum: ['trivial', 'simple', 'moderate', 'complex', 'very_complex']
+          enum: ['trivial', 'simple', 'moderate', 'complex', 'very_complex'],
         },
         estimatedResolutionTime: { type: 'number' }, // hours
-        dependencies: { type: 'array', items: { type: 'string' } }
+        dependencies: { type: 'array', items: { type: 'string' } },
       },
-      required: ['affectedSystems', 'affectedUsers', 'businessImpact', 'technicalComplexity', 'estimatedResolutionTime', 'dependencies']
+      required: [
+        'affectedSystems',
+        'affectedUsers',
+        'businessImpact',
+        'technicalComplexity',
+        'estimatedResolutionTime',
+        'dependencies',
+      ],
     },
     relatedIssues: {
       type: 'array',
@@ -355,12 +372,12 @@ const AnalyzeImpactSchema: JSONSchema = {
           issueId: { type: 'string' },
           relation: {
             type: 'string',
-            enum: ['duplicate', 'blocks', 'blocked_by', 'relates_to', 'causes']
+            enum: ['duplicate', 'blocks', 'blocked_by', 'relates_to', 'causes'],
           },
-          confidence: { type: 'number', minimum: 0, maximum: 1 }
+          confidence: { type: 'number', minimum: 0, maximum: 1 },
         },
-        required: ['issueId', 'relation', 'confidence']
-      }
+        required: ['issueId', 'relation', 'confidence'],
+      },
     },
     recommendations: {
       type: 'array',
@@ -369,14 +386,14 @@ const AnalyzeImpactSchema: JSONSchema = {
         properties: {
           action: { type: 'string' },
           priority: { type: 'number' },
-          reason: { type: 'string' }
+          reason: { type: 'string' },
         },
-        required: ['action', 'priority', 'reason']
-      }
+        required: ['action', 'priority', 'reason'],
+      },
     },
-    impactScore: { type: 'number', minimum: 0, maximum: 100 }
+    impactScore: { type: 'number', minimum: 0, maximum: 100 },
   },
-  required: ['impactAnalysis', 'relatedIssues', 'recommendations', 'impactScore']
+  required: ['impactAnalysis', 'relatedIssues', 'recommendations', 'impactScore'],
 };
 
 export const analyzeImpactModule: PromptModule<ImpactContext> = {
@@ -386,10 +403,10 @@ export const analyzeImpactModule: PromptModule<ImpactContext> = {
     '影響を受けるコンポーネントを特定',
     'ビジネスへの影響を評価',
     '技術的な影響範囲を分析',
-    '解決の緊急度を判定'
+    '解決の緊急度を判定',
   ],
 
-  schema: AnalyzeImpactSchema
+  schema: AnalyzeImpactSchema,
 };
 ```
 
@@ -407,7 +424,7 @@ const ExtractKnowledgeSchema: JSONSchema = {
         summary: { type: 'string' },
         category: {
           type: 'string',
-          enum: ['solution', 'pattern', 'issue', 'best_practice', 'reference']
+          enum: ['solution', 'pattern', 'issue', 'best_practice', 'reference'],
         },
         content: { type: 'string' },
         tags: { type: 'array', items: { type: 'string' } },
@@ -416,9 +433,9 @@ const ExtractKnowledgeSchema: JSONSchema = {
           properties: {
             contexts: { type: 'array', items: { type: 'string' } },
             systems: { type: 'array', items: { type: 'string' } },
-            conditions: { type: 'array', items: { type: 'string' } }
+            conditions: { type: 'array', items: { type: 'string' } },
           },
-          required: ['contexts', 'systems', 'conditions']
+          required: ['contexts', 'systems', 'conditions'],
         },
         relations: {
           type: 'array',
@@ -427,13 +444,13 @@ const ExtractKnowledgeSchema: JSONSchema = {
             properties: {
               type: {
                 type: 'string',
-                enum: ['supersedes', 'extends', 'contradicts', 'supports']
+                enum: ['supersedes', 'extends', 'contradicts', 'supports'],
               },
               targetId: { type: 'string' },
-              description: { type: 'string' }
+              description: { type: 'string' },
             },
-            required: ['type', 'targetId', 'description']
-          }
+            required: ['type', 'targetId', 'description'],
+          },
         },
         confidence: { type: 'number', minimum: 0, maximum: 1 },
         extractionMetadata: {
@@ -441,12 +458,22 @@ const ExtractKnowledgeSchema: JSONSchema = {
           properties: {
             sourceType: { type: 'string' },
             extractionMethod: { type: 'string' },
-            timestamp: { type: 'string', format: 'date-time' }
+            timestamp: { type: 'string', format: 'date-time' },
           },
-          required: ['sourceType', 'extractionMethod', 'timestamp']
-        }
+          required: ['sourceType', 'extractionMethod', 'timestamp'],
+        },
       },
-      required: ['title', 'summary', 'category', 'content', 'tags', 'applicability', 'relations', 'confidence', 'extractionMetadata']
+      required: [
+        'title',
+        'summary',
+        'category',
+        'content',
+        'tags',
+        'applicability',
+        'relations',
+        'confidence',
+        'extractionMetadata',
+      ],
     },
     isDuplicate: { type: 'boolean' },
     similarKnowledge: {
@@ -456,13 +483,13 @@ const ExtractKnowledgeSchema: JSONSchema = {
         properties: {
           id: { type: 'string' },
           similarity: { type: 'number', minimum: 0, maximum: 1 },
-          mergeRecommended: { type: 'boolean' }
+          mergeRecommended: { type: 'boolean' },
         },
-        required: ['id', 'similarity', 'mergeRecommended']
-      }
-    }
+        required: ['id', 'similarity', 'mergeRecommended'],
+      },
+    },
   },
-  required: ['knowledge', 'isDuplicate', 'similarKnowledge']
+  required: ['knowledge', 'isDuplicate', 'similarKnowledge'],
 };
 
 export const extractKnowledgeModule: PromptModule<KnowledgeContext> = {
@@ -472,10 +499,10 @@ export const extractKnowledgeModule: PromptModule<KnowledgeContext> = {
     '再利用可能な知識を特定',
     '知識をカテゴリー分類',
     '関連する既存知識とリンク',
-    'メタデータを生成'
+    'メタデータを生成',
   ],
 
-  schema: ExtractKnowledgeSchema
+  schema: ExtractKnowledgeSchema,
 };
 ```
 
@@ -484,21 +511,25 @@ export const extractKnowledgeModule: PromptModule<KnowledgeContext> = {
 ### 3.1 段階的移行計画
 
 #### Phase 1: 基盤整備（1週間）
+
 1. ディレクトリ構造の作成
 2. 共通スキーマとインターフェースの定義
 3. ModulerPromptモジュールのテンプレート作成
 
 #### Phase 2: A-0の書き直し（3日）
+
 1. 新構造でA-0を完全に書き直し
 2. テストの作成と実行
 3. 既存システムとの統合テスト
 
 #### Phase 3: 残りのワークフロー移行（1週間）
+
 1. A-1, A-2, A-3を順次移行
 2. 各ワークフローのテスト作成
 3. ワークフローチェーンの統合テスト
 
 #### Phase 4: 最適化と改善（3日）
+
 1. パフォーマンス測定と最適化
 2. エラーハンドリングの強化
 3. ドキュメント整備
@@ -531,28 +562,31 @@ describe('A-0: ProcessUserRequest', () => {
 ## 4. 期待される効果
 
 ### 4.1 品質向上
+
 - **型安全性**: Schema定義により出力が予測可能
 - **保守性**: モジュール化により変更が容易
 - **テスタビリティ**: AI処理と機械的処理の分離によりテストが簡単
 
 ### 4.2 機能向上
+
 - **理解度向上**: AIによる深い内容理解
 - **精度向上**: 構造化出力による正確な処理
 - **拡張性**: 新機能追加が容易
 
 ### 4.3 パフォーマンス
+
 - **効率化**: 不要なAI呼び出しの削減
 - **並列化**: 独立した処理の並列実行
 - **キャッシュ**: 構造化データのキャッシュ可能性
 
 ## 5. リスクと対策
 
-| リスク | 影響 | 対策 |
-|--------|------|------|
-| AI処理コストの増加 | 高 | 適切なキャッシュとバッチ処理 |
-| 移行期間中の不整合 | 中 | 段階的移行と十分なテスト |
-| 複雑性の増大 | 中 | 明確なドキュメントとサンプル |
-| スキーマ変更の影響 | 低 | バージョニングと後方互換性 |
+| リスク             | 影響 | 対策                         |
+| ------------------ | ---- | ---------------------------- |
+| AI処理コストの増加 | 高   | 適切なキャッシュとバッチ処理 |
+| 移行期間中の不整合 | 中   | 段階的移行と十分なテスト     |
+| 複雑性の増大       | 中   | 明確なドキュメントとサンプル |
+| スキーマ変更の影響 | 低   | バージョニングと後方互換性   |
 
 ## 6. まとめ
 

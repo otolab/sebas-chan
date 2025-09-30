@@ -4,10 +4,10 @@
 
 ## ドキュメント一覧
 
-| ドキュメント | 説明 |
-|------------|------|
-| [STRATEGY.md](STRATEGY.md) | テスト戦略と方針 |
-| [SPECIFICATIONS.md](SPECIFICATIONS.md) | テスト仕様書 |
+| ドキュメント                           | 説明             |
+| -------------------------------------- | ---------------- |
+| [STRATEGY.md](STRATEGY.md)             | テスト戦略と方針 |
+| [SPECIFICATIONS.md](SPECIFICATIONS.md) | テスト仕様書     |
 
 ## 読む順序
 

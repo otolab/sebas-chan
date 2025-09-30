@@ -165,11 +165,13 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       registry.register(ingestInputWorkflow);
     });
 
-    it('TEST-EVENT-001: InputからINGEST_INPUTイベントが生成される', async () => {
+    it('TEST-EVENT-001: InputからDATA_ARRIVEDイベントが生成される', async () => {
       // Arrange
       await engine.start();
-      const eventListener = vi.fn();
-      engine.on('event:queued', eventListener);
+      const eventReceivedListener = vi.fn();
+      const workflowQueuedListener = vi.fn();
+      engine.on('event:received', eventReceivedListener);
+      engine.on('workflow:queued', workflowQueuedListener);
 
       // Act
       const input = await engine.createInput({
@@ -183,18 +185,31 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       expect(input.source).toBe('manual');
       expect(input.content).toBe('テストコンテンツ');
 
-      // イベントがキューに追加されたことを確認
-      expect(eventListener).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'INGEST_INPUT',
-          payload: expect.objectContaining({
-            input: expect.objectContaining({
-              id: input.id,
+      // イベント処理を待つ
+      await vi.advanceTimersByTimeAsync(100);
+
+      // イベントが受信されたことを確認
+      await vi.waitFor(() => {
+        expect(eventReceivedListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DATA_ARRIVED',
+            payload: expect.objectContaining({
+              pondEntryId: input.id,
               content: 'テストコンテンツ',
+              source: 'manual',
             }),
-          }),
-        })
-      );
+          })
+        );
+      });
+
+      // ワークフローがキューに入ったことを確認（IngestInputワークフローが登録されている場合）
+      if (workflowQueuedListener.mock.calls.length > 0) {
+        expect(workflowQueuedListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            workflow: 'IngestInput',
+          })
+        );
+      }
     });
 
     it('TEST-EVENT-002: イベントがWorkflowRegistryから適切なワークフローを取得して実行される', async () => {

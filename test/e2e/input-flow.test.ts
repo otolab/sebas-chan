@@ -39,18 +39,22 @@ describe('Input処理フローのE2Eテスト', () => {
     name: 'IngestInput',
     description: '入力データをPondに保存し、必要に応じて分析',
     triggers: {
-      eventTypes: ['INGEST_INPUT'],
+      eventTypes: ['DATA_ARRIVED'],
     },
     executor: vi.fn().mockImplementation(async (event, context, emitter) => {
-      const input = event.payload.input;
+      const input = {
+        id: event.payload.pondEntryId,
+        content: event.payload.content,
+        source: event.payload.source,
+      };
       processedInputs.push(input);
 
       // Pondに保存
       const pondEntry = await context.storage.addPondEntry({
-        content: input.content,
-        source: input.source,
+        content: event.payload.content,
+        source: event.payload.source,
         metadata: {
-          inputId: input.id,
+          inputId: event.payload.pondEntryId,
           processedAt: new Date(),
         },
       });
@@ -194,7 +198,7 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'INGEST_INPUT') {
+        if (event.type === 'DATA_ARRIVED') {
           return {
             event,
             workflows: [ingestInputWorkflow],
@@ -207,7 +211,7 @@ describe('Input処理フローのE2Eテスト', () => {
       await engine.start();
 
       // イベントリスナーを設定
-      engine.on('event:queued', (event) => capturedEvents.push(event));
+      engine.on('event:received', (event) => capturedEvents.push(event));
 
       // Act - Input投稿
       const inputData = {
@@ -227,10 +231,10 @@ describe('Input処理フローのE2Eテスト', () => {
       expect(input.source).toBe('manual');
       expect(input.content).toBe('テスト用の入力データです。正常なコンテンツ。');
 
-      // 2. INGEST_INPUTイベントが生成される
+      // 2. DATA_ARRIVEDイベントが生成される
       expect(capturedEvents).toHaveLength(1);
-      expect(capturedEvents[0].type).toBe('INGEST_INPUT');
-      expect(capturedEvents[0].payload.input.id).toBe(input.id);
+      expect(capturedEvents[0].type).toBe('DATA_ARRIVED');
+      expect(capturedEvents[0].payload.pondEntryId).toBe(input.id);
 
       // 3. ワークフローが実行される
       await vi.waitFor(() => {
@@ -264,7 +268,7 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'INGEST_INPUT') {
+        if (event.type === 'DATA_ARRIVED') {
           return {
             event,
             workflows: [ingestInputWorkflow],
@@ -325,7 +329,7 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'INGEST_INPUT') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
         if (event.type === 'ANALYZE_ISSUE_IMPACT') return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
@@ -334,7 +338,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
       // イベントリスナーを設定
       const allEvents: any[] = [];
-      engine.on('event:queued', (event) => allEvents.push(event));
+      engine.on('event:received', (event) => allEvents.push(event));
 
       // Act - エラーを含むInput投稿
       const errorInput = await engine.createInput({
@@ -343,10 +347,10 @@ describe('Input処理フローのE2Eテスト', () => {
         timestamp: new Date(),
       });
 
-      // イベント処理を実行（INGEST_INPUT）
+      // イベント処理を実行（DATA_ARRIVED）
       await vi.advanceTimersByTimeAsync(1000);
 
-      // Assert - INGEST_INPUTワークフローが実行される
+      // Assert - DATA_ARRIVEDワークフローが実行される
       await vi.waitFor(() => {
         expect(ingestInputWorkflow.executor).toHaveBeenCalled();
       });
@@ -390,7 +394,7 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'INGEST_INPUT') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
         if (event.type === 'ANALYZE_ISSUE_IMPACT') return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
@@ -433,14 +437,14 @@ describe('Input処理フローのE2Eテスト', () => {
         name: 'StateTracking',
         description: '状態の変化を追跡',
         triggers: {
-          eventTypes: ['INGEST_INPUT'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           const currentState = context.state || '';
           const inputCount = (currentState.match(/\[Processed Input:/g) || []).length;
 
           // 処理済み数をコンテキストに記録
-          context.state = currentState + `\n[Processed Input: ${event.payload.input.id}]`;
+          context.state = currentState + `\n[Processed Input: ${event.payload.pondEntryId}]`;
 
           return {
             success: true,
@@ -458,7 +462,7 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'INGEST_INPUT') return { event, workflows: [stateTrackingWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED') return { event, workflows: [stateTrackingWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
 
@@ -510,7 +514,7 @@ describe('Input処理フローのE2Eテスト', () => {
         name: 'ErrorWorkflow',
         description: 'エラーを発生させるワークフロー',
         triggers: {
-          eventTypes: ['INGEST_INPUT'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           attemptCount++;
@@ -524,7 +528,7 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'INGEST_INPUT') return { event, workflows: [errorWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED') return { event, workflows: [errorWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
 
@@ -562,7 +566,7 @@ describe('Input処理フローのE2Eテスト', () => {
         name: 'PartialFailure',
         description: '部分的に失敗するワークフロー',
         triggers: {
-          eventTypes: ['INGEST_INPUT'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: vi.fn().mockImplementation(async (event, context, emitter) => {
           processCount++;
@@ -578,8 +582,8 @@ describe('Input処理フローのE2Eテスト', () => {
 
           // 奇数番目は成功
           const pondEntry = await context.storage.addPondEntry({
-            content: event.payload.input.content,
-            source: event.payload.input.source,
+            content: event.payload.content,
+            source: event.payload.source,
           });
 
           return {

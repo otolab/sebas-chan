@@ -11,5 +11,9 @@ export {
 export { WorkflowRegistry } from './workflow-registry.js';
 export { WorkflowResolver } from './workflow-resolver.js';
 
-// 実装をエクスポート
-export * from './impl-functional/index.js';
+// デフォルトワークフロー
+export { ingestInputWorkflow } from './a-0.ingest-input/index.js';
+export { processUserRequestWorkflow } from './a-1.process-user-request/index.js';
+export { analyzeIssueImpactWorkflow } from './a-2.analyze-issue-impact/index.js';
+export { extractKnowledgeWorkflow } from './a-3.extract-knowledge/index.js';
+export { DEFAULT_WORKFLOWS, registerDefaultWorkflows } from './default-workflows.js';

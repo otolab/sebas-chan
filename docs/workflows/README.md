@@ -1,38 +1,68 @@
-# ワークフロードキュメント
+# ワークフロー開発ドキュメント
 
-このディレクトリには、sebas-chanのワークフローシステムに関するドキュメントが含まれています。
+sebas-chanのワークフローシステムに関する開発文書です。
 
-## ドキュメント一覧
+## 📚 ドキュメント一覧
 
-| ドキュメント | 説明 |
-|------------|------|
-| [EVENT_CATALOG.md](EVENT_CATALOG.md) | **NEW** イベントカタログ（全イベントの定義と仕様） |
-| [SPECIFICATION.md](SPECIFICATION.md) | ワークフロー技術仕様書（インターフェース定義、イベント設計） |
-| [WORKFLOW_PERSPECTIVE.md](WORKFLOW_PERSPECTIVE.md) | **NEW** ワークフローから見える世界（制約と能力） |
-| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | ワークフロー開発者向けガイド |
-| [MODULER_PROMPT_GUIDE.md](MODULER_PROMPT_GUIDE.md) | Moduler Prompt利用ガイド（AI処理） |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | ワークフロー実装アーキテクチャと実装例 |
-| [COGNITIVE_WORKFLOWS.md](COGNITIVE_WORKFLOWS.md) | 認知ワークフローの設計思想 |
-| [LOGGING_SPEC.md](LOGGING_SPEC.md) | ワークフローログ仕様 |
+| ドキュメント                               | 内容                     | 重要度 |
+| ------------------------------------------ | ------------------------ | ------ |
+| [SPECIFICATION.md](SPECIFICATION.md)       | ワークフロー技術仕様書   | ⭐⭐⭐ |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)   | ワークフロー開発者ガイド | ⭐⭐⭐ |
+| [EVENT_CATALOG.md](EVENT_CATALOG.md)       | イベントカタログ         | ⭐⭐⭐ |
+| [RECORDING_SPEC.md](RECORDING_SPEC.md)     | ワークフロー実行記録仕様 | ⭐⭐   |
+| [PERSPECTIVE.md](PERSPECTIVE.md)           | ワークフローの世界観     | ⭐⭐   |
+| [COGNITIVE_DESIGN.md](COGNITIVE_DESIGN.md) | 認知ワークフロー設計     | ⭐     |
 
-## 読む順序
+## 🎯 読む順序
 
-1. **EVENT_CATALOG.md** - システムで起きる出来事を理解
-2. **WORKFLOW_PERSPECTIVE.md** - ワークフローの世界観を理解
-3. **SPECIFICATION.md** - 技術仕様とインターフェースを理解
-4. **DEVELOPER_GUIDE.md** - 開発方法を学習
-5. **MODULER_PROMPT_GUIDE.md** - AI処理の実装方法を理解
-6. **ARCHITECTURE.md** - 実装例とパターンを確認
-7. **COGNITIVE_WORKFLOWS.md** - 高度なワークフロー設計を理解
-8. **LOGGING_SPEC.md** - ログ仕様の詳細
+### ワークフロー開発者（必読）
 
-## クイックスタート
+1. **EVENT_CATALOG.md** - どんなイベントがあるか理解
+2. **SPECIFICATION.md** - 技術仕様を理解
+3. **DEVELOPER_GUIDE.md** - 開発手順を学習
+4. **[../ai/MODULER_PROMPT_GUIDE.md](../ai/MODULER_PROMPT_GUIDE.md)** - AI処理の実装
 
-新しいワークフローを作成する場合：
-1. [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) - 基本的な開発手順
-2. [MODULER_PROMPT_GUIDE.md](MODULER_PROMPT_GUIDE.md) - AI処理が必要な場合
+### 設計者向け
 
-## 関連ドキュメント
+1. **PERSPECTIVE.md** - ワークフローの制約と能力
+2. **COGNITIVE_DESIGN.md** - 高度な設計パターン
+3. **RECORDING_SPEC.md** - トレーサビリティ設計
 
-- [システムアーキテクチャ](../architecture/) - システム全体の設計
-- [実装状況](../IMPLEMENTATION_STATUS.md) - 実装済みワークフロー一覧
+## 🚀 クイックスタート
+
+### 新しいワークフローを作成
+
+```typescript
+import type { WorkflowDefinition } from '@sebas-chan/core';
+
+export const myWorkflow: WorkflowDefinition = {
+  name: 'MyWorkflow',
+  description: 'ワークフローの説明',
+  triggers: {
+    eventTypes: ['MY_EVENT'],
+    priority: 0,
+  },
+  executor: async (event, context, emitter) => {
+    // ワークフロー処理
+    return { success: true, context };
+  },
+};
+```
+
+詳細は[DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)を参照。
+
+## 📊 実装済みワークフロー
+
+### A系（基本ワークフロー）
+
+- **A-0**: IngestInput - データ取り込み
+- **A-1**: ProcessUserRequest - ユーザーリクエスト処理
+- **A-2**: AnalyzeIssueImpact - Issue影響分析 ⭐ [リファレンス実装](../../packages/core/src/workflows/a-2.analyze-issue-impact/README.md)
+- **A-3**: ExtractKnowledge - 知識抽出
+
+## 🔗 関連ドキュメント
+
+- [システム設計](../design/) - 全体アーキテクチャ
+- [AI統合](../ai/) - AI処理実装
+- [データ設計](../data/) - データモデル
+- [実装状況](../IMPLEMENTATION_STATUS.md) - 開発進捗

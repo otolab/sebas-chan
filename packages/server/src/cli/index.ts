@@ -1,4 +1,5 @@
 import * as readline from 'readline';
+import { nanoid } from 'nanoid';
 import { CoreEngine } from '../core/engine.js';
 
 export class CLI {
@@ -169,8 +170,16 @@ Available commands:
     }
 
     this.coreEngine.emitEvent({
-      type: 'PROCESS_USER_REQUEST',
-      payload: { prompt },
+      type: 'USER_REQUEST_RECEIVED',
+      payload: {
+        userId: 'cli-user',
+        content: prompt,
+        sessionId: `cli-session-${nanoid()}`,
+        timestamp: new Date().toISOString(),
+        metadata: {
+          source: 'cli',
+        },
+      },
     });
     console.log('Request queued for processing');
   }

@@ -8,7 +8,7 @@ import {
   processUserRequestWorkflow,
   analyzeIssueImpactWorkflow,
   extractKnowledgeWorkflow,
-} from './workflows/impl-functional/index.js';
+} from './workflows/index.js';
 
 class CoreAgent {
   private workflowRegistry: WorkflowRegistry;
@@ -90,7 +90,7 @@ export { WorkflowRecorder, RecordType } from './workflows/recorder.js';
 export * from './workflows/index.js';
 
 // デフォルトワークフロー登録関数
-export { registerDefaultWorkflows } from './workflows/impl-functional/index.js';
+export { registerDefaultWorkflows } from './workflows/index.js';
 
 // 標準ワークフローをすべて登録したRegistryを生成
 export function generateWorkflowRegistry(): WorkflowRegistry {

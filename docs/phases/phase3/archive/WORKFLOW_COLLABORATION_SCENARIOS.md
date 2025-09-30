@@ -7,6 +7,7 @@
 ## シナリオ1: メール受信から行動計画まで
 
 ### トリガー
+
 Gmailから重要なメールを受信
 
 ### ワークフローチェーン
@@ -24,6 +25,7 @@ graph LR
 ### 詳細フロー
 
 #### Step 1: メール受信（Reporter → A-1）
+
 ```typescript
 // Gmail Reporterからの入力
 {
@@ -52,6 +54,7 @@ graph LR
 ```
 
 #### Step 2: Issue影響分析（A-2）
+
 ```typescript
 // イベントチェーン
 ISSUE_CREATED → A-2実行
@@ -63,30 +66,36 @@ ISSUE_CREATED → A-2実行
 ```
 
 #### Step 3: 並列処理（B-1 & C-1）
+
 ```typescript
 // 同時に2つのワークフローが起動
 // B-1: 関連Issueのクラスタリング
 {
-  clusters: [{
-    theme: '予算関連タスク',
-    issueIds: ['issue-001', 'issue-past-01', 'issue-past-02'],
-    commonPatterns: ['締切厳守', 'テンプレート使用']
-  }]
+  clusters: [
+    {
+      theme: '予算関連タスク',
+      issueIds: ['issue-001', 'issue-past-01', 'issue-past-02'],
+      commonPatterns: ['締切厳守', 'テンプレート使用'],
+    },
+  ];
 }
 
 // C-1: 次のFlow提案
 {
-  suggestions: [{
-    flowId: 'flow-budget',
-    reason: '締切が明日で最優先',
-    estimatedDuration: 120
-  }]
+  suggestions: [
+    {
+      flowId: 'flow-budget',
+      reason: '締切が明日で最優先',
+      estimatedDuration: 120,
+    },
+  ];
 }
 ```
 
 ## シナリオ2: 定期実行による最適化
 
 ### トリガー
+
 毎朝9時の定期実行
 
 ### ワークフローチェーン
@@ -122,6 +131,7 @@ graph TD
 ## シナリオ3: エラー回復とリトライ
 
 ### トリガー
+
 ワークフロー実行エラー
 
 ### ワークフローチェーン
@@ -138,6 +148,7 @@ graph LR
 ### エラーハンドリングパターン
 
 #### パターン1: 一時的エラー（ネットワーク等）
+
 ```typescript
 // WorkflowExecutorのリトライ機構
 {
@@ -151,6 +162,7 @@ graph LR
 ```
 
 #### パターン2: 永続的エラー（データ不整合等）
+
 ```typescript
 // エラーからIssueを生成
 {
@@ -167,6 +179,7 @@ graph LR
 ## シナリオ4: Knowledge活用による自動化
 
 ### トリガー
+
 類似パターンの検出
 
 ### ワークフローチェーン
@@ -183,6 +196,7 @@ graph TD
 ### Knowledge活用フロー
 
 #### Step 1: パターン学習
+
 ```typescript
 // B-1が繰り返しパターンを検出
 {
@@ -201,23 +215,27 @@ graph TD
 ```
 
 #### Step 2: 自動提案
+
 ```typescript
 // 月曜日にA-0が起動
 // Knowledgeから手順を取得
 // C-2が具体的なアクションを生成
 {
-  actions: [{
-    type: 'automated',
-    description: '週次報告書の自動生成',
-    template: 'weekly-report-template',
-    confidence: 0.95
-  }]
+  actions: [
+    {
+      type: 'automated',
+      description: '週次報告書の自動生成',
+      template: 'weekly-report-template',
+      confidence: 0.95,
+    },
+  ];
 }
 ```
 
 ## シナリオ5: 優先度による競合解決
 
 ### 状況
+
 複数の高優先度イベントが同時発生
 
 ### ワークフローの実行順序

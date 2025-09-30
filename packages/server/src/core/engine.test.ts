@@ -381,16 +381,25 @@ describe('CoreEngine', () => {
 
       await engine.stop();
 
-      const listener = vi.fn();
-      engine.on('event:queued', listener);
+      const eventReceivedListener = vi.fn();
+      const workflowQueuedListener = vi.fn();
+      engine.on('event:received', eventReceivedListener);
+      engine.on('workflow:queued', workflowQueuedListener);
 
       engine.emitEvent({
-        type: 'PROCESS_USER_REQUEST',
-        payload: {},
+        type: 'USER_REQUEST_RECEIVED', // デフォルトワークフローが処理するイベント
+        payload: {
+          userId: 'test',
+          content: 'test',
+          timestamp: new Date().toISOString(),
+        },
       });
 
-      // イベントはキューに入るが処理されない
-      expect(listener).toHaveBeenCalled();
+      // イベントは受信される
+      expect(eventReceivedListener).toHaveBeenCalled();
+
+      // ワークフローもキューに入る（停止後でも）
+      expect(workflowQueuedListener).toHaveBeenCalled();
     });
   });
 

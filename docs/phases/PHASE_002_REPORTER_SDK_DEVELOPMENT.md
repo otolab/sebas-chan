@@ -13,11 +13,13 @@ Phase 2では、sebas-chanの情報収集基盤となるReporter SDKを開発し
 ### 1. Reporter SDKアーキテクチャ
 
 **決定内容**:
+
 - CLIツール（manual-reporter）とAPIクライアントの分離
 - 再利用可能なクライアントライブラリの提供
 - TypeScript型定義による型安全性の保証
 
 **構成**:
+
 ```
 reporter-sdk/
 ├── src/
@@ -31,6 +33,7 @@ reporter-sdk/
 ### 2. CLI設計
 
 **コマンド構造**:
+
 ```bash
 # ヘルスチェック
 manual-reporter health --api-url http://localhost:3000
@@ -43,6 +46,7 @@ manual-reporter interactive --api-url http://localhost:3000
 ```
 
 **設計原則**:
+
 - UNIX哲学に従った単一責任
 - 環境変数とコマンドライン引数の両方をサポート
 - エラー時の適切な終了コード
@@ -50,6 +54,7 @@ manual-reporter interactive --api-url http://localhost:3000
 ### 3. エラーハンドリング戦略
 
 **階層的エラー処理**:
+
 1. ネットワークエラー: 再試行とフォールバック
 2. バリデーションエラー: 明確なエラーメッセージ
 3. サーバーエラー: 適切なログとユーザー通知
@@ -59,10 +64,11 @@ manual-reporter interactive --api-url http://localhost:3000
 ### 主要機能
 
 1. **APIクライアント（ReporterClient）**
+
    ```typescript
    class ReporterClient {
-     async health(): Promise<HealthResponse>
-     async submitInput(content: string, source?: string): Promise<Input>
+     async health(): Promise<HealthResponse>;
+     async submitInput(content: string, source?: string): Promise<Input>;
    }
    ```
 
@@ -87,6 +93,7 @@ manual-reporter interactive --api-url http://localhost:3000
    // E2E手動テストコマンド
    npm run test:e2e:manual
    ```
+
    - 実際のサーバーとの統合テスト
    - CLIコマンドの実行テスト
 
@@ -145,6 +152,7 @@ manual-reporter interactive --api-url http://localhost:3000
 ```
 
 重要な依存関係とそのバージョン固定理由：
+
 - commander: CLIフレームワーク（安定版）
 - chalk: ターミナル出力の装飾（ESMのみ）
 - ora: スピナー表示（非同期処理の視覚化）

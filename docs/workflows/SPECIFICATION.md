@@ -37,12 +37,12 @@ interface WorkflowDefinition {
 
 #### フィールド仕様
 
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `name` | `string` | ✓ | ワークフローのユニーク識別子。英数字とハイフン、アンダースコアのみ使用可能 |
-| `description` | `string` | ✓ | ワークフローの目的と動作の説明（最大500文字推奨） |
-| `triggers` | `WorkflowTrigger` | ✓ | ワークフローの実行条件を定義 |
-| `executor` | `WorkflowExecutor` | ✓ | 実際の処理を実行する関数 |
+| フィールド    | 型                 | 必須 | 説明                                                                       |
+| ------------- | ------------------ | ---- | -------------------------------------------------------------------------- |
+| `name`        | `string`           | ✓    | ワークフローのユニーク識別子。英数字とハイフン、アンダースコアのみ使用可能 |
+| `description` | `string`           | ✓    | ワークフローの目的と動作の説明（最大500文字推奨）                          |
+| `triggers`    | `WorkflowTrigger`  | ✓    | ワークフローの実行条件を定義                                               |
+| `executor`    | `WorkflowExecutor` | ✓    | 実際の処理を実行する関数                                                   |
 
 ### 2.2 WorkflowTrigger
 
@@ -61,19 +61,19 @@ interface WorkflowTrigger {
 
   /** スケジュール実行（オプション、将来実装） */
   schedule?: {
-    cron?: string;  // Cron式
-    interval?: number;  // ミリ秒単位
+    cron?: string; // Cron式
+    interval?: number; // ミリ秒単位
   };
 }
 ```
 
 #### フィールド仕様
 
-| フィールド | 型 | 必須 | デフォルト | 説明 |
-|-----------|-----|------|------------|------|
-| `eventTypes` | `string[]` | ✓ | - | トリガーとなるイベントタイプのリスト。空配列は不可 |
-| `condition` | `Function` | - | - | イベントタイプに加えて評価される追加条件 |
-| `priority` | `number` | - | `0` | 実行優先度。範囲: -100 〜 100 |
+| フィールド   | 型         | 必須 | デフォルト | 説明                                               |
+| ------------ | ---------- | ---- | ---------- | -------------------------------------------------- |
+| `eventTypes` | `string[]` | ✓    | -          | トリガーとなるイベントタイプのリスト。空配列は不可 |
+| `condition`  | `Function` | -    | -          | イベントタイプに加えて評価される追加条件           |
+| `priority`   | `number`   | -    | `0`        | 実行優先度。範囲: -100 〜 100                      |
 
 #### 優先度システム
 
@@ -95,11 +95,11 @@ type WorkflowExecutor = (
 
 #### パラメータ仕様
 
-| パラメータ | 型 | 説明 |
-|-----------|-----|------|
-| `event` | `AgentEvent` | トリガーとなったイベント |
-| `context` | `WorkflowContextInterface` | 実行環境へのアクセス |
-| `emitter` | `WorkflowEventEmitterInterface` | 新しいイベントの発行 |
+| パラメータ | 型                              | 説明                     |
+| ---------- | ------------------------------- | ------------------------ |
+| `event`    | `AgentEvent`                    | トリガーとなったイベント |
+| `context`  | `WorkflowContextInterface`      | 実行環境へのアクセス     |
+| `emitter`  | `WorkflowEventEmitterInterface` | 新しいイベントの発行     |
 
 #### 戻り値
 
@@ -127,12 +127,12 @@ interface WorkflowResult {
 
 #### フィールド仕様
 
-| フィールド | 型 | 必須 | 説明 |
-|-----------|-----|------|------|
-| `success` | `boolean` | ✓ | true: 正常終了、false: エラー終了 |
-| `context` | `WorkflowContextInterface` | ✓ | 実行後のコンテキスト（変更されていない場合も含む） |
-| `output` | `unknown` | - | ワークフロー固有の出力データ |
-| `error` | `Error` | - | エラーオブジェクト（success=falseの場合は必須） |
+| フィールド | 型                         | 必須 | 説明                                               |
+| ---------- | -------------------------- | ---- | -------------------------------------------------- |
+| `success`  | `boolean`                  | ✓    | true: 正常終了、false: エラー終了                  |
+| `context`  | `WorkflowContextInterface` | ✓    | 実行後のコンテキスト（変更されていない場合も含む） |
+| `output`   | `unknown`                  | -    | ワークフロー固有の出力データ                       |
+| `error`    | `Error`                    | -    | エラーオブジェクト（success=falseの場合は必須）    |
 
 ## 3. WorkflowContext
 
@@ -168,7 +168,7 @@ interface WorkflowContextInterface {
 
 ```typescript
 interface WorkflowStorageInterface {
-  // Issue操作 - 問題管理の中心
+  // Issue操作 - ユーザーに代わってAIが追跡・管理すべき事項
   getIssue(id: string): Promise<Issue | null>;
   searchIssues(query: string): Promise<Issue[]>;
   createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
@@ -189,23 +189,23 @@ interface WorkflowStorageInterface {
 #### 活用パターン
 
 ```typescript
-// 関連Issueの効率的な検索
+// 関連する追跡事項の効率的な検索
 const relatedIssues = await context.storage.searchIssues(
   `${issue.title} OR (${issue.labels.join(' OR ')})`
 );
 
-// Pondからのパターン発見
-const similarEntries = await context.storage.searchPond(errorMessage);
+// Pondからのパターン発見（繰り返し現れる追跡すべき事項）
+const similarEntries = await context.storage.searchPond(userInput);
 if (similarEntries.length > THRESHOLD) {
-  // パターンとして認識
+  // 繰り返しパターンとして認識し、ユーザーが気づくべき傾向として記録
 }
 
 // 知識の信頼度更新
 await context.storage.updateKnowledge(knowledgeId, {
   reputation: {
     upvotes: knowledge.reputation.upvotes + 1,
-    downvotes: knowledge.reputation.downvotes
-  }
+    downvotes: knowledge.reputation.downvotes,
+  },
 });
 ```
 
@@ -215,10 +215,7 @@ await context.storage.updateKnowledge(knowledgeId, {
 
 ```typescript
 interface WorkflowEventEmitterInterface {
-  emit(event: {
-    type: WorkflowEventType;
-    payload: unknown;
-  }): void;
+  emit(event: { type: WorkflowEventType; payload: unknown }): void;
 }
 ```
 
@@ -269,10 +266,10 @@ interface WorkflowSchedulerInterface {
 
 ```typescript
 type ScheduleAction =
-  | 'reminder'        // リマインダー通知
-  | 'escalate'        // エスカレーション
-  | 'auto_close'      // 自動クローズ
-  | 'follow_up'       // フォローアップ
+  | 'reminder' // リマインダー通知
+  | 'escalate' // エスカレーション
+  | 'auto_close' // 自動クローズ
+  | 'follow_up' // フォローアップ
   | 'check_progress'; // 進捗確認
 ```
 
@@ -280,23 +277,15 @@ type ScheduleAction =
 
 ```typescript
 // ワークフロー内でのスケジュール登録
-const result = await context.scheduler.schedule(
-  issue.id,
-  "3日後の朝9時にリマインド",
-  'reminder',
-  { timezone: 'Asia/Tokyo' }
-);
+const result = await context.scheduler.schedule(issue.id, '3日後の朝9時にリマインド', 'reminder', {
+  timezone: 'Asia/Tokyo',
+});
 
 // 重複防止（Issue ID + dedupeKeyの組み合わせでユニーク判定）
-await context.scheduler.schedule(
-  issue.id,
-  "毎日午後3時に進捗確認",
-  'check_progress',
-  {
-    dedupeKey: 'daily-check',  // 同じIssue内でのみユニーク
-    maxOccurrences: 7
-  }
-);
+await context.scheduler.schedule(issue.id, '毎日午後3時に進捗確認', 'check_progress', {
+  dedupeKey: 'daily-check', // 同じIssue内でのみユニーク
+  maxOccurrences: 7,
+});
 // 注: 異なるIssueでは同じdedupeKeyを使用可能
 
 // Issue close時の自動キャンセル
@@ -325,14 +314,14 @@ interface ScheduleTriggeredEvent {
 
 ### 4.1 エラー種別
 
-| エラー種別 | 説明 | リトライ可能 |
-|-----------|------|--------------|
-| `ValidationError` | 入力検証エラー | ✗ |
-| `TimeoutError` | タイムアウト | ✓ |
-| `NetworkError` | ネットワークエラー | ✓ |
-| `StorageError` | データベースエラー | ✓ |
-| `AIDriverError` | AI処理エラー | ✓ |
-| `WorkflowError` | ワークフロー実行エラー | ✗ |
+| エラー種別        | 説明                   | リトライ可能 |
+| ----------------- | ---------------------- | ------------ |
+| `ValidationError` | 入力検証エラー         | ✗            |
+| `TimeoutError`    | タイムアウト           | ✓            |
+| `NetworkError`    | ネットワークエラー     | ✓            |
+| `StorageError`    | データベースエラー     | ✓            |
+| `AIDriverError`   | AI処理エラー           | ✓            |
+| `WorkflowError`   | ワークフロー実行エラー | ✗            |
 
 ### 4.2 エラー処理戦略
 
@@ -420,9 +409,9 @@ const issueAnalysisWorkflow: WorkflowDefinition = {
       const payload = event.payload as any;
       return payload.entity === 'issue' && payload.action === 'created';
     },
-    priority: 30
+    priority: 30,
   },
-  executor: analyzeIssue
+  executor: analyzeIssue,
 };
 ```
 
@@ -449,8 +438,8 @@ async function updateIssueWithEvents(
         issueId,
         from: before.status,
         to: after.status,
-        issue: after
-      }
+        issue: after,
+      },
     });
   }
 
@@ -458,7 +447,7 @@ async function updateIssueWithEvents(
   if (before.priority !== after.priority && after.priority > 80) {
     emitter.emit({
       type: 'HIGH_PRIORITY_DETECTED',
-      payload: { issueId, priority: after.priority }
+      payload: { issueId, priority: after.priority },
     });
   }
 }
@@ -473,17 +462,17 @@ async function updateIssueWithEvents(
 ```typescript
 // 推奨: シンプルなイベントタイプ
 const RECOMMENDED_EVENT_TYPES = [
-  'DATA_CHANGED',      // データの変更全般
-  'USER_ACTION',       // ユーザーからのアクション
-  'SYSTEM_EVENT',      // システムイベント
+  'DATA_CHANGED', // データの変更全般
+  'USER_ACTION', // ユーザーからのアクション
+  'SYSTEM_EVENT', // システムイベント
   'ANALYSIS_COMPLETE', // 分析処理の完了
-  'ERROR_OCCURRED'     // エラー発生
+  'ERROR_OCCURRED', // エラー発生
 ];
 
 // 非推奨: 細かすぎるイベントタイプ
 const NOT_RECOMMENDED = [
   'ISSUE_CREATED_WITH_HIGH_PRIORITY_AND_ERROR_LABEL',
-  'KNOWLEDGE_UPDATED_WITH_UPVOTE_FROM_ADMIN_USER'
+  'KNOWLEDGE_UPDATED_WITH_UPVOTE_FROM_ADMIN_USER',
 ];
 ```
 
@@ -514,12 +503,12 @@ sequenceDiagram
 
 ## 9. パフォーマンス要件
 
-| 項目 | 要件 | 備考 |
-|------|------|------|
-| ワークフロー解決時間 | < 10ms | 100個のワークフローでの測定値 |
-| 単一ワークフロー実行時間 | < 5秒 | AI処理を除く |
-| 同時実行数 | 最大10 | システムリソースに依存 |
-| メモリ使用量 | < 100MB/ワークフロー | 通常の処理時 |
+| 項目                     | 要件                 | 備考                          |
+| ------------------------ | -------------------- | ----------------------------- |
+| ワークフロー解決時間     | < 10ms               | 100個のワークフローでの測定値 |
+| 単一ワークフロー実行時間 | < 5秒                | AI処理を除く                  |
+| 同時実行数               | 最大10               | システムリソースに依存        |
+| メモリ使用量             | < 100MB/ワークフロー | 通常の処理時                  |
 
 ## 10. セキュリティ考慮事項
 
@@ -536,7 +525,23 @@ sequenceDiagram
 - **ワークフローチェーン**: 明示的な連鎖実行
 - **メトリクス収集**: 実行時間、成功率などの統計
 
-## 12. 関連文書
+## 12. リファレンス実装
+
+新しいワークフローを実装する際の参考として、以下のリファレンス実装を用意しています：
+
+### A-2: ANALYZE_ISSUE_IMPACT ワークフロー
+
+📖 **[実装ガイド](../../packages/core/src/workflows/a-2.analyze-issue-impact/README.md)**
+
+このリファレンス実装では以下の実装パターンが確認できます：
+- WorkflowDefinitionの完全な実装例
+- WorkflowContextの効果的な活用方法
+- WorkflowEventEmitterを使ったイベント発行
+- エラーハンドリングとWorkflowResultの返却
+- context.recorderによる詳細なログ記録
+- テストの実装方法
+
+## 13. 関連文書
 
 - [ワークフローから見える世界](./WORKFLOW_PERSPECTIVE.md) - ワークフローの視点と制約
 - [開発者ガイド](./DEVELOPER_GUIDE.md) - 実装ガイドライン
