@@ -20,6 +20,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       downvotes: 1,
     },
     sources: [],
+    createdAt: new Date('2024-01-01'),
   };
 
   beforeEach(() => {
