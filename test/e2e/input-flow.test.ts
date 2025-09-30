@@ -444,7 +444,7 @@ describe('Input処理フローのE2Eテスト', () => {
           const inputCount = (currentState.match(/\[Processed Input:/g) || []).length;
 
           // 処理済み数をコンテキストに記録
-          context.state = currentState + `\n[Processed Input: ${event.payload.input.id}]`;
+          context.state = currentState + `\n[Processed Input: ${event.payload.pondEntryId}]`;
 
           return {
             success: true,
@@ -582,8 +582,8 @@ describe('Input処理フローのE2Eテスト', () => {
 
           // 奇数番目は成功
           const pondEntry = await context.storage.addPondEntry({
-            content: event.payload.input.content,
-            source: event.payload.input.source,
+            content: event.payload.content,
+            source: event.payload.source,
           });
 
           return {
