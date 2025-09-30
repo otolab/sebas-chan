@@ -44,6 +44,7 @@ export function createKnowledgeRouter(coreEngine: CoreEngine): Router {
           downvotes: 0,
         },
         sources: dto.sources || [],
+        createdAt: new Date(),
       });
 
       res.status(201).json({

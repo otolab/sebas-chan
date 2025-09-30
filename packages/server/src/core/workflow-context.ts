@@ -9,8 +9,8 @@ import type {
   Issue,
   Knowledge,
   PondEntry,
-  WorkflowType,
-  EventPayload,
+  EventType,
+  SystemEvent,
 } from '@sebas-chan/shared-types';
 import type { DBClient } from '@sebas-chan/db';
 import type { StateManager } from './state-manager.js';
@@ -92,7 +92,8 @@ export class EngineWorkflowStorage implements WorkflowStorageInterface {
     return results.length > 0 ? results[0] : null;
   }
 
-  async createKnowledge(knowledge: Omit<Knowledge, 'id' | 'createdAt'>): Promise<Knowledge> {
+  async createKnowledge(knowledge: Omit<Knowledge, 'id'>): Promise<Knowledge> {
+    // createdAtが提供されていない場合は、engine側で自動設定
     return this.engine.createKnowledge(knowledge);
   }
 
@@ -127,8 +128,8 @@ export class EngineWorkflowEventEmitter implements WorkflowEventEmitterInterface
   emit(event: { type: string; payload: unknown }): void {
     // EngineのemitEventを使用してイベントを発行
     this.engine.emitEvent({
-      type: event.type as WorkflowType,
-      payload: event.payload as EventPayload,
+      type: event.type as EventType,
+      payload: event.payload as SystemEvent['payload'],
     });
   }
 }

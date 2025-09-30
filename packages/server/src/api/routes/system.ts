@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { nanoid } from 'nanoid';
 import { CoreEngine } from '../../core/engine.js';
 import { ProcessRequestDto, SystemStats } from '@sebas-chan/shared-types';
 
@@ -35,11 +36,22 @@ export function createSystemRouter(coreEngine: CoreEngine): Router {
     try {
       const dto: ProcessRequestDto = req.body;
 
+      // セッションIDを生成（contextにsessionIdがあれば使用、なければ新規生成）
+      const sessionId = (typeof dto.context?.sessionId === 'string' && dto.context.sessionId)
+        ? dto.context.sessionId
+        : `api-session-${nanoid()}`;
+
       coreEngine.emitEvent({
-        type: 'PROCESS_USER_REQUEST',
+        type: 'USER_REQUEST_RECEIVED',
         payload: {
-          prompt: dto.prompt,
-          context: dto.context,
+          userId: 'system', // TODO: 実際のユーザーIDを使用
+          content: dto.prompt,
+          sessionId,
+          timestamp: new Date().toISOString(),
+          metadata: {
+            source: 'api',
+            context: dto.context, // 元のcontextをmetadataに保存
+          },
         },
       });
 

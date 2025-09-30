@@ -390,8 +390,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     };
     logger.info('Created input', { input });
     this.emitEvent({
-      type: 'INGEST_INPUT',
-      payload: { input }, // Inputオブジェクト全体を渡す
+      type: 'DATA_ARRIVED',
+      payload: {
+        source: input.source,
+        content: input.content,
+        pondEntryId: input.id, // InputのIDをPondエントリIDとして使用
+        timestamp: input.timestamp.toISOString(),
+        metadata: {},
+      },
     });
     return input;
   }
