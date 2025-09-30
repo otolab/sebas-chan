@@ -165,7 +165,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       registry.register(ingestInputWorkflow);
     });
 
-    it('TEST-EVENT-001: InputからINGEST_INPUTイベントが生成される', async () => {
+    it('TEST-EVENT-001: InputからDATA_ARRIVEDイベントが生成される', async () => {
       // Arrange
       await engine.start();
       const eventListener = vi.fn();
@@ -183,18 +183,22 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       expect(input.source).toBe('manual');
       expect(input.content).toBe('テストコンテンツ');
 
+      // イベント処理を待つ
+      await vi.advanceTimersByTimeAsync(100);
+
       // イベントがキューに追加されたことを確認
-      expect(eventListener).toHaveBeenCalledWith(
-        expect.objectContaining({
-          type: 'INGEST_INPUT',
-          payload: expect.objectContaining({
-            input: expect.objectContaining({
-              id: input.id,
+      await vi.waitFor(() => {
+        expect(eventListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'DATA_ARRIVED',
+            payload: expect.objectContaining({
+              pondEntryId: input.id,
               content: 'テストコンテンツ',
+              source: 'manual',
             }),
-          }),
-        })
-      );
+          })
+        );
+      });
     });
 
     it('TEST-EVENT-002: イベントがWorkflowRegistryから適切なワークフローを取得して実行される', async () => {
