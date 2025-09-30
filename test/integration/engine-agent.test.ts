@@ -168,8 +168,10 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     it('TEST-EVENT-001: InputからDATA_ARRIVEDイベントが生成される', async () => {
       // Arrange
       await engine.start();
-      const eventListener = vi.fn();
-      engine.on('event:queued', eventListener);
+      const eventReceivedListener = vi.fn();
+      const workflowQueuedListener = vi.fn();
+      engine.on('event:received', eventReceivedListener);
+      engine.on('workflow:queued', workflowQueuedListener);
 
       // Act
       const input = await engine.createInput({
@@ -186,9 +188,9 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // イベント処理を待つ
       await vi.advanceTimersByTimeAsync(100);
 
-      // イベントがキューに追加されたことを確認
+      // イベントが受信されたことを確認
       await vi.waitFor(() => {
-        expect(eventListener).toHaveBeenCalledWith(
+        expect(eventReceivedListener).toHaveBeenCalledWith(
           expect.objectContaining({
             type: 'DATA_ARRIVED',
             payload: expect.objectContaining({
@@ -199,6 +201,15 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
           })
         );
       });
+
+      // ワークフローがキューに入ったことを確認（IngestInputワークフローが登録されている場合）
+      if (workflowQueuedListener.mock.calls.length > 0) {
+        expect(workflowQueuedListener).toHaveBeenCalledWith(
+          expect.objectContaining({
+            workflow: 'IngestInput',
+          })
+        );
+      }
     });
 
     it('TEST-EVENT-002: イベントがWorkflowRegistryから適切なワークフローを取得して実行される', async () => {

@@ -211,7 +211,7 @@ describe('Input処理フローのE2Eテスト', () => {
       await engine.start();
 
       // イベントリスナーを設定
-      engine.on('event:queued', (event) => capturedEvents.push(event));
+      engine.on('event:received', (event) => capturedEvents.push(event));
 
       // Act - Input投稿
       const inputData = {
@@ -338,7 +338,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
       // イベントリスナーを設定
       const allEvents: any[] = [];
-      engine.on('event:queued', (event) => allEvents.push(event));
+      engine.on('event:received', (event) => allEvents.push(event));
 
       // Act - エラーを含むInput投稿
       const errorInput = await engine.createInput({

@@ -523,6 +523,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       timestamp: new Date(),
     };
 
+    // イベントを受信したことを通知
+    this.emit('event:received', fullEvent);
+
     // AgentEventに変換
     const agentEvent: AgentEvent = {
       type: fullEvent.type,
@@ -535,6 +538,8 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     if (!resolution || resolution.workflows.length === 0) {
       logger.warn(`No workflows found for event type: ${event.type}`);
+      // ワークフローがなくてもイベント自体は発生したことを記録
+      this.emit('event:no-workflows', fullEvent);
       return;
     }
 
@@ -556,8 +561,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
         priority: workflow.triggers.priority ?? 0,
         timestamp: new Date(),
       });
-    }
 
-    this.emit('event:queued', fullEvent);
+      // 各ワークフローがキューに入ったことを通知
+      this.emit('workflow:queued', { event: fullEvent, workflow: workflow.name });
+    }
   }
 }

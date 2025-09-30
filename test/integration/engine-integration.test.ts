@@ -420,6 +420,10 @@ describe('CoreEngine - CoreAgent Integration', () => {
     it('should handle multiple inputs in sequence', async () => {
       await engine.initialize();
 
+      // デフォルトワークフローをクリアして、テスト用ワークフローのみを登録
+      // @ts-ignore - private propertyにアクセス
+      engine.workflowRegistry.clear();
+
       // ワークフローを登録
       const testWorkflow = {
         name: 'test-multiple-inputs',
