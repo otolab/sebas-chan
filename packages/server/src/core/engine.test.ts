@@ -387,7 +387,7 @@ describe('CoreEngine', () => {
       engine.on('workflow:queued', workflowQueuedListener);
 
       engine.emitEvent({
-        type: 'USER_REQUEST_RECEIVED',  // デフォルトワークフローが処理するイベント
+        type: 'USER_REQUEST_RECEIVED', // デフォルトワークフローが処理するイベント
         payload: {
           userId: 'test',
           content: 'test',
