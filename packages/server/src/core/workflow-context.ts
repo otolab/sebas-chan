@@ -5,7 +5,7 @@ import type {
   DriverFactory,
 } from '@sebas-chan/core';
 import type { WorkflowRecorder } from '@sebas-chan/core';
-import type { Issue, Knowledge, PondEntry, EventType, SystemEvent } from '@sebas-chan/shared-types';
+import type { Issue, Knowledge, PondEntry, Flow, EventType, SystemEvent } from '@sebas-chan/shared-types';
 import type { DBClient } from '@sebas-chan/db';
 import type { StateManager } from './state-manager.js';
 import type { CoreEngine } from './engine.js';
@@ -46,24 +46,7 @@ export class EngineWorkflowStorage implements WorkflowStorageInterface {
   }
 
   async updateIssue(id: string, update: Partial<Issue>): Promise<Issue> {
-    // DBClientが利用可能な場合はそれを使用
-    if (this.db) {
-      return await this.db.updateIssue(id, update);
-    }
-
-    // 既存のIssueを取得
-    const existing = await this.getIssue(id);
-    if (!existing) {
-      throw new Error(`Issue not found: ${id}`);
-    }
-
-    // 更新を適用
-    const updated = {
-      ...existing,
-      ...update,
-    };
-
-    return updated;
+    return await this.db.updateIssue(id, update);
   }
 
   async addPondEntry(entry: Omit<PondEntry, 'id' | 'timestamp'>): Promise<PondEntry> {
@@ -76,14 +59,7 @@ export class EngineWorkflowStorage implements WorkflowStorageInterface {
   }
 
   async getKnowledge(id: string): Promise<Knowledge | null> {
-    // DBClientが利用可能な場合はそれを使用
-    if (this.db) {
-      return await this.db.getKnowledge(id);
-    }
-
-    // フォールバックとして検索を使用
-    const results = await this.searchKnowledge(`id:${id}`);
-    return results.length > 0 ? results[0] : null;
+    return await this.db.getKnowledge(id);
   }
 
   async createKnowledge(knowledge: Omit<Knowledge, 'id'>): Promise<Knowledge> {
@@ -92,24 +68,24 @@ export class EngineWorkflowStorage implements WorkflowStorageInterface {
   }
 
   async updateKnowledge(id: string, update: Partial<Knowledge>): Promise<Knowledge> {
-    // DBClientが利用可能な場合はそれを使用
-    if (this.db) {
-      return await this.db.updateKnowledge(id, update);
-    }
+    return await this.db.updateKnowledge(id, update);
+  }
 
-    // 既存のKnowledgeを取得
-    const results = await this.searchKnowledge(`id:${id}`);
-    if (results.length === 0) {
-      throw new Error(`Knowledge not found: ${id}`);
-    }
+  // Flow操作
+  async getFlow(id: string): Promise<Flow | null> {
+    return await this.db.getFlow(id);
+  }
 
-    const existing = results[0];
-    const updated = {
-      ...existing,
-      ...update,
-    };
+  async searchFlows(query: string): Promise<Flow[]> {
+    return await this.db.searchFlows(query);
+  }
 
-    return updated;
+  async createFlow(flow: Omit<Flow, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flow> {
+    return await this.db.addFlow(flow);
+  }
+
+  async updateFlow(id: string, update: Partial<Flow>): Promise<Flow> {
+    return await this.db.updateFlow(id, update);
   }
 }
 

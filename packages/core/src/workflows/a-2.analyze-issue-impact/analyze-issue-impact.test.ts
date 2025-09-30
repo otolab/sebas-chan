@@ -60,6 +60,11 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
         updateIssue: vi.fn(),
         createKnowledge: vi.fn(),
         updateKnowledge: vi.fn(),
+        // Flow操作
+        getFlow: vi.fn(),
+        searchFlows: vi.fn().mockResolvedValue([]),
+        createFlow: vi.fn(),
+        updateFlow: vi.fn(),
       },
       createDriver: vi.fn(), // 各テストケースで設定
       recorder: new WorkflowRecorder('test'),

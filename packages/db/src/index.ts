@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { Issue, Knowledge } from '@sebas-chan/shared-types';
+import { Issue, Knowledge, Flow } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -421,6 +421,39 @@ export class DBClient extends EventEmitter {
     // TODO: 実際のDB更新を実装
     // 現時点では更新されたオブジェクトを返すのみ
     return updated;
+  }
+
+  // Flow関連のメソッド
+  async addFlow(flow: Omit<Flow, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flow> {
+    const newFlow: Flow = {
+      ...flow,
+      id: nanoid(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await this.sendRequest('addFlow', newFlow);
+    return result as Flow;
+  }
+
+  async getFlow(id: string): Promise<Flow | null> {
+    const result = await this.sendRequest('getFlow', { id });
+    return result as Flow | null;
+  }
+
+  async searchFlows(query: string): Promise<Flow[]> {
+    const result = await this.sendRequest('searchFlows', { query });
+    return result as Flow[];
+  }
+
+  async updateFlow(id: string, update: Partial<Flow>): Promise<Flow> {
+    const result = await this.sendRequest('updateFlow', {
+      id,
+      update: {
+        ...update,
+        updatedAt: new Date(),
+      },
+    });
+    return result as Flow;
   }
 
   // State文書関連のメソッド

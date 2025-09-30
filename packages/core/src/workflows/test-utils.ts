@@ -10,7 +10,7 @@ import type {
   DriverFactory,
 } from './context.js';
 import { WorkflowRecorder } from './recorder.js';
-import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
+import type { Issue, Knowledge, PondEntry, Flow } from '@sebas-chan/shared-types';
 import { TestDriver } from '@moduler-prompt/driver';
 
 /**
@@ -65,9 +65,29 @@ export function createMockWorkflowContext(): WorkflowContextInterface {
         createdAt: new Date(),
       } as Knowledge;
     },
+
+    // Flow操作
+    getFlow: async (_id: string): Promise<Flow | null> => null,
+    searchFlows: async (_query: string): Promise<Flow[]> => [],
+    createFlow: async (flow: Omit<Flow, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flow> => {
+      return {
+        ...flow,
+        id: 'test-flow-id',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Flow;
+    },
+    updateFlow: async (id: string, update: Partial<Flow>): Promise<Flow> => {
+      return {
+        ...update,
+        id,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as Flow;
+    },
   };
 
-  const mockCreateDriver: DriverFactory = async (_config?: any) => {
+  const mockCreateDriver: DriverFactory = async () => {
     return new TestDriver({ responses: [] });
   };
 

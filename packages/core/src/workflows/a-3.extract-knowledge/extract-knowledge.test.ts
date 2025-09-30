@@ -44,6 +44,11 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
           sources: [],
         }),
         updateKnowledge: vi.fn(),
+        // Flow操作
+        getFlow: vi.fn(),
+        searchFlows: vi.fn().mockResolvedValue([]),
+        createFlow: vi.fn(),
+        updateFlow: vi.fn(),
       },
       createDriver: async () => new TestDriver({
         responses: [JSON.stringify({

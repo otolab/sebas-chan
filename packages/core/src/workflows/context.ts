@@ -2,6 +2,7 @@ import type {
   Issue,
   Knowledge,
   PondEntry,
+  Flow,
   DriverSelectionCriteria,
 } from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
@@ -69,6 +70,12 @@ export interface WorkflowStorageInterface {
   searchIssues(query: string): Promise<Issue[]>;
   createIssue(issue: Omit<Issue, 'id' | 'createdAt' | 'updatedAt'>): Promise<Issue>;
   updateIssue(id: string, update: Partial<Issue>): Promise<Issue>;
+
+  // Flow操作
+  getFlow(id: string): Promise<Flow | null>;
+  searchFlows(query: string): Promise<Flow[]>;
+  createFlow(flow: Omit<Flow, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flow>;
+  updateFlow(id: string, update: Partial<Flow>): Promise<Flow>;
 
   // Pond操作
   searchPond(query: string): Promise<PondEntry[]>;
