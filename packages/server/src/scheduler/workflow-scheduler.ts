@@ -13,6 +13,23 @@ import { DBClient } from '@sebas-chan/db';
 import type { DriverFactory } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 
+// DBの行データ型
+interface ScheduleRow {
+  id: string;
+  issue_id: string;
+  request: string;
+  action: ScheduleAction;
+  next_run: string | null;
+  last_run: string | null;
+  pattern?: string;
+  occurrences: number;
+  max_occurrences?: number;
+  dedupe_key?: string;
+  status: 'active' | 'completed' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+}
+
 export class WorkflowScheduler implements WorkflowSchedulerInterface {
   private timers: Map<string, NodeJS.Timeout> = new Map();
   private checkInterval: NodeJS.Timeout | null = null;
@@ -243,7 +260,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       limit: 1000,
     });
 
-    return results.map((row: any) => this.rowToSchedule(row));
+    return results.map((row: ScheduleRow) => this.rowToSchedule(row));
   }
 
   private async findDue(): Promise<Schedule[]> {
@@ -254,7 +271,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
     return activeSchedules.filter((schedule) => schedule.nextRun && schedule.nextRun <= now);
   }
 
-  private rowToSchedule(row: any): Schedule {
+  private rowToSchedule(row: ScheduleRow): Schedule {
     return {
       id: row.id,
       issueId: row.issue_id,
@@ -390,7 +407,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 
   async list(filter?: ScheduleFilter): Promise<Schedule[]> {
     // フィルタに基づいて検索
-    const searchFilter: any = {};
+    const searchFilter: Partial<ScheduleFilter> = {};
     if (filter?.status) {
       searchFilter.status = filter.status;
     }
@@ -406,7 +423,7 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
       limit: 1000,
     });
 
-    let schedules = results.map((row: any) => this.rowToSchedule(row));
+    let schedules = results.map((row: ScheduleRow) => this.rowToSchedule(row));
 
     // 日付フィルタを適用
     if (filter?.createdAfter) {

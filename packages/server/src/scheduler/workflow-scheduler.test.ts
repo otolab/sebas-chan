@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WorkflowScheduler } from './workflow-scheduler.js';
 import { EventEmitter } from 'events';
 import type { DriverFactory } from '../types.js';
+import type { ScheduleFilter } from '@sebas-chan/shared-types';
 
 // DBClientのモック
 const mockDbClient = {
@@ -11,7 +12,6 @@ const mockDbClient = {
     status: 'ok',
     tables: ['schedules'],
   }),
-  execute: vi.fn(),
   getSchedule: vi.fn(),
   searchSchedules: vi.fn(),
   updateSchedule: vi.fn(),
@@ -79,16 +79,7 @@ describe('WorkflowScheduler', () => {
   describe('schedule', () => {
     it('自然言語からスケジュールを作成できる', async () => {
       // モックデータは直接resultで検証
-
-      mockDbClient.execute.mockImplementation((params: any) => {
-        if (params.action === 'insert') {
-          return Promise.resolve();
-        }
-        if (params.action === 'search') {
-          return Promise.resolve([]);
-        }
-        return Promise.resolve();
-      });
+      mockDbClient.searchSchedules.mockResolvedValue([]);
 
       const result = await scheduler.schedule('test-issue-1', '5分後にリマインド', {
         type: 'REMINDER',
@@ -129,7 +120,7 @@ describe('WorkflowScheduler', () => {
         updated_at: new Date().toISOString(),
       };
 
-      mockDbClient.searchSchedules.mockImplementation((filter: any) => {
+      mockDbClient.searchSchedules.mockImplementation((filter: Partial<Record<string, string | number>>) => {
         if (filter?.dedupe_key === 'test-correlation' && filter?.issue_id === 'test-issue-2') {
           return Promise.resolve([existingSchedule]);
         }
@@ -138,21 +129,6 @@ describe('WorkflowScheduler', () => {
       mockDbClient.getSchedule.mockResolvedValue(existingSchedule);
       mockDbClient.updateSchedule.mockResolvedValue(undefined);
       mockDbClient.addSchedule.mockResolvedValue(undefined);
-      mockDbClient.execute.mockImplementation((params: any) => {
-        if (params.action === 'search' && params.filter?.correlation_id) {
-          return Promise.resolve([existingSchedule]);
-        }
-        if (params.action === 'search' && params.filter?.id) {
-          return Promise.resolve([existingSchedule]);
-        }
-        if (params.action === 'update') {
-          return Promise.resolve();
-        }
-        if (params.action === 'insert') {
-          return Promise.resolve();
-        }
-        return Promise.resolve([]);
-      });
 
       await scheduler.schedule(
         'test-issue-2',
@@ -223,16 +199,7 @@ describe('WorkflowScheduler', () => {
       };
 
       mockDbClient.getSchedule.mockResolvedValue(schedule);
-      mockDbClient.updateSchedule.mockResolvedValue(undefined);
-      mockDbClient.execute.mockImplementation((params: any) => {
-        if (params.action === 'search' && params.filter?.id === 'test-id') {
-          return Promise.resolve([schedule]);
-        }
-        if (params.action === 'update') {
-          return Promise.resolve();
-        }
-        return Promise.resolve([]);
-      });
+      mockDbClient.updateSchedule.mockResolvedValue(true);
 
       const result = await scheduler.cancel('test-id');
 
@@ -248,7 +215,6 @@ describe('WorkflowScheduler', () => {
 
     it('存在しないスケジュールのキャンセルはfalseを返す', async () => {
       mockDbClient.getSchedule.mockResolvedValue(null);
-      mockDbClient.execute.mockResolvedValue([]);
 
       const result = await scheduler.cancel('non-existent');
 
@@ -318,19 +284,8 @@ describe('WorkflowScheduler', () => {
       vi.useFakeTimers();
 
       // テスト用のスケジュールデータ
-
-      mockDbClient.execute.mockImplementation((params: any) => {
-        if (params.action === 'insert') {
-          return Promise.resolve();
-        }
-        if (params.action === 'search') {
-          return Promise.resolve([]);
-        }
-        if (params.action === 'update') {
-          return Promise.resolve();
-        }
-        return Promise.resolve();
-      });
+      mockDbClient.searchSchedules.mockResolvedValue([]);
+      mockDbClient.addSchedule.mockResolvedValue('test-schedule-id');
 
       // 1秒後の実行を設定するようにモックを変更
       mockDriverFactory = vi.fn().mockResolvedValue({
@@ -408,7 +363,7 @@ describe('WorkflowScheduler', () => {
       ];
 
       mockDbClient.searchSchedules.mockResolvedValue(activeSchedules);
-      mockDbClient.execute.mockImplementation((params: any) => {
+      mockDbClient.execute.mockImplementation((params: DBExecuteParams) => {
         if (params.action === 'search' && params.filter?.status === 'active') {
           return Promise.resolve(activeSchedules);
         }
@@ -426,7 +381,7 @@ describe('WorkflowScheduler', () => {
     });
 
     it('shutdown時に全タイマーをクリアする', async () => {
-      mockDbClient.execute.mockResolvedValue([]);
+      mockDbClient.searchSchedules.mockResolvedValue([]);
 
       await scheduler.schedule('test-issue-5', 'テスト', {
         type: 'TEST',
