@@ -4,7 +4,7 @@
 
 import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
 import { PRIORITY } from '@sebas-chan/shared-types';
-import type { WorkflowEventEmitterInterface } from '../context.js';
+import type { WorkflowEventEmitterInterface, WorkflowStorageInterface, WorkflowRecorder } from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
 import { ingestInputPromptModule, type InputAnalysisContext } from './prompts.js';
@@ -83,8 +83,8 @@ export function determinePriority(severity: 'low' | 'medium' | 'high' | 'critica
  * 意図: 関連するIssueに新しい情報を追加し、必要に応じて優先度を上げる
  */
 export async function updateRelatedIssues(
-  storage: any, // WorkflowStorageInterface
-  recorder: any, // WorkflowRecorderInterface
+  storage: WorkflowStorageInterface,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   analysis: InputAnalysisResult,
   pondEntryId: string,
@@ -144,8 +144,8 @@ export async function updateRelatedIssues(
  * 意図: 既存Issueで対応できない新しい追跡事項を記録
  */
 export async function createNewIssue(
-  storage: any, // WorkflowStorageInterface
-  recorder: any, // WorkflowRecorderInterface
+  storage: WorkflowStorageInterface,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   analysis: InputAnalysisResult,
   pondEntryId: string,
@@ -198,16 +198,15 @@ export async function createNewIssue(
  */
 export function emitHighPriorityEvent(
   emitter: WorkflowEventEmitterInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   analysis: InputAnalysisResult,
   issueId?: string
 ): void {
   if (analysis.severity === 'critical' || analysis.severity === 'high') {
     emitter.emit({
-      type: 'HIGH_PRIORITY_DETECTED',
+      type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: {
-        entityType: 'issue',
-        entityId: issueId || `pending-${Date.now()}`,
+        issueId: issueId || `pending-${Date.now()}`,
         priority: determinePriority(analysis.severity),
         reason: `High severity ${analysis.severity} issue detected`,
         requiredAction: analysis.updateContent || 'Immediate attention required',
@@ -216,7 +215,7 @@ export function emitHighPriorityEvent(
 
     recorder.record(RecordType.INFO, {
       step: 'eventEmitted',
-      eventType: 'HIGH_PRIORITY_DETECTED',
+      eventType: 'HIGH_PRIORITY_ISSUE_DETECTED',
       severity: analysis.severity,
     });
   }

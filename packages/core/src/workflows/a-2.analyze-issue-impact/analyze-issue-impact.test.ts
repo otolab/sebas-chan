@@ -130,7 +130,7 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     expect((result.output as any).impactScore).toBeDefined();
   });
 
-  it('should trigger HIGH_PRIORITY_DETECTED for high impact issues', async () => {
+  it('should trigger HIGH_PRIORITY_ISSUE_DETECTED for high impact issues', async () => {
     (mockEvent.payload as any).issue.title = 'Critical urgent crash - system completely down';
     mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
 
@@ -152,10 +152,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
 
     // 高優先度検出イベントが発行される
     expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'HIGH_PRIORITY_DETECTED',
+      type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: expect.objectContaining({
-        entityType: 'issue',
-        entityId: 'issue-123',
+        issueId: 'issue-123',
       }),
     });
   });

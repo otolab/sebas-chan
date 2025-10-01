@@ -179,6 +179,9 @@ export async function updateExistingIssue(
  * Pondエントリを作成
  * 意図: ユーザーリクエストをPondに保存し、DATA_ARRIVEDイベントを発行
  */
+
+>>> これはどこから呼ばれる想定かな？workflowの中から実行されることはないので、ここに記述するべきじゃない
+
 export async function createPondEntryAndEmitEvent(
   storage: WorkflowStorageInterface,
   recorder: any,
@@ -223,6 +226,9 @@ export async function createPondEntryAndEmitEvent(
  * アクションを実行
  * 意図: AI判定に基づいて具体的なアクションを実行
  */
+
+>>> ここは順次増やしていくイメージですね。増え過ぎたらプラグイン的にかけるようにしたほうがいいかもしれません。TODOとして書いておいて
+
 export async function executeActions(
   storage: WorkflowStorageInterface,
   recorder: any,

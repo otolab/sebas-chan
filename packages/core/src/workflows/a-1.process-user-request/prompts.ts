@@ -82,7 +82,8 @@ const availableEventTypes = [
   '- ERROR_DETECTED: エラー検出',
   '- PATTERN_FOUND: パターン発見',
   '- KNOWLEDGE_EXTRACTABLE: 知識抽出可能',
-  '- HIGH_PRIORITY_DETECTED: 高優先度検出',
+  '- HIGH_PRIORITY_ISSUE_DETECTED: 高優先度Issue検出',
+  '- HIGH_PRIORITY_FLOW_DETECTED: 高優先度Flow検出',
   '- SCHEDULE_TRIGGERED: スケジュール実行',
 ].join('\n');
 

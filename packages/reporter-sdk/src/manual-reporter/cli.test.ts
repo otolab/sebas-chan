@@ -6,7 +6,7 @@ vi.mock('fs');
 vi.mock('../client');
 
 describe('manual-reporter CLI', () => {
-  let mockClient: any;
+  let mockClient: Pick<ReporterClient, 'submitInput'>;
 
   beforeEach(() => {
     mockClient = {

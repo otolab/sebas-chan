@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { Issue, Knowledge, Flow } from '@sebas-chan/shared-types';
+import { Issue, Knowledge, Flow, Schedule, ScheduleFilter } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -562,20 +562,20 @@ export class DBClient extends EventEmitter {
   }
 
   // Schedule操作メソッド
-  async addSchedule(scheduleData: any): Promise<string> {
+  async addSchedule(scheduleData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     return (await this.sendRequest('addSchedule', scheduleData)) as string;
   }
 
-  async getSchedule(id: string): Promise<any | null> {
+  async getSchedule(id: string): Promise<Schedule | null> {
     return await this.sendRequest('getSchedule', { id });
   }
 
-  async updateSchedule(id: string, updates: any): Promise<boolean> {
+  async updateSchedule(id: string, updates: Partial<Schedule>): Promise<boolean> {
     return (await this.sendRequest('updateSchedule', { id, updates })) as boolean;
   }
 
-  async searchSchedules(filters: any): Promise<any[]> {
-    return (await this.sendRequest('searchSchedules', filters)) as any[];
+  async searchSchedules(filters: ScheduleFilter): Promise<Schedule[]> {
+    return (await this.sendRequest('searchSchedules', filters)) as Schedule[];
   }
 
   // テスト用メソッド

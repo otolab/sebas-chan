@@ -116,7 +116,11 @@ describe('Workflow Chain Integration Tests', () => {
       });
 
       // A-0実行
-      const ingestResult = await ingestInputWorkflow.executor(inputEvent, ingestContext, mockEmitter);
+      const ingestResult = await ingestInputWorkflow.executor(
+        inputEvent,
+        ingestContext,
+        mockEmitter
+      );
 
       if (!ingestResult.success) {
         console.error('Ingest failed:', ingestResult.error);
@@ -132,7 +136,7 @@ describe('Workflow Chain Integration Tests', () => {
         type: 'ISSUE_CREATED',
         timestamp: new Date(),
         payload: {
-          issueId: 'issue-456',  // A-2が期待するissueId
+          issueId: 'issue-456', // A-2が期待するissueId
           issue: {
             id: 'issue-456',
             title: 'Critical Error',
@@ -178,7 +182,8 @@ describe('Workflow Chain Integration Tests', () => {
             hasKnowledge: true,
             knowledgeSummary: 'クリティカルエラーの影響分析',
             impactScore: 0.9,
-            updatedState: ingestResult.context.state + '\n## Issue影響分析\n高影響度のIssueを検出しました。',
+            updatedState:
+              ingestResult.context.state + '\n## Issue影響分析\n高影響度のIssueを検出しました。',
           }),
         ],
         storageOverrides: {
@@ -217,8 +222,8 @@ describe('Workflow Chain Integration Tests', () => {
       expect(emittedEvents.length).toBeGreaterThanOrEqual(2);
 
       // A-2が発行するイベントを確認
-      const knowledgeEvent = emittedEvents.find(e => e.type === 'KNOWLEDGE_EXTRACTABLE');
-      const priorityEvent = emittedEvents.find(e => e.type === 'HIGH_PRIORITY_DETECTED');
+      const knowledgeEvent = emittedEvents.find((e) => e.type === 'KNOWLEDGE_EXTRACTABLE');
+      const priorityEvent = emittedEvents.find((e) => e.type === 'HIGH_PRIORITY_ISSUE_DETECTED');
       expect(knowledgeEvent).toBeDefined();
       expect(priorityEvent).toBeDefined();
 
@@ -231,7 +236,7 @@ describe('Workflow Chain Integration Tests', () => {
           {
             content: 'エラーを修正しました',
             timestamp: new Date(),
-            author: 'user',
+            author: 'user' as const,
           },
         ],
       };
@@ -241,7 +246,8 @@ describe('Workflow Chain Integration Tests', () => {
         driverResponses: [
           // A-3用のレスポンス
           JSON.stringify({
-            extractedKnowledge: 'システムで重大なエラーが発生した際は、即座にログを確認し、影響範囲を特定する必要がある。エラーの原因と解決方法を記録に残すことも重要。',
+            extractedKnowledge:
+              'システムで重大なエラーが発生した際は、即座にログを確認し、影響範囲を特定する必要がある。エラーの原因と解決方法を記録に残すことも重要。',
             updatedState: analyzeResult.context.state + '\n## 知識抽出\n重要な知識を抽出しました。',
           }),
         ],
@@ -259,7 +265,7 @@ describe('Workflow Chain Integration Tests', () => {
       });
 
       const extractResult = await extractKnowledgeWorkflow.executor(
-        knowledgeEvent!,  // KNOWLEDGE_EXTRACTABLEイベントを使用
+        knowledgeEvent!, // KNOWLEDGE_EXTRACTABLEイベントを使用
         extractContext,
         mockEmitter
       );
@@ -637,7 +643,9 @@ describe('Workflow Chain Integration Tests', () => {
       }
 
       // A-3実行（高影響度で発行されたイベントを使用）
-      const knowledgeExtractableEvent = emittedEvents.find(e => e.type === 'KNOWLEDGE_EXTRACTABLE');
+      const knowledgeExtractableEvent = emittedEvents.find(
+        (e) => e.type === 'KNOWLEDGE_EXTRACTABLE'
+      );
       if (knowledgeExtractableEvent) {
         // extract-knowledge用にgetIssueをモック
         const closedIssue = {

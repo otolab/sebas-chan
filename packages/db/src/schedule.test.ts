@@ -178,7 +178,15 @@ describe('DBClient - Schedule Methods', () => {
     it('addScheduleでエラーが発生した場合、エラーを投げる', async () => {
       client.sendRequest = vi.fn().mockRejectedValue(new Error('DB Error'));
 
-      await expect(client.addSchedule({ id: 'test' } as any)).rejects.toThrow('DB Error');
+      await expect(client.addSchedule({
+        issueId: 'test-issue',
+        request: 'test',
+        action: 'reminder',
+        nextRun: null,
+        lastRun: null,
+        occurrences: 0,
+        status: 'active'
+      })).rejects.toThrow('DB Error');
     });
 
     it('getScheduleでエラーが発生した場合、エラーを投げる', async () => {
