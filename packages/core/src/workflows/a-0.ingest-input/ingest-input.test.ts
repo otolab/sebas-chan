@@ -42,7 +42,6 @@ describe('IngestInput Workflow (Functional)', () => {
     // モックイベント
     mockEvent = {
       type: 'DATA_ARRIVED',
-      timestamp: new Date(),
       payload: {
         source: 'slack',
         content: '来週の水曜日に重要なミーティングがあるそうです。プレゼン資料を準備しておいてください。',

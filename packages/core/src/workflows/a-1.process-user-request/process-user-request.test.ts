@@ -53,12 +53,15 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
 
     // モックイベント
     mockEvent = {
-      type: 'USER_REQUEST',
-      timestamp: new Date(),
+      type: 'USER_REQUEST_RECEIVED',
       payload: {
         userId: 'user-123',
         content: 'システムエラーが発生しています',
-        type: 'message',
+        sessionId: 'session-123',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          source: 'web' as const,
+        },
       },
     };
   });
@@ -94,7 +97,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
   });
 
   it('should handle missing request content', async () => {
-    mockEvent.payload.content = undefined;
+    // USER_REQUEST_RECEIVEDイベントのcontentを空文字にする
+    mockEvent.payload.content = '';
 
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({

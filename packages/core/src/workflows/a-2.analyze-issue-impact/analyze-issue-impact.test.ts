@@ -78,14 +78,14 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     // モックイベント
     mockEvent = {
       type: 'ISSUE_CREATED',
-      timestamp: new Date(),
       payload: {
         issueId: 'issue-123',
         issue: {
           id: 'issue-123',
           title: 'Critical system error occurred',
           description: 'The system is down',
-          status: 'open',
+          status: 'open' as const,
+          priority: 50,  // priorityは数値
           labels: [],
           updates: [],
           relations: [],
@@ -93,6 +93,8 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
+        createdBy: 'user' as const,
+        sourceWorkflow: 'ProcessUserRequest',
       },
     };
   });
