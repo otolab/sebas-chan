@@ -6,8 +6,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { TestDriver } from '@moduler-prompt/driver';
 import { clusterIssuesWorkflow } from './index.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
-import type { AgentEvent } from '../../types.js';
-import type { Issue, Flow } from '@sebas-chan/shared-types';
+import type { SystemEvent, Issue, Flow } from '@sebas-chan/shared-types';
 import type { ExtendedIssue } from '../extended-types.js';
 
 // モックコンテキストの作成
@@ -156,16 +155,18 @@ describe('ClusterIssues Workflow', () => {
 
   it('should have correct workflow definition', () => {
     expect(clusterIssuesWorkflow.name).toBe('ClusterIssues');
-    expect(clusterIssuesWorkflow.triggers.eventTypes).toContain('UNCLUSTERED_ISSUES_EXCEEDED');
     expect(clusterIssuesWorkflow.triggers.eventTypes).toContain('USER_REQUEST_RECEIVED');
     expect(clusterIssuesWorkflow.triggers.priority).toBe(10);
   });
 
   it('should cluster unclustered issues', async () => {
-    const event: AgentEvent = {
-      type: 'UNCLUSTERED_ISSUES_EXCEEDED',
-      payload: { count: 3 },
-      timestamp: new Date(),
+    const event: SystemEvent = {
+      type: 'USER_REQUEST_RECEIVED',
+      payload: {
+        userId: 'test-user',
+        content: 'クラスタリングをお願いします',
+        timestamp: new Date().toISOString(),
+      },
     };
 
     const result = await clusterIssuesWorkflow.executor(event, mockContext, mockEmitter);
@@ -184,20 +185,24 @@ describe('ClusterIssues Workflow', () => {
     });
   });
 
-  it('should emit FLOW_CREATION_SUGGESTED event for clusters with 3+ issues', async () => {
-    const event: AgentEvent = {
+  it('should emit ISSUES_CLUSTER_DETECTED event for clusters with 3+ issues', async () => {
+    const event: SystemEvent = {
       type: 'USER_REQUEST_RECEIVED',
-      payload: {},
-      timestamp: new Date(),
+      payload: {
+        userId: 'test-user',
+        content: 'クラスタリングをお願いします',
+        timestamp: new Date().toISOString(),
+      },
     };
 
     await clusterIssuesWorkflow.executor(event, mockContext, mockEmitter);
 
     const emittedEvents = (mockEmitter as any).getEmittedEvents();
-    const flowCreationEvent = emittedEvents.find((e: any) => e.type === 'FLOW_CREATION_SUGGESTED');
+    const clusterEvent = emittedEvents.find((e: any) => e.type === 'ISSUES_CLUSTER_DETECTED');
 
-    expect(flowCreationEvent).toBeDefined();
-    expect(flowCreationEvent.payload).toMatchObject({
+    expect(clusterEvent).toBeDefined();
+    expect(clusterEvent.payload).toMatchObject({
+      clusterId: 'cluster-1',
       perspective: expect.objectContaining({
         type: 'project',
       }),

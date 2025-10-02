@@ -10,7 +10,7 @@
  * - ユーザーの経験を体系化し、忘れても再利用できる形で保存
  */
 
-import type { SystemEvent, IssueStatusChangedEvent, PatternFoundEvent, KnowledgeExtractableEvent } from '@sebas-chan/shared-types';
+import type { SystemEvent, IssueStatusChangedEvent, RecurringPatternDetectedEvent, KnowledgeExtractableEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -56,7 +56,7 @@ async function executeExtractKnowledge(
 
     const { content, sourceType, sourceId, confidence } = await getContentFromEvent(
       event.type,
-      event.payload as KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | PatternFoundEvent['payload'],
+      event.payload as KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | RecurringPatternDetectedEvent['payload'],
       storage
     );
 
@@ -201,17 +201,17 @@ export const extractKnowledgeWorkflow: WorkflowDefinition = {
   name: 'ExtractKnowledge',
   description: '解決済みIssueやパターンから再利用可能な知識を抽出し、Knowledge DBに保存する',
   triggers: {
-    eventTypes: ['KNOWLEDGE_EXTRACTABLE', 'ISSUE_STATUS_CHANGED', 'PATTERN_FOUND'],
+    eventTypes: ['KNOWLEDGE_EXTRACTABLE', 'ISSUE_STATUS_CHANGED', 'RECURRING_PATTERN_DETECTED'],
     condition: (event) => {
       // ISSUE_STATUS_CHANGEDの場合はresolvedのみ
       if (event.type === 'ISSUE_STATUS_CHANGED') {
         const payload = (event as IssueStatusChangedEvent).payload;
         return payload.to === 'closed';
       }
-      // PATTERN_FOUNDの場合は信頼度が高いもののみ
-      if (event.type === 'PATTERN_FOUND') {
-        const payload = (event as PatternFoundEvent).payload;
-        return payload.pattern?.confidence > 0.7;
+      // RECURRING_PATTERN_DETECTEDの場合は信頼度が高いもののみ
+      if (event.type === 'RECURRING_PATTERN_DETECTED') {
+        const payload = (event as RecurringPatternDetectedEvent).payload;
+        return payload.confidence > 0.7;
       }
       return true;
     },

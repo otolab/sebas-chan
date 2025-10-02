@@ -61,25 +61,22 @@ async function executeCreateFlow(
           id: `flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           title: clusterEvent.payload.perspective.title,
           description: clusterEvent.payload.perspective.description,
-          status: 'active' as const,
-          priority: clusterEvent.payload.suggestedPriority || 50,
-          perspective: {
-            type: clusterEvent.payload.perspective.type,
-            query: `cluster:${clusterEvent.payload.clusterId}`,
-          },
+          status: 'active',
+          priorityScore: (clusterEvent.payload.suggestedPriority || 50) / 100, // 0-100を0-1に変換
           issueIds: clusterEvent.payload.issueIds,
-          metadata: {
-            createdFrom: 'cluster_detection',
-            clusterId: clusterEvent.payload.clusterId,
-            similarity: clusterEvent.payload.similarity,
-          },
           createdAt: new Date(),
           updatedAt: new Date(),
+        } as Flow & {
+          perspective?: {
+            type: 'project' | 'temporal' | 'thematic' | 'dependency';
+            query?: string;
+          };
+          metadata?: Record<string, unknown>;
         };
 
         recorder.record(RecordType.INFO, {
           event: 'FLOW_CREATED_FROM_CLUSTER',
-          flowId: newFlow.id,
+          flowId: newFlow!.id,
           issueCount: clusterEvent.payload.issueIds.length,
         });
         break;
@@ -109,25 +106,22 @@ async function executeCreateFlow(
           id: `flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           title: perspectiveEvent.payload.perspective,
           description: `Flow created from perspective: ${perspectiveEvent.payload.triggerReason}`,
-          status: 'active' as const,
-          priority: 60, // 観点トリガーは少し高めの優先度
-          perspective: {
-            type: 'thematic', // デフォルトはテーマ型
-            query: perspectiveEvent.payload.perspective,
-          },
+          status: 'active',
+          priorityScore: 0.6, // 観点トリガーは少し高めの優先度
           issueIds: perspectiveEvent.payload.suggestedIssues || [],
-          metadata: {
-            createdFrom: 'perspective_trigger',
-            source: perspectiveEvent.payload.source,
-            triggerReason: perspectiveEvent.payload.triggerReason,
-          },
           createdAt: new Date(),
           updatedAt: new Date(),
+        } as Flow & {
+          perspective?: {
+            type: 'project' | 'temporal' | 'thematic' | 'dependency';
+            query?: string;
+          };
+          metadata?: Record<string, unknown>;
         };
 
         recorder.record(RecordType.INFO, {
           event: 'FLOW_CREATED_FROM_PERSPECTIVE',
-          flowId: newFlow.id,
+          flowId: newFlow!.id,
           source: perspectiveEvent.payload.source,
         });
         break;
@@ -218,9 +212,9 @@ export const createFlowWorkflow: WorkflowDefinition = {
       'ISSUES_CLUSTER_DETECTED',  // クラスター検出
       'PERSPECTIVE_TRIGGERED',     // 観点発見
     ],
+    priority: 30, // 中優先度
   },
   executor: executeCreateFlow,
-  priority: 30, // 中優先度
   conditions: {
     // 実行条件なし（イベントを受信したら実行）
   },

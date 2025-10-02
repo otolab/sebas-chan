@@ -8,7 +8,7 @@ import type {
   Issue,
   KnowledgeExtractableEvent,
   IssueStatusChangedEvent,
-  PatternFoundEvent
+  RecurringPatternDetectedEvent
 } from '@sebas-chan/shared-types';
 import type { WorkflowStorageInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
