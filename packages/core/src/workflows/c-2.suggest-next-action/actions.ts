@@ -137,50 +137,77 @@ export async function applyActionSuggestions(
   });
 
   // アクション提案準備完了イベント
+  // ACTION_SUGGESTION_READYは未定義のため削除
+  // 提案内容はワークフローのoutputとして返されるため、イベント発火は不要
   if (prioritizedActions.length > 0) {
-    emitter.emit({
-      type: 'ACTION_SUGGESTION_READY',
-      payload: {
-        issueId,
-        primaryAction: prioritizedActions[0].title,
-        totalActions: prioritizedActions.length,
-      },
-    });
+    // イベント発火を削除（ワークフローのoutputで十分）
   }
 
-  // Issue分割が推奨される場合
+  // Issue分割が推奨される場合、Issueとして作成
   if (actionResult.splitSuggestion?.shouldSplit) {
+    const splitIssue = await storage.createIssue({
+      title: `Issue "${issue.title}" の分割を検討`,
+      description: `## 提案内容\nIssue (${issueId}) を複数のサブIssueに分割することを提案します。\n\n## 理由\n${actionResult.splitSuggestion.reason}\n\n## 提案されるサブIssue\n${actionResult.splitSuggestion.suggestedSubIssues.map((sub: any) => `- ${sub.title}: ${sub.description}`).join('\n')}\n\n## アクション\nこの提案をレビューして、適切な場合は手動でサブIssueを作成してください。`,
+      status: 'open' as any,
+      priority: 'medium' as any,
+      labels: ['suggestion', 'issue-split'],
+      updates: [{
+        timestamp: new Date(),
+        content: `SuggestNextActionワークフローによって作成されました。元Issue: ${issueId}`,
+        author: 'ai' as const,
+      }],
+      relations: [{ type: 'relates_to', targetId: issueId }],
+      sourceInputIds: [],
+    });
+
     emitter.emit({
-      type: 'ISSUE_SPLIT_SUGGESTED',
+      type: 'ISSUE_CREATED',
       payload: {
-        issueId,
-        reason: actionResult.splitSuggestion.reason,
-        suggestedSubIssues: actionResult.splitSuggestion.suggestedSubIssues,
+        issueId: splitIssue.id,
+        issue: splitIssue,
+        createdBy: 'workflow' as const,
+        sourceWorkflow: 'SuggestNextAction',
       },
     });
 
     recorder.record(RecordType.INFO, {
-      event: 'ISSUE_SPLIT_SUGGESTED',
-      issueId,
+      action: 'ISSUE_SPLIT_ISSUE_CREATED',
+      originalIssueId: issueId,
+      suggestionIssueId: splitIssue.id,
       subIssuesCount: actionResult.splitSuggestion.suggestedSubIssues.length,
     });
   }
 
-  // エスカレーションが必要な場合
+  // エスカレーションが必要な場合、高優先度Issueとして更新
   if (actionResult.escalationSuggestion?.shouldEscalate) {
+    // 既存Issueの優先度を上げる
+    await storage.updateIssue(issueId, {
+      priority: 'high' as any,
+      updates: [
+        ...issue.updates,
+        {
+          timestamp: new Date(),
+          content: `エスカレーション推奨: ${actionResult.escalationSuggestion.reason}\n担当推奨: ${actionResult.escalationSuggestion.escalateTo}`,
+          author: 'ai' as const,
+        },
+      ],
+    });
+
+    // 高優先度Issue検出イベントを発火
     emitter.emit({
-      type: 'ESCALATION_REQUIRED',
+      type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: {
         issueId,
+        priority: 90,
         reason: actionResult.escalationSuggestion.reason,
-        escalateTo: actionResult.escalationSuggestion.escalateTo,
       },
     });
 
     recorder.record(RecordType.INFO, {
-      event: 'ESCALATION_REQUIRED',
+      action: 'ISSUE_ESCALATED',
       issueId,
       escalateTo: actionResult.escalationSuggestion.escalateTo,
+      reason: actionResult.escalationSuggestion.reason,
     });
   }
 

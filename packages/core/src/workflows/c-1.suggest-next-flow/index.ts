@@ -96,7 +96,10 @@ async function executeSuggestNextFlow(
     const suggestionResult = await suggestNextFlow(
       driver,
       contextAnalysis,
-      payload.constraints || {},
+      {
+        maxSuggestions: 5,
+        priorityThreshold: 0.5,
+      },
       context.state
     );
 
@@ -118,16 +121,6 @@ async function executeSuggestNextFlow(
     if (suggestionResult.suggestions.length > 0) {
       const primarySuggestion = suggestionResult.suggestions[0];
 
-      // Flow提案準備完了イベント
-      emitter.emit({
-        type: 'FLOW_SUGGESTION_READY',
-        payload: {
-          flowId: primarySuggestion.flowId,
-          score: primarySuggestion.score,
-          reason: primarySuggestion.reason,
-        },
-      });
-
       // 高スコアの場合、観点トリガーイベント
       if (primarySuggestion.score > 0.8) {
         const flow = await storage.getFlow(primarySuggestion.flowId);
@@ -137,7 +130,8 @@ async function executeSuggestNextFlow(
             payload: {
               flowId: flow.id,
               perspective: flow.description,
-              trigger: 'suggestion',
+              triggerReason: `High score suggestion: ${primarySuggestion.reason}`,
+              source: 'workflow' as const,
             },
           });
         }

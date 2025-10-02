@@ -357,31 +357,40 @@ export function determineDefaultEvents(
 
   switch (requestType) {
     case REQUEST_TYPE.ISSUE:
+      // ISSUE_REPORTEDは削除されたため、ISSUE_CREATEDイベントを直接発火する準備
+      // 実際のIssue作成はexecutorで行い、ここではイベント準備のみ
       events.push({
-        type: 'ISSUE_REPORTED',
+        type: 'ISSUE_CREATED',
         payload: {
           content,
-          reportedBy: 'user',
+          createdBy: 'user' as const,
+          sourceWorkflow: 'ProcessUserRequest',
           timestamp,
         },
       });
       break;
 
     case REQUEST_TYPE.SCHEDULE:
+      // SCHEDULE_REQUESTEDは未定義のため、SCHEDULE_TRIGGEREDを使用
       events.push({
-        type: 'SCHEDULE_REQUESTED',
+        type: 'SCHEDULE_TRIGGERED',
         payload: {
-          content,
-          timestamp,
+          scheduledTask: content,
+          scheduledTime: timestamp,
+          executionTime: timestamp,
         },
       });
       break;
 
     case REQUEST_TYPE.SEARCH:
+      // SEARCH_REQUESTEDは未定義のため、DATA_ARRIVEDを使用
       events.push({
-        type: 'SEARCH_REQUESTED',
+        type: 'DATA_ARRIVED',
         payload: {
-          query: content,
+          source: 'user_search',
+          content: `検索クエリ: ${content}`,
+          pondEntryId: `search-${Date.now()}`,
+          metadata: { searchQuery: content },
           timestamp,
         },
       });

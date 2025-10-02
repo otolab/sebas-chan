@@ -80,7 +80,7 @@ const availableEventTypes = [
   '- ISSUE_UPDATED: Issue更新',
   '- ISSUE_STATUS_CHANGED: Issueステータス変更',
   '- ERROR_DETECTED: エラー検出',
-  '- PATTERN_FOUND: パターン発見',
+  '- RECURRING_PATTERN_DETECTED: 繰り返しパターン検出',
   '- KNOWLEDGE_EXTRACTABLE: 知識抽出可能',
   '- HIGH_PRIORITY_ISSUE_DETECTED: 高優先度Issue検出',
   '- HIGH_PRIORITY_FLOW_DETECTED: 高優先度Flow検出',

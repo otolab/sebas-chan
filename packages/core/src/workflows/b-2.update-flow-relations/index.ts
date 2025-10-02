@@ -160,14 +160,17 @@ export const updateFlowRelationsWorkflow: WorkflowDefinition = {
       'ISSUE_CREATED',
       'ISSUE_UPDATED',
       'ISSUE_STATUS_CHANGED',
-      'ISSUE_CLOSED',
+      // 'ISSUE_CLOSED', // 削除済みイベント
     ],
     // Issue変更に応じて優先度を変える
     priority: 15,
     condition: (event) => {
-      // ISSUE_CLOSEDは重要なので常に実行
-      if (event.type === 'ISSUE_CLOSED') {
-        return true;
+      // ISSUE_STATUS_CHANGEDでstatusがclosedの場合は重要
+      if (event.type === 'ISSUE_STATUS_CHANGED') {
+        const payload = event.payload as { newStatus?: string };
+        if (payload.newStatus === 'closed') {
+          return true;
+        }
       }
       // それ以外は高優先度Issueの場合のみ
       const payload = event.payload as { priority?: number };

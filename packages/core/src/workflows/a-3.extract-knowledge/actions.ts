@@ -70,7 +70,7 @@ export function createKnowledgeSource(sourceType: string, sourceId: string): Kno
  */
 export async function getContentFromEvent(
   eventType: string,
-  payload: KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | PatternFoundEvent['payload'],
+  payload: KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | RecurringPatternDetectedEvent['payload'],
   storage: WorkflowStorageInterface
 ): Promise<{
   content: string;
@@ -122,8 +122,8 @@ export async function getContentFromEvent(
       }
       confidence = 0.8; // 解決済みIssueは信頼度高
     }
-  } else if (eventType === 'PATTERN_FOUND') {
-    const patternPayload = payload as PatternFoundEvent['payload'];
+  } else if (eventType === 'RECURRING_PATTERN_DETECTED') {
+    const patternPayload = payload as RecurringPatternDetectedEvent['payload'];
     // パターン発見時の知識抽出
     sourceType = 'pattern';
     sourceId = `pattern-${Date.now()}`;

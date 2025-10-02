@@ -212,14 +212,14 @@ export const suggestNextActionWorkflow: WorkflowDefinition = {
   triggers: {
     eventTypes: [
       'ISSUE_STALLED',
-      'ACTION_REQUESTED',
-      'ISSUE_OPENED',
-      'USER_STUCK',
+      'HIGH_PRIORITY_ISSUE_DETECTED',
+      'USER_REQUEST_RECEIVED',
+      'ISSUE_CREATED', // ISSUE_OPENEDの代わり
     ],
     priority: 25,
     condition: (event) => {
-      // 高優先度Issueまたは明示的な要求の場合のみ
-      if (event.type === 'ACTION_REQUESTED' || event.type === 'USER_STUCK') {
+      // 高優先度Issueの場合のみ（ACTION_REQUESTEDとUSER_STUCKは削除済み）
+      if (event.type === 'HIGH_PRIORITY_ISSUE_DETECTED' || event.type === 'USER_REQUEST_RECEIVED') {
         return true;
       }
       const payload = event.payload as { priority?: number };
