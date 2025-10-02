@@ -60,48 +60,34 @@ export async function clusterIssues(
 }
 
 /**
- * Flow作成提案イベントを発行
+ * クラスター検出イベントを発行
  */
-export async function emitFlowSuggestions(
+export async function emitClusterDetectedEvents(
   clusteringResult: ClusteringResult,
   emitter: WorkflowEventEmitterInterface,
   recorder: WorkflowRecorder
 ): Promise<void> {
   for (const cluster of clusteringResult.clusters) {
-    // 3件以上のIssueを含むクラスタのみFlow提案
+    // 3件以上のIssueを含むクラスタのみイベント発行
     if (cluster.issueIds.length >= 3) {
       emitter.emit({
-        type: 'FLOW_CREATION_SUGGESTED',
+        type: 'ISSUES_CLUSTER_DETECTED',
         payload: {
+          clusterId: cluster.id,
           perspective: cluster.perspective,
           issueIds: cluster.issueIds,
-          relationships: cluster.relationships,
-          priority: cluster.suggestedPriority,
-          completionCriteria: cluster.completionCriteria,
+          similarity: 0.8, // TODO: 実際の類似度計算を実装
+          suggestedPriority: cluster.suggestedPriority,
           autoCreate: cluster.perspective.type === 'project', // プロジェクト型は自動作成
         },
       });
 
       recorder.record(RecordType.INFO, {
-        event: 'FLOW_CREATION_SUGGESTED',
+        event: 'ISSUES_CLUSTER_DETECTED',
         clusterId: cluster.id,
         issueCount: cluster.issueIds.length,
         perspectiveType: cluster.perspective.type,
       });
     }
-  }
-
-  // クラスタ発見イベント
-  if (clusteringResult.clusters.length > 0) {
-    emitter.emit({
-      type: 'ISSUES_CLUSTER_DETECTED',
-      payload: {
-        clusterCount: clusteringResult.clusters.length,
-        totalIssues: clusteringResult.clusters.reduce(
-          (sum, c) => sum + c.issueIds.length,
-          0
-        ),
-      },
-    });
   }
 }

@@ -85,7 +85,7 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
       '',
       '内容:',
 
-      >>> 省略しない
+      // >>> 省略しない
 
       (ctx: KnowledgeExtractionContext) => {
         const lines = ctx.content.split('\n').slice(0, 20);

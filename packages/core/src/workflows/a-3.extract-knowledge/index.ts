@@ -10,7 +10,7 @@
  * - ユーザーの経験を体系化し、忘れても再利用できる形で保存
  */
 
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent, IssueStatusChangedEvent, PatternFoundEvent, KnowledgeExtractableEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -34,7 +34,7 @@ import {
  * 6. システムStateの更新
  */
 async function executeExtractKnowledge(
-  event: AgentEvent,
+  event: SystemEvent,
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
@@ -56,7 +56,7 @@ async function executeExtractKnowledge(
 
     const { content, sourceType, sourceId, confidence } = await getContentFromEvent(
       event.type,
-      event.payload,
+      event.payload as KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | PatternFoundEvent['payload'],
       storage
     );
 
@@ -205,12 +205,12 @@ export const extractKnowledgeWorkflow: WorkflowDefinition = {
     condition: (event) => {
       // ISSUE_STATUS_CHANGEDの場合はresolvedのみ
       if (event.type === 'ISSUE_STATUS_CHANGED') {
-        const payload = event.payload as any;
-        return payload.to === 'resolved';
+        const payload = (event as IssueStatusChangedEvent).payload;
+        return payload.to === 'closed';
       }
       // PATTERN_FOUNDの場合は信頼度が高いもののみ
       if (event.type === 'PATTERN_FOUND') {
-        const payload = event.payload as any;
+        const payload = (event as PatternFoundEvent).payload;
         return payload.pattern?.confidence > 0.7;
       }
       return true;

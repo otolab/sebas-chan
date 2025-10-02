@@ -10,9 +10,10 @@
  * - 作業の継続性とコンテキストスイッチの最小化
  */
 
-import type { AgentEvent } from '../../types.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { SystemEvent, Flow } from '@sebas-chan/shared-types';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface, WorkflowStorageInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
+import type { ExtendedFlow } from '../extended-types.js';
 import { RecordType } from '../recorder.js';
 import { suggestNextFlow, recordSuggestion } from './actions.js';
 
@@ -20,7 +21,7 @@ import { suggestNextFlow, recordSuggestion } from './actions.js';
  * C-1: SUGGEST_NEXT_FLOW ワークフロー実行関数
  */
 async function executeSuggestNextFlow(
-  event: AgentEvent,
+  event: SystemEvent,
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
@@ -182,25 +183,28 @@ function isWorkingHours(date: Date, timezone?: string): boolean {
 /**
  * 最近完了したFlowを取得
  */
-async function getRecentCompletedFlows(storage: any, days: number): Promise<any[]> {
+async function getRecentCompletedFlows(storage: WorkflowStorageInterface, days: number): Promise<Flow[]> {
   const flows = await storage.searchFlows('status:completed');
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
 
-  return flows.filter((f: any) => new Date(f.updatedAt) > cutoff);
+  return flows.filter((f) => new Date(f.updatedAt) > cutoff);
 }
 
 /**
  * 今後の締切を取得
  */
-async function getUpcomingDeadlines(storage: any, days: number): Promise<any[]> {
-  const flows = await storage.searchFlows('status:active');
+async function getUpcomingDeadlines(storage: WorkflowStorageInterface, days: number): Promise<ExtendedFlow[]> {
+  const flows = await storage.searchFlows('status:active') as ExtendedFlow[];
   const future = new Date();
   future.setDate(future.getDate() + days);
 
   return flows
-    .filter((f: any) => f.deadline && new Date(f.deadline) <= future)
-    .sort((a: any, b: any) => new Date(a.deadline).getTime() - new Date(b.deadline).getTime());
+    .filter((f) => f.deadline && new Date(f.deadline) <= future)
+    .sort((a, b) => {
+      if (!a.deadline || !b.deadline) return 0;
+      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+    });
 }
 
 /**

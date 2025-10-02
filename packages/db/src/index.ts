@@ -562,12 +562,14 @@ export class DBClient extends EventEmitter {
   }
 
   // Schedule操作メソッド
-  async addSchedule(scheduleData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async addSchedule(
+    scheduleData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<string> {
     return (await this.sendRequest('addSchedule', scheduleData)) as string;
   }
 
   async getSchedule(id: string): Promise<Schedule | null> {
-    return await this.sendRequest('getSchedule', { id });
+    return (await this.sendRequest('getSchedule', { id })) as Schedule | null;
   }
 
   async updateSchedule(id: string, updates: Partial<Schedule>): Promise<boolean> {

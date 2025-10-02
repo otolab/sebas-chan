@@ -23,16 +23,24 @@ export type EventType =
   | 'ISSUE_CREATED'
   | 'ISSUE_UPDATED'
   | 'ISSUE_STATUS_CHANGED'
+  | 'ISSUE_STALLED'
+  | 'FLOW_CREATED'
+  | 'FLOW_UPDATED'
+  | 'FLOW_STATUS_CHANGED'
   | 'KNOWLEDGE_CREATED'
 
   // 分析イベント
-  | 'PATTERN_FOUND'
+  | 'RECURRING_PATTERN_DETECTED'
   | 'KNOWLEDGE_EXTRACTABLE'
   | 'HIGH_PRIORITY_ISSUE_DETECTED'
   | 'HIGH_PRIORITY_FLOW_DETECTED'
+  | 'ISSUES_CLUSTER_DETECTED'
+  | 'PERSPECTIVE_TRIGGERED'
 
   // システムイベント
-  | 'SCHEDULE_TRIGGERED';
+  | 'SCHEDULE_TRIGGERED'
+  | 'SYSTEM_MAINTENANCE_DUE'
+  | 'IDLE_TIME_DETECTED';
 
 // ====================
 // イベントペイロード定義
@@ -116,20 +124,33 @@ export interface IssueStatusChangedEvent {
 }
 
 /**
- * PATTERN_FOUND: Issue群から共通パターンが発見された
+ * ISSUE_STALLED: Issueが停滞している
  */
-export interface PatternFoundEvent {
-  type: 'PATTERN_FOUND';
+export interface IssueStalledEvent {
+  type: 'ISSUE_STALLED';
   payload: {
-    patternType: 'recurring' | 'temporal' | 'category' | 'dependency';
-    pattern: {
-      description: string;
-      occurrences: number;
-      confidence: number;
-      examples: string[];
+    issueId: string;
+    stalledDays: number;
+    lastUpdate: Date | string;
+  };
+}
+
+/**
+ * RECURRING_PATTERN_DETECTED: 繰り返し現れるパターンが検出された
+ */
+export interface RecurringPatternDetectedEvent {
+  type: 'RECURRING_PATTERN_DETECTED';
+  payload: {
+    patternType: 'temporal' | 'behavioral' | 'structural' | 'statistical';
+    description: string;
+    occurrences: number;
+    timespan?: {
+      start: string;
+      end: string;
     };
-    relatedIssues: string[];
-    suggestedAction?: string;
+    confidence: number; // 0-1
+    entities: string[]; // 関連するIssue ID、ユーザーID等
+    suggestedKnowledge?: string; // 知識化の提案
   };
 }
 
@@ -192,6 +213,97 @@ export interface HighPriorityFlowDetectedEvent {
 }
 
 /**
+ * ISSUES_CLUSTER_DETECTED: 類似するIssue群のクラスターが検出された
+ */
+export interface IssuesClusterDetectedEvent {
+  type: 'ISSUES_CLUSTER_DETECTED';
+  payload: {
+    clusterId: string;
+    perspective: {
+      type: 'project' | 'temporal' | 'thematic' | 'dependency';
+      title: string;
+      description: string;
+    };
+    issueIds: string[];
+    similarity: number; // 0-1
+    suggestedPriority?: number;
+    autoCreate?: boolean; // Flow自動作成フラグ
+  };
+}
+
+/**
+ * PERSPECTIVE_TRIGGERED: 重要な観点が発見された
+ */
+export interface PerspectiveTriggeredEvent {
+  type: 'PERSPECTIVE_TRIGGERED';
+  payload: {
+    flowId?: string; // 既存Flowの場合
+    perspective: string;
+    triggerReason: string;
+    source: 'user' | 'workflow' | 'system';
+    suggestedIssues?: string[]; // 関連するIssue
+  };
+}
+
+/**
+ * FLOW_CREATED: 新しいFlowが作成された
+ */
+export interface FlowCreatedEvent {
+  type: 'FLOW_CREATED';
+  payload: {
+    flowId: string;
+    flow: {
+      id: string;
+      title: string;
+      description: string;
+      status: string;
+      priority?: number;
+      perspective?: {
+        type: 'project' | 'temporal' | 'thematic' | 'dependency';
+        query?: string;
+      };
+      issueIds: string[];
+      metadata?: Record<string, unknown>;
+      createdAt: Date;
+      updatedAt: Date;
+    };
+    createdBy: 'user' | 'system' | 'workflow';
+    sourceWorkflow?: string;
+  };
+}
+
+/**
+ * FLOW_UPDATED: Flowが更新された
+ */
+export interface FlowUpdatedEvent {
+  type: 'FLOW_UPDATED';
+  payload: {
+    flowId: string;
+    updates: {
+      before: Record<string, unknown>;
+      after: Record<string, unknown>;
+      changedFields: string[];
+    };
+    updatedBy: string;
+  };
+}
+
+/**
+ * FLOW_STATUS_CHANGED: Flowのステータスが変更された
+ */
+export type FlowStatus = 'active' | 'completed' | 'archived' | 'paused';
+
+export interface FlowStatusChangedEvent {
+  type: 'FLOW_STATUS_CHANGED';
+  payload: {
+    flowId: string;
+    oldStatus: FlowStatus;
+    newStatus: FlowStatus;
+    reason?: string;
+  };
+}
+
+/**
  * SCHEDULE_TRIGGERED: context.schedulerに登録されたスケジュールが実行時刻に達した
  */
 export interface ScheduleTriggeredEvent {
@@ -202,6 +314,28 @@ export interface ScheduleTriggeredEvent {
     scheduledTime: string;
     action: 'reminder' | 'follow_up' | 'escalate' | 'custom';
     details?: Record<string, unknown>;
+  };
+}
+
+/**
+ * SYSTEM_MAINTENANCE_DUE: システムメンテナンス時期
+ */
+export interface SystemMaintenanceDueEvent {
+  type: 'SYSTEM_MAINTENANCE_DUE';
+  payload: {
+    maintenanceType?: string;
+    lastExecution?: string;
+  };
+}
+
+/**
+ * IDLE_TIME_DETECTED: アイドル時間が検出された
+ */
+export interface IdleTimeDetectedEvent {
+  type: 'IDLE_TIME_DETECTED';
+  payload: {
+    duration?: number; // ミリ秒
+    lastActivity?: string;
   };
 }
 
@@ -218,12 +352,20 @@ export type SystemEvent =
   | IssueCreatedEvent
   | IssueUpdatedEvent
   | IssueStatusChangedEvent
-  | PatternFoundEvent
+  | IssueStalledEvent
+  | FlowCreatedEvent
+  | FlowUpdatedEvent
+  | FlowStatusChangedEvent
+  | RecurringPatternDetectedEvent
   | KnowledgeExtractableEvent
   | KnowledgeCreatedEvent
   | HighPriorityIssueDetectedEvent
   | HighPriorityFlowDetectedEvent
-  | ScheduleTriggeredEvent;
+  | IssuesClusterDetectedEvent
+  | PerspectiveTriggeredEvent
+  | ScheduleTriggeredEvent
+  | SystemMaintenanceDueEvent
+  | IdleTimeDetectedEvent;
 
 /**
  * イベントのペイロード型を取得するヘルパー型
@@ -271,6 +413,7 @@ export type WorkflowType =
   | 'ANALYZE_ISSUE_IMPACT' // A-2
   | 'EXTRACT_KNOWLEDGE' // A-3
   | 'DEFINE_SYSTEM_RULE'
+  | 'CREATE_FLOW' // B-0
   | 'CLUSTER_ISSUES' // B-1
   | 'UPDATE_FLOW_RELATIONS' // B-2
   | 'UPDATE_FLOW_PRIORITIES' // B-3
@@ -291,10 +434,18 @@ export const EVENT_TO_WORKFLOWS: Record<EventType, WorkflowType[]> = {
   ISSUE_CREATED: ['ANALYZE_ISSUE_IMPACT', 'UPDATE_FLOW_RELATIONS'],
   ISSUE_UPDATED: ['ANALYZE_ISSUE_IMPACT', 'UPDATE_FLOW_PRIORITIES'],
   ISSUE_STATUS_CHANGED: ['EXTRACT_KNOWLEDGE', 'SUGGEST_NEXT_FLOW'],
-  PATTERN_FOUND: ['EXTRACT_KNOWLEDGE', 'CLUSTER_ISSUES'],
+  ISSUE_STALLED: ['SUGGEST_NEXT_ACTION'],
+  FLOW_CREATED: [], // 終端イベント（現時点）
+  FLOW_UPDATED: ['UPDATE_FLOW_PRIORITIES'],
+  FLOW_STATUS_CHANGED: [], // 終端イベント（現時点）
+  RECURRING_PATTERN_DETECTED: ['EXTRACT_KNOWLEDGE'],
   KNOWLEDGE_EXTRACTABLE: ['EXTRACT_KNOWLEDGE'],
   KNOWLEDGE_CREATED: [], // 終端イベント
   HIGH_PRIORITY_ISSUE_DETECTED: ['SUGGEST_NEXT_ACTION'],
   HIGH_PRIORITY_FLOW_DETECTED: ['SUGGEST_NEXT_ACTION'],
+  ISSUES_CLUSTER_DETECTED: ['CREATE_FLOW'],
+  PERSPECTIVE_TRIGGERED: ['CREATE_FLOW'],
   SCHEDULE_TRIGGERED: ['HANDLE_SCHEDULED_TASK'],
+  SYSTEM_MAINTENANCE_DUE: ['COLLECT_SYSTEM_STATS'],
+  IDLE_TIME_DETECTED: ['COLLECT_SYSTEM_STATS'],
 };

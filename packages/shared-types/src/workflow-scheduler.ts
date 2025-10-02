@@ -85,6 +85,7 @@ export interface ScheduleFilter {
   issueId?: string;
   status?: 'active' | 'completed' | 'cancelled';
   action?: ScheduleAction;
+  dedupeKey?: string;
   createdAfter?: Date;
   createdBefore?: Date;
 }

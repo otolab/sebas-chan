@@ -13,8 +13,16 @@ import { flowsToMaterials } from '../shared/material-utils.js';
  */
 interface NextFlowContext extends StateContext {
   contextAnalysis: ContextAnalysis;
-  knowledgeBase: any[];
-  constraints: any;
+  knowledgeBase: Array<{
+    id: string;
+    type: string;
+    content: string;
+    confidence: number;
+  }>;
+  constraints: {
+    maxSuggestions: number;
+    priorityThreshold: number;
+  };
 }
 
 /**

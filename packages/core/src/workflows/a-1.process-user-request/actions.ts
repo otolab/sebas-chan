@@ -7,7 +7,7 @@ import type { WorkflowStorageInterface, WorkflowEventEmitterInterface } from '..
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
 import { processUserRequestPromptModule, type RequestAnalysisContext } from './prompts.js';
-import { RecordType } from '../recorder.js';
+import { RecordType, type WorkflowRecorder } from '../recorder.js';
 import { REQUEST_TYPE, ACTION_TYPE } from '../shared/constants.js';
 
 /**
@@ -92,7 +92,7 @@ export async function searchRelatedData(
  */
 export async function createNewIssue(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   title: string,
   description: string,
@@ -137,7 +137,7 @@ export async function createNewIssue(
  */
 export async function updateExistingIssue(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   issue: Issue,
   content: string,
@@ -179,12 +179,9 @@ export async function updateExistingIssue(
  * Pondエントリを作成
  * 意図: ユーザーリクエストをPondに保存し、DATA_ARRIVEDイベントを発行
  */
-
->>> これはどこから呼ばれる想定かな？workflowの中から実行されることはないので、ここに記述するべきじゃない
-
 export async function createPondEntryAndEmitEvent(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   content: string,
   metadata?: Record<string, unknown>
@@ -227,11 +224,10 @@ export async function createPondEntryAndEmitEvent(
  * 意図: AI判定に基づいて具体的なアクションを実行
  */
 
->>> ここは順次増やしていくイメージですね。増え過ぎたらプラグイン的にかけるようにしたほうがいいかもしれません。TODOとして書いておいて
-
+// TODO: アクションタイプが増えすぎた場合はプラグイン化を検討
 export async function executeActions(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   actions: RequestAnalysisResult['actions'],
   content: string | undefined,
@@ -300,7 +296,7 @@ export async function executeActions(
  */
 export async function emitEvents(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   events: RequestAnalysisResult['events'],
   content: string | undefined,

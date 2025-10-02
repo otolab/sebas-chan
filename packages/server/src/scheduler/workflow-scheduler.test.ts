@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WorkflowScheduler } from './workflow-scheduler.js';
 import { EventEmitter } from 'events';
 import type { DriverFactory } from '../types.js';
-import type { ScheduleFilter } from '@sebas-chan/shared-types';
 
 // DBClientのモック
 const mockDbClient = {
@@ -120,12 +119,14 @@ describe('WorkflowScheduler', () => {
         updated_at: new Date().toISOString(),
       };
 
-      mockDbClient.searchSchedules.mockImplementation((filter: Partial<Record<string, string | number>>) => {
-        if (filter?.dedupe_key === 'test-correlation' && filter?.issue_id === 'test-issue-2') {
-          return Promise.resolve([existingSchedule]);
+      mockDbClient.searchSchedules.mockImplementation(
+        (filter: Partial<Record<string, string | number>>) => {
+          if (filter?.dedupe_key === 'test-correlation' && filter?.issue_id === 'test-issue-2') {
+            return Promise.resolve([existingSchedule]);
+          }
+          return Promise.resolve([]);
         }
-        return Promise.resolve([]);
-      });
+      );
       mockDbClient.getSchedule.mockResolvedValue(existingSchedule);
       mockDbClient.updateSchedule.mockResolvedValue(undefined);
       mockDbClient.addSchedule.mockResolvedValue(undefined);

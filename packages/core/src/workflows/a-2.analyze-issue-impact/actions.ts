@@ -7,7 +7,7 @@ import type { WorkflowEventEmitterInterface } from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
 import { analyzeImpactPromptModule, type ImpactAnalysisContext } from './prompts.js';
-import { RecordType } from '../recorder.js';
+import { RecordType, type WorkflowRecorder } from '../recorder.js';
 
 /**
  * AI分析結果の型定義
@@ -113,7 +113,7 @@ export function buildIssueUpdates(issue: Issue, analysis: ImpactAnalysisResult):
  */
 export function emitFollowupEvents(
   emitter: WorkflowEventEmitterInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   analysis: ImpactAnalysisResult,
   issueId: string,
   issue: Issue

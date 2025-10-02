@@ -10,7 +10,7 @@
  * - Flow間の関係性の再評価
  */
 
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -20,7 +20,7 @@ import { analyzeFlowRelations, applyFlowUpdates } from './actions.js';
  * B-2: UPDATE_FLOW_RELATIONS ワークフロー実行関数
  */
 async function executeUpdateFlowRelations(
-  event: AgentEvent,
+  event: SystemEvent,
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {

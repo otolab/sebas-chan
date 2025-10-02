@@ -2,7 +2,7 @@
  * B-2: UPDATE_FLOW_RELATIONS ワークフローのアクション関数
  */
 
-import type { Issue, Flow } from '@sebas-chan/shared-types';
+import type { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
 import type { WorkflowEventEmitterInterface, WorkflowStorageInterface } from '../context.js';
 import type { WorkflowRecorder } from '../recorder.js';
@@ -21,6 +21,15 @@ export interface FlowAnalysis {
 }
 
 /**
+ * Flow変更の型定義
+ */
+export interface FlowChange {
+  action: 'remove_issue' | 'add_issue' | 'split_flow' | 'merge_flow' | 'archive_flow';
+  target: string;
+  rationale: string;
+}
+
+/**
  * Flow関係性分析結果の型定義
  */
 export interface FlowRelationResult {
@@ -33,11 +42,7 @@ export interface FlowRelationResult {
       suggestedUpdate?: string;
     };
     relationships: string;
-    suggestedChanges: Array<{
-      action: 'remove_issue' | 'add_issue' | 'split_flow' | 'merge_flow' | 'archive_flow';
-      target: string;
-      rationale: string;
-    }>;
+    suggestedChanges: FlowChange[];
   }>;
   updatedState: string;
 }
@@ -52,7 +57,7 @@ export async function analyzeFlowRelations(
   currentState: string
 ): Promise<FlowRelationResult> {
   // 関連Knowledgeの取得（実際はstorageから取得すべきだが、簡略化）
-  const knowledgeBase: any[] = [];
+  const knowledgeBase: Knowledge[] = [];
 
   const context = {
     flowAnalysis,
@@ -141,7 +146,7 @@ export async function applyFlowUpdates(
  */
 async function applyFlowChange(
   flowId: string,
-  change: any,
+  change: FlowChange,
   storage: WorkflowStorageInterface,
   emitter: WorkflowEventEmitterInterface,
   recorder: WorkflowRecorder

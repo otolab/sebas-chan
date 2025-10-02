@@ -15,6 +15,9 @@ import { knowledgesToMaterials } from '../shared/material-utils.js';
 interface IssueActionContext extends StateContext {
   issueAnalysis: IssueAnalysis;
   relevantKnowledge: Knowledge[];
+
+  // >>> anyがまだ使われていますね。
+
   similarResolvedIssues: any[];
   flowPerspective: Flow | null;
   userContext: any;
@@ -28,6 +31,9 @@ interface IssueActionContext extends StateContext {
 export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
   updateStatePromptModule,
   {
+
+    // >>> createContextなしだとちょっと分かりづらいかな？初期値は不要ですか？
+
     objective: ['Issueに対する具体的で実行可能なアクションを提案する'],
 
     terms: [
@@ -36,6 +42,9 @@ export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
       'ブロッカー: 進行を妨げる要因',
       '根本原因: 問題の根源的な理由',
     ],
+
+    // >>> どうも複雑な出力を求めすぎているように思えます
+    // >>> 複数回への分割をしたほうが良いと思います。
 
     instructions: [
       '以下の観点からアクションを提案してください：',
@@ -142,6 +151,10 @@ export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
     schema: [
       {
         type: 'json',
+
+        // >>> schemaは別途const schema =として定義。
+        // >>> 大きすぎて、この規模の出力をまとめで処理できるかちょっとわからないですね。
+
         content: {
           type: 'object',
           properties: {

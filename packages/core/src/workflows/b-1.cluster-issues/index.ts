@@ -10,17 +10,20 @@
  * - Flow作成の必要性判断と提案
  */
 
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent, Issue } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
-import { clusterIssues, emitFlowSuggestions } from './actions.js';
+import { clusterIssues, emitClusterDetectedEvents } from './actions.js';
+
+// Issue型を拡張してflowIdsを含める
+type IssueWithFlowIds = Issue & { flowIds?: string[] };
 
 /**
  * B-1: CLUSTER_ISSUES ワークフロー実行関数
  */
 async function executeClusterIssues(
-  event: AgentEvent,
+  event: SystemEvent,
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
@@ -39,8 +42,8 @@ async function executeClusterIssues(
 
     // Flowに属していないIssueのみ抽出
     // NOTE: issueにflowIdsプロパティがあると仮定（実際の実装では関係性を別途管理するか検討）
-    const unclusteredIssues = issues.filter(
-      issue => !(issue as any).flowIds || (issue as any).flowIds?.length === 0
+    const unclusteredIssues = (issues as IssueWithFlowIds[]).filter(
+      issue => !issue.flowIds || issue.flowIds.length === 0
     );
 
     // 処理可否判定
@@ -82,8 +85,8 @@ async function executeClusterIssues(
       clustersFound: clusteringResult.clusters.length,
     });
 
-    // 5. Flow候補の提案イベント発行
-    await emitFlowSuggestions(clusteringResult, emitter, recorder);
+    // 5. クラスター検出イベント発行
+    await emitClusterDetectedEvents(clusteringResult, emitter, recorder);
 
     // 6. 結果を返す
     return {

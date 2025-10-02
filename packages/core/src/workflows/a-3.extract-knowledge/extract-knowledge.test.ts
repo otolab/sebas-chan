@@ -67,7 +67,6 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     // モックイベント
     mockEvent = {
       type: 'KNOWLEDGE_EXTRACTABLE',
-      timestamp: new Date(),
       payload: {
         sourceType: 'issue',
         sourceId: 'issue-123',
@@ -84,7 +83,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'システムエラー',
       description: '重大なシステムエラーが発生',
-      status: 'resolved',
+      status: 'closed',
       updates: [{
         content: 'サービスを再起動して解決',
         timestamp: new Date(),
@@ -138,12 +137,12 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       payload: {
         issueId: 'issue-456',
         from: 'open',
-        to: 'resolved',
+        to: 'closed',
         issue: {
           id: 'issue-456',
           title: 'ログインエラー',
           description: 'ログインができない',
-          status: 'resolved',
+          status: 'closed',
           labels: [],
           priority: 50,
           sourceInputIds: [],
@@ -152,7 +151,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
           updates: [{
             content: 'パスワードリセットで解決',
             timestamp: new Date(),
-            author: 'support',
+            author: 'ai',
           }],
           relations: [],
         },
@@ -190,7 +189,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       type: 'PATTERN_FOUND',
       timestamp: new Date(),
       payload: {
-        patternType: 'error_pattern',
+        patternType: 'recurring',
         pattern: {
           description: 'メモリリークのパターン',
           occurrences: 5,
@@ -222,7 +221,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'テスト',
       description: 'テスト',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
     mockContext.createDriver = async () => new TestDriver({
@@ -274,12 +273,11 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     mockEvent = {
       type: 'KNOWLEDGE_EXTRACTABLE',
       payload: {
-        sourceType: 'high_impact_issue',
+        sourceType: 'issue',
         sourceId: 'issue-123',
         confidence: 0.8,
         reason: 'High impact issue',
       },
-      timestamp: new Date(),
     };
 
     mockContext.createDriver = async () => new TestDriver({
@@ -340,7 +338,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'テストIssue',
       description: 'テスト用のIssue',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
 
@@ -368,7 +366,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'テストIssue',
       description: 'テスト用のIssue',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
 
@@ -387,7 +385,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'test',
       description: 'test',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
     const error = new Error('Knowledge extraction failed');

@@ -5,10 +5,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { collectSystemStatsWorkflow } from './index.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+
+// >>> 消したんじゃなかったっけ？
 import type { AgentEvent } from '../../types.js';
+
 import type { Issue, Flow, PondEntry } from '@sebas-chan/shared-types';
 
+
 // モックコンテキストの作成
+
+// >>> 共通のmockがあるはずです。毎回全部作らないほうがよいですね。
+
 function createMockContext(
   issues: Issue[] = [],
   flows: Flow[] = [],

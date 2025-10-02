@@ -10,7 +10,7 @@
  * - 適切なアクションを実行し、必要なイベントを発行
  */
 
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -44,7 +44,7 @@ interface ProcessUserRequestPayload {
  * 6. システムStateの更新
  */
 async function executeProcessUserRequest(
-  event: AgentEvent,
+  event: SystemEvent,
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {

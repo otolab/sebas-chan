@@ -75,11 +75,19 @@ export interface FlowSuggestionResult {
 export async function suggestNextFlow(
   driver: AIDriver,
   contextAnalysis: ContextAnalysis,
-  constraints: any,
+  constraints: {
+    maxSuggestions: number;
+    priorityThreshold: number;
+  },
   currentState: string
 ): Promise<FlowSuggestionResult> {
   // Knowledgeの取得（実際はstorageから取得すべきだが、簡略化）
-  const knowledgeBase: any[] = [];
+  const knowledgeBase: Array<{
+    id: string;
+    type: string;
+    content: string;
+    confidence: number;
+  }> = [];
 
   const context = {
     contextAnalysis,

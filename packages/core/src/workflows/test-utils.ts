@@ -105,22 +105,19 @@ export function createMockWorkflowContext(): WorkflowContextInterface {
  * WorkflowRecorderのモック実装を作成
  */
 export function createMockWorkflowRecorder(): WorkflowRecorder {
-  const recorder = {
+  // 実際のWorkflowRecorderインスタンスを作成
+  const recorder = new WorkflowRecorder('TestWorkflow', {
     executionId: 'test-execution-id',
-    workflowName: 'TestWorkflow',
+    consoleOutput: false,
+  });
 
-    // 基本記録メソッド
-    record: vi.fn(),
+  // メソッドをモックに置き換え
+  vi.spyOn(recorder, 'record');
+  vi.spyOn(recorder, 'clearBuffer').mockReturnValue([]);
+  vi.spyOn(recorder, 'getBuffer').mockReturnValue([]);
+  vi.spyOn(recorder, 'close');
 
-    // バッファ管理
-    clearBuffer: vi.fn().mockReturnValue([]),
-    getBuffer: vi.fn().mockReturnValue([]),
-
-    // クローズ
-    close: vi.fn(),
-  };
-
-  return recorder as unknown as WorkflowRecorder;
+  return recorder;
 }
 
 /**

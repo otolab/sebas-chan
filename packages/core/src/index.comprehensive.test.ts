@@ -49,18 +49,32 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 異なる優先度のイベントでワークフローを実行
       const events: AgentEvent[] = [
         {
-          type: 'LOW_PRIORITY',
-          payload: {},
+          type: 'DATA_ARRIVED',
+          payload: {
+            source: 'test',
+            pondEntryId: 'entry-1',
+            content: 'test',
+            metadata: {},
+            timestamp: new Date().toISOString(),
+          },
           timestamp: new Date(),
         },
         {
-          type: 'HIGH_PRIORITY',
-          payload: {},
+          type: 'HIGH_PRIORITY_ISSUE_DETECTED',
+          payload: {
+            issueId: 'issue-1',
+            priority: 'critical',
+            reason: 'test',
+          },
           timestamp: new Date(),
         },
         {
-          type: 'NORMAL_PRIORITY',
-          payload: {},
+          type: 'USER_REQUEST_RECEIVED',
+          payload: {
+            userId: 'user-1',
+            content: 'test request',
+            timestamp: new Date().toISOString(),
+          },
           timestamp: new Date(),
         },
       ];
@@ -68,9 +82,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       for (const event of events) {
         // イベントタイプに基づいてワークフローを選択
         const workflow =
-          event.type === 'PROCESS_USER_REQUEST'
+          event.type === 'HIGH_PRIORITY_ISSUE_DETECTED'
             ? highPriorityWorkflow
-            : event.type === 'INGEST_INPUT'
+            : event.type === 'USER_REQUEST_RECEIVED'
               ? normalPriorityWorkflow
               : lowPriorityWorkflow;
 
@@ -91,11 +105,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
         name: 'fifo-workflow',
         description: 'Test FIFO ordering',
         triggers: {
-          eventTypes: ['SAME_PRIORITY'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event) => {
-          const payload = event.payload as { id: string };
-          processedOrder.push(payload.id);
+          const payload = event.payload as { metadata?: { id: string } };
+          if (payload.metadata?.id) {
+            processedOrder.push(payload.metadata.id);
+          }
           return {
             success: true,
             context: createMockWorkflowContext(),
@@ -111,8 +127,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 同じ優先度のイベントを順番に実行
       for (let i = 1; i <= 5; i++) {
         const event: AgentEvent = {
-          type: 'SAME_PRIORITY',
-          payload: { id: `event-${i}` },
+          type: 'DATA_ARRIVED',
+          payload: {
+            source: 'test',
+            pondEntryId: `event-${i}`,
+            content: 'test',
+            metadata: { id: `event-${i}` },
+            timestamp: new Date().toISOString(),
+          },
           timestamp: new Date(),
         };
 
@@ -161,8 +183,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       // 初期状態を確認
       const event1: AgentEvent = {
-        type: 'CHECK_STATE',
-        payload: {},
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          pondEntryId: 'state-check-1',
+          content: 'check state',
+          metadata: {},
+          timestamp: new Date().toISOString(),
+        },
         timestamp: new Date(),
       };
 
