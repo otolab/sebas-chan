@@ -8,6 +8,7 @@ import type { WorkflowEventEmitterInterface, WorkflowStorageInterface, WorkflowR
 import { RecordType } from '../recorder.js';
 import { compile } from '@moduler-prompt/core';
 import { issueActionPromptModule } from './prompts.js';
+import { PRIORITY } from '../shared/constants.js';
 
 /**
  * Issue分析データの型定義
@@ -145,18 +146,19 @@ export async function applyActionSuggestions(
 
   // Issue分割が推奨される場合、Issueとして作成
   if (actionResult.splitSuggestion?.shouldSplit) {
+    const issue = await storage.getIssue(issueId);
     const splitIssue = await storage.createIssue({
-      title: `Issue "${issue.title}" の分割を検討`,
+      title: `Issue "${issue?.title || issueId}" の分割を検討`,
       description: `## 提案内容\nIssue (${issueId}) を複数のサブIssueに分割することを提案します。\n\n## 理由\n${actionResult.splitSuggestion.reason}\n\n## 提案されるサブIssue\n${actionResult.splitSuggestion.suggestedSubIssues.map((sub: any) => `- ${sub.title}: ${sub.description}`).join('\n')}\n\n## アクション\nこの提案をレビューして、適切な場合は手動でサブIssueを作成してください。`,
       status: 'open' as any,
-      priority: 'medium' as any,
+      priority: PRIORITY.MEDIUM,
       labels: ['suggestion', 'issue-split'],
       updates: [{
         timestamp: new Date(),
         content: `SuggestNextActionワークフローによって作成されました。元Issue: ${issueId}`,
         author: 'ai' as const,
       }],
-      relations: [{ type: 'relates_to', targetId: issueId }],
+      relations: [{ type: 'relates_to', relatedIssueId: issueId }],
       sourceInputIds: [],
     });
 
@@ -180,11 +182,12 @@ export async function applyActionSuggestions(
 
   // エスカレーションが必要な場合、高優先度Issueとして更新
   if (actionResult.escalationSuggestion?.shouldEscalate) {
+    const existingIssue = await storage.getIssue(issueId);
     // 既存Issueの優先度を上げる
     await storage.updateIssue(issueId, {
-      priority: 'high' as any,
+      priority: PRIORITY.HIGH,
       updates: [
-        ...issue.updates,
+        ...(existingIssue?.updates || []),
         {
           timestamp: new Date(),
           content: `エスカレーション推奨: ${actionResult.escalationSuggestion.reason}\n担当推奨: ${actionResult.escalationSuggestion.escalateTo}`,
@@ -198,7 +201,7 @@ export async function applyActionSuggestions(
       type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: {
         issueId,
-        priority: 90,
+        priority: PRIORITY.CRITICAL,
         reason: actionResult.escalationSuggestion.reason,
       },
     });

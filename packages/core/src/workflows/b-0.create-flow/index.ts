@@ -215,7 +215,4 @@ export const createFlowWorkflow: WorkflowDefinition = {
     priority: 30, // 中優先度
   },
   executor: executeCreateFlow,
-  conditions: {
-    // 実行条件なし（イベントを受信したら実行）
-  },
 };

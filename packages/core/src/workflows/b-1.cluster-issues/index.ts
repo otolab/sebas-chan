@@ -126,17 +126,9 @@ export const clusterIssuesWorkflow: WorkflowDefinition = {
   description: '関連するIssue群を自動的にグルーピングし、Flow生成の候補を発見する',
   triggers: {
     eventTypes: [
-      'UNCLUSTERED_ISSUES_EXCEEDED',
       'USER_REQUEST_RECEIVED',
     ],
     priority: 10,
-    condition: (event) => {
-      if (event.type === 'UNCLUSTERED_ISSUES_EXCEEDED') {
-        const payload = event.payload as { count?: number };
-        return (payload.count ?? 0) >= 5;
-      }
-      return true;
-    },
   },
   executor: executeClusterIssues,
 };

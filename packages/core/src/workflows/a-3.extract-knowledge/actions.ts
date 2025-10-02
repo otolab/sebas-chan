@@ -127,8 +127,8 @@ export async function getContentFromEvent(
     // パターン発見時の知識抽出
     sourceType = 'pattern';
     sourceId = `pattern-${Date.now()}`;
-    content = `パターン: ${patternPayload.pattern.description}\n発生回数: ${patternPayload.pattern.occurrences}\n例:\n${patternPayload.pattern.examples.join('\n')}`;
-    confidence = patternPayload.pattern.confidence;
+    content = `パターン: ${patternPayload.description}\n発生回数: ${patternPayload.occurrences}`;
+    confidence = patternPayload.confidence;
   }
 
   return { content, sourceType, sourceId, confidence };

@@ -13,6 +13,7 @@ import type { WorkflowRecorder } from '../recorder.js';
 import { RecordType } from '../recorder.js';
 import { compile } from '@moduler-prompt/core';
 import { flowRelationPromptModule } from './prompts.js';
+import { PRIORITY } from '../shared/constants.js';
 
 /**
  * Flow分析データの型定義
@@ -265,7 +266,7 @@ async function applyFlowChange(
         title: `Flow "${flow.title}" の分割を検討`,
         description: `## 提案内容\nFlow (${flowId}) を複数のFlowに分割することを提案します。\n\n## 理由\n${change.rationale}\n\n## 現在のFlow内容\n- タイトル: ${flow.title}\n- Issue数: ${flow.issueIds.length}\n\n## アクション\nこのIssueをレビューして、分割が適切な場合は手動で新しいFlowを作成してください。`,
         status: 'open' as any,
-        priority: 'medium' as any,
+        priority: PRIORITY.MEDIUM,
         labels: ['suggestion', 'flow-management', 'split-flow'],
         updates: [{
           timestamp: new Date(),
@@ -302,7 +303,7 @@ async function applyFlowChange(
         title: `Flow "${flow.title}" と "${targetFlow?.title || change.target}" の統合を検討`,
         description: `## 提案内容\n2つのFlowを統合することを提案します。\n\n## 対象Flow\n- ソース: ${flow.title} (${flowId})\n- ターゲット: ${targetFlow?.title || 'Unknown'} (${change.target})\n\n## 理由\n${change.rationale}\n\n## アクション\nこのIssueをレビューして、統合が適切な場合は手動でFlowを統合してください。`,
         status: 'open' as any,
-        priority: 'medium' as any,
+        priority: PRIORITY.MEDIUM,
         labels: ['suggestion', 'flow-management', 'merge-flow'],
         updates: [{
           timestamp: new Date(),

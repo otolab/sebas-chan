@@ -245,7 +245,7 @@ describe('ClusterIssues Workflow', () => {
 
     mockContext = createMockContext(fewIssues, []);
 
-    const event: AgentEvent = {
+    const event: SystemEvent = {
       type: 'USER_REQUEST_RECEIVED',
       payload: {},
       timestamp: new Date(),
@@ -267,7 +267,7 @@ describe('ClusterIssues Workflow', () => {
       throw new Error('Driver creation failed');
     };
 
-    const event: AgentEvent = {
+    const event: SystemEvent = {
       type: 'USER_REQUEST_RECEIVED',
       payload: {},
       timestamp: new Date(),
