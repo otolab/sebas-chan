@@ -3,14 +3,14 @@ import { ingestInputWorkflow } from './a-0.ingest-input/index.js';
 import { processUserRequestWorkflow } from './a-1.process-user-request/index.js';
 import { analyzeIssueImpactWorkflow } from './a-2.analyze-issue-impact/index.js';
 import { extractKnowledgeWorkflow } from './a-3.extract-knowledge/index.js';
-import type { AgentEvent } from '../types.js';
+import type { SystemEvent } from '../types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './context.js';
 import { createCustomMockContext } from './test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';
 
 describe('Workflow Chain Integration Tests', () => {
   let mockContext: WorkflowContextInterface;
-  let emittedEvents: AgentEvent[] = [];
+  let emittedEvents: SystemEvent[] = [];
 
   beforeEach(() => {
     emittedEvents = [];
@@ -72,9 +72,8 @@ describe('Workflow Chain Integration Tests', () => {
   describe('A-0 → A-2 → A-3 Chain (エラー検出フロー)', () => {
     it('should trigger analysis and knowledge extraction for error input', async () => {
       // A-0: INGEST_INPUT (DATA_ARRIVED event)
-      const inputEvent: AgentEvent = {
+      const inputEvent: SystemEvent = {
         type: 'DATA_ARRIVED',
-        timestamp: new Date(),
         payload: {
           source: 'monitoring',
           content: 'システムで重大なエラーが発生しました',
@@ -85,12 +84,12 @@ describe('Workflow Chain Integration Tests', () => {
       };
 
       const mockEmitter: WorkflowEventEmitterInterface = {
-        emit: (event: Omit<AgentEvent, 'id' | 'timestamp'>) => {
+        emit: (event: Omit<SystemEvent, 'id' | 'timestamp'>) => {
           emittedEvents.push({
             ...event,
             id: `event-${emittedEvents.length}`,
             timestamp: new Date(),
-          } as AgentEvent);
+          } as SystemEvent);
         },
       };
 
@@ -132,7 +131,7 @@ describe('Workflow Chain Integration Tests', () => {
 
       // ingest-inputはeventsを発行しない可能性がある
       // 代わりに手動でISSUE_CREATEDイベントを作成してテスト
-      const issueCreatedEvent: AgentEvent = {
+      const issueCreatedEvent: SystemEvent = {
         type: 'ISSUE_CREATED',
         timestamp: new Date(),
         payload: {
@@ -149,7 +148,7 @@ describe('Workflow Chain Integration Tests', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
           },
-          createdBy: 'IngestInput',
+          createdBy: 'workflow' as const,
         },
       };
 
@@ -301,24 +300,23 @@ describe('Workflow Chain Integration Tests', () => {
   describe('A-1 → A-2 Chain (ユーザーリクエスト処理)', () => {
     it('should process user issue request and trigger analysis', async () => {
       // A-1: USER_REQUEST_RECEIVED
-      const requestEvent: AgentEvent = {
+      const requestEvent: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
-        timestamp: new Date(),
         payload: {
-          request: {
-            id: 'req-001',
-            content: 'ログインでエラーが発生しています。調査してください。',
-          },
+          userId: 'user-001',
+          content: 'ログインでエラーが発生しています。調査してください。',
+          sessionId: 'session-001',
+          timestamp: new Date().toISOString(),
         },
       };
 
       const mockEmitter: WorkflowEventEmitterInterface = {
-        emit: (event: Omit<AgentEvent, 'id' | 'timestamp'>) => {
+        emit: (event: Omit<SystemEvent, 'id' | 'timestamp'>) => {
           emittedEvents.push({
             ...event,
             id: `event-${emittedEvents.length}`,
             timestamp: new Date(),
-          } as AgentEvent);
+          } as SystemEvent);
         },
       };
 
@@ -368,24 +366,23 @@ describe('Workflow Chain Integration Tests', () => {
       };
 
       // A-1: USER_REQUEST_RECEIVED（質問）
-      const questionEvent: AgentEvent = {
+      const questionEvent: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
-        timestamp: new Date(),
         payload: {
-          request: {
-            id: 'req-002',
-            content: 'どうやってキャッシュをクリアしますか？',
-          },
+          userId: 'user-002',
+          content: 'どうやってキャッシュをクリアしますか？',
+          sessionId: 'session-002',
+          timestamp: new Date().toISOString(),
         },
       };
 
       const mockEmitter: WorkflowEventEmitterInterface = {
-        emit: (event: Omit<AgentEvent, 'id' | 'timestamp'>) => {
+        emit: (event: Omit<SystemEvent, 'id' | 'timestamp'>) => {
           emittedEvents.push({
             ...event,
             id: `event-${emittedEvents.length}`,
             timestamp: new Date(),
-          } as AgentEvent);
+          } as SystemEvent);
         },
       };
 
@@ -409,17 +406,17 @@ describe('Workflow Chain Integration Tests', () => {
   describe('並行ワークフロー実行', () => {
     it('should handle multiple workflows in parallel', async () => {
       const mockEmitter: WorkflowEventEmitterInterface = {
-        emit: (event: Omit<AgentEvent, 'id' | 'timestamp'>) => {
+        emit: (event: Omit<SystemEvent, 'id' | 'timestamp'>) => {
           emittedEvents.push({
             ...event,
             id: `event-${emittedEvents.length}`,
             timestamp: new Date(),
-          } as AgentEvent);
+          } as SystemEvent);
         },
       };
 
       // 複数のイベントを同時に処理
-      const events: AgentEvent[] = [
+      const events: SystemEvent[] = [
         {
           type: 'DATA_ARRIVED',
           timestamp: new Date(),
@@ -481,9 +478,8 @@ describe('Workflow Chain Integration Tests', () => {
         emit: vi.fn(),
       };
 
-      const inputEvent: AgentEvent = {
+      const inputEvent: SystemEvent = {
         type: 'DATA_ARRIVED',
-        timestamp: new Date(),
         payload: {
           source: 'test',
           content: 'テストデータ',
@@ -508,12 +504,12 @@ describe('Workflow Chain Integration Tests', () => {
   describe('状態の一貫性', () => {
     it('should maintain state consistency across workflow chain', async () => {
       const mockEmitter: WorkflowEventEmitterInterface = {
-        emit: (event: Omit<AgentEvent, 'id' | 'timestamp'>) => {
+        emit: (event: Omit<SystemEvent, 'id' | 'timestamp'>) => {
           emittedEvents.push({
             ...event,
             id: `event-${emittedEvents.length}`,
             timestamp: new Date(),
-          } as AgentEvent);
+          } as SystemEvent);
         },
       };
 
@@ -583,9 +579,8 @@ describe('Workflow Chain Integration Tests', () => {
       let currentState = stateTestContext.state;
 
       // A-0実行
-      const inputEvent: AgentEvent = {
+      const inputEvent: SystemEvent = {
         type: 'DATA_ARRIVED',
-        timestamp: new Date(),
         payload: {
           source: 'monitor',
           content: 'Critical error detected',

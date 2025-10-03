@@ -7,7 +7,7 @@ import { collectSystemStatsWorkflow } from './index.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 
 // >>> 消したんじゃなかったっけ？
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent } from '../../types.js';
 
 import type { Issue, Flow, PondEntry } from '@sebas-chan/shared-types';
 
@@ -97,10 +97,9 @@ describe('CollectSystemStats Workflow', () => {
 
     mockContext = createMockContext(issues, [], []);
 
-    const event: AgentEvent = {
+    const event: SystemEvent = {
       type: 'SYSTEM_MAINTENANCE_DUE',
       payload: {},
-      timestamp: new Date(),
     };
 
     const result = await collectSystemStatsWorkflow.executor(event, mockContext, mockEmitter);
@@ -152,10 +151,9 @@ describe('CollectSystemStats Workflow', () => {
 
     mockContext = createMockContext(issues, [], []);
 
-    const event: AgentEvent = {
+    const event: SystemEvent = {
       type: 'IDLE_TIME_DETECTED',
       payload: {},
-      timestamp: new Date(),
     };
 
     const result = await collectSystemStatsWorkflow.executor(event, mockContext, mockEmitter);
@@ -182,10 +180,9 @@ describe('CollectSystemStats Workflow', () => {
 
     mockContext = createMockContext([], [], pondEntries);
 
-    const event: AgentEvent = {
+    const event: SystemEvent = {
       type: 'SYSTEM_MAINTENANCE_DUE',
       payload: {},
-      timestamp: new Date(),
     };
 
     const result = await collectSystemStatsWorkflow.executor(event, mockContext, mockEmitter);
@@ -246,10 +243,9 @@ describe('CollectSystemStats Workflow', () => {
 
     mockContext = createMockContext(issues, flows, []);
 
-    const event: AgentEvent = {
+    const event: SystemEvent = {
       type: 'SYSTEM_MAINTENANCE_DUE',
       payload: {},
-      timestamp: new Date(),
     };
 
     const result = await collectSystemStatsWorkflow.executor(event, mockContext, mockEmitter);
@@ -276,10 +272,9 @@ describe('CollectSystemStats Workflow', () => {
       throw new Error('Database connection failed');
     };
 
-    const event: AgentEvent = {
+    const event: SystemEvent = {
       type: 'SYSTEM_MAINTENANCE_DUE',
       payload: {},
-      timestamp: new Date(),
     };
 
     const result = await collectSystemStatsWorkflow.executor(event, mockContext, mockEmitter);

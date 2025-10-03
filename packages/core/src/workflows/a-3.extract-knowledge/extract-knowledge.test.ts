@@ -133,7 +133,6 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     // ISSUE_STATUS_CHANGEDイベント
     mockEvent = {
       type: 'ISSUE_STATUS_CHANGED',
-      timestamp: new Date(),
       payload: {
         issueId: 'issue-456',
         from: 'open',
@@ -184,18 +183,15 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
         updatedState: 'Initial state\nパターン発見: メモリリーク対処法'
       })]
     });
-    // PATTERN_FOUNDイベント
+    // RECURRING_PATTERN_DETECTEDイベント
     mockEvent = {
-      type: 'PATTERN_FOUND',
-      timestamp: new Date(),
+      type: 'RECURRING_PATTERN_DETECTED',
       payload: {
-        patternType: 'recurring',
-        pattern: {
-          description: 'メモリリークのパターン',
-          occurrences: 5,
-          confidence: 0.9,
-          examples: ['例1', '例2'],
-        },
+        patternType: 'behavioral',  // 'temporal' | 'behavioral' | 'structural' | 'statistical'
+        description: 'メモリリークのパターン',
+        occurrences: 5,
+        confidence: 0.9,
+        entities: ['メモリ', 'リーク'],
       },
     };
 
