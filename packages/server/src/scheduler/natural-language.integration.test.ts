@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { compile } from '@moduler-prompt/core';
 import type { JSONSchema } from '@moduler-prompt/core';
+import type { AIDriver } from '@moduler-prompt/driver';
 
 /**
  * 自然言語スケジュール解釈のインテグレーションテスト
@@ -9,7 +10,7 @@ import type { JSONSchema } from '@moduler-prompt/core';
 const hasApiKey = !!process.env.ANTHROPIC_API_KEY;
 
 describe.skipIf(!hasApiKey)('Natural Language Schedule Interpretation (Integration)', () => {
-  let driver: any;
+  let driver: AIDriver;
 
   beforeAll(async () => {
     if (!hasApiKey) return;

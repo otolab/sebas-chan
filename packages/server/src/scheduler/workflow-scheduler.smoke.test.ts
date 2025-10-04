@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { EventEmitter } from 'events';
 import { WorkflowScheduler } from './workflow-scheduler.js';
+import type { DriverFactory } from '@sebas-chan/core';
+import type { DBClient } from '@sebas-chan/db';
 
 /**
  * WorkflowSchedulerのスモークテスト
@@ -10,7 +12,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
   it('should instantiate without errors', () => {
     const mockDriverFactory = {
       getDriver: vi.fn(),
-    } as any;
+    } as DriverFactory;
 
     const mockEventEmitter = new EventEmitter();
 
@@ -19,7 +21,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       connect: vi.fn(),
       execute: vi.fn(),
       getStatus: vi.fn(),
-    };
+    } as unknown as DBClient;
 
     const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
@@ -28,9 +30,9 @@ describe('WorkflowScheduler (Smoke Test)', () => {
   });
 
   it('should have required methods', () => {
-    const mockDriverFactory = {} as any;
+    const mockDriverFactory = {} as DriverFactory;
     const mockEventEmitter = new EventEmitter();
-    const mockDbClient = {} as any;
+    const mockDbClient = {} as unknown as DBClient;
 
     const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
@@ -59,7 +61,9 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       }),
     };
 
-    const mockDriverFactory = vi.fn().mockResolvedValue(mockDriver) as any;
+    const mockDriverFactory = {
+      getDriver: vi.fn().mockResolvedValue(mockDriver),
+    } as DriverFactory;
 
     const mockEventEmitter = new EventEmitter();
 
@@ -70,7 +74,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       getStatus: vi.fn(),
       addSchedule: vi.fn().mockResolvedValue(undefined),
       searchSchedules: vi.fn().mockResolvedValue([]),
-    } as any;
+    } as unknown as DBClient;
 
     const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
@@ -82,7 +86,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
     expect(result).toBeDefined();
     expect(result.scheduleId).toBeDefined();
     expect(result.interpretation).toBe('テスト実行');
-    expect(mockDriverFactory).toHaveBeenCalled();
+    expect(mockDriverFactory.getDriver).toHaveBeenCalled();
     expect(mockDriver.query).toHaveBeenCalled();
   });
 
@@ -104,7 +108,9 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       }),
     };
 
-    const mockDriverFactory = vi.fn().mockResolvedValue(mockDriver) as any;
+    const mockDriverFactory = {
+      getDriver: vi.fn().mockResolvedValue(mockDriver),
+    } as DriverFactory;
 
     const mockEventEmitter = new EventEmitter();
     const emitSpy = vi.spyOn(mockEventEmitter, 'emit');
@@ -116,7 +122,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       getStatus: vi.fn(),
       addSchedule: vi.fn().mockResolvedValue(undefined),
       searchSchedules: vi.fn().mockResolvedValue([]),
-    } as any;
+    } as unknown as DBClient;
 
     const scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
