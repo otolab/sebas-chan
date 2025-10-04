@@ -15,11 +15,7 @@ export { Event };
 import { StateManager } from './state-manager.js';
 import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
-import {
-  CoreAgent,
-  WorkflowRecorder,
-  WorkflowResolver,
-} from '@sebas-chan/core';
+import { CoreAgent, WorkflowRecorder, WorkflowResolver } from '@sebas-chan/core';
 import { WorkflowQueue } from './workflow-queue.js';
 import { registerDefaultWorkflows, WorkflowRegistry } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';

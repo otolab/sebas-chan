@@ -13,7 +13,6 @@ import { DBClient } from '@sebas-chan/db';
 import type { DriverFactory } from '@sebas-chan/core';
 import { nanoid } from 'nanoid';
 
-
 export class WorkflowScheduler implements WorkflowSchedulerInterface {
   private timers: Map<string, NodeJS.Timeout> = new Map();
   private checkInterval: NodeJS.Timeout | null = null;
