@@ -158,7 +158,7 @@ export async function applyActionSuggestions(
         content: `SuggestNextActionワークフローによって作成されました。元Issue: ${issueId}`,
         author: 'ai' as const,
       }],
-      relations: [{ type: 'relates_to', relatedIssueId: issueId }],
+      relations: [{ type: 'relates_to', targetIssueId: issueId }],
       sourceInputIds: [],
     });
 

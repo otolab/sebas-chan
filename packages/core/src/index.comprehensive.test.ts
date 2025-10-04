@@ -188,7 +188,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
           metadata: {},
           timestamp: new Date().toISOString(),
         },
-        timestamp: new Date(),
       };
 
       const _recorder1 = new WorkflowRecorder('state-workflow');
@@ -321,6 +320,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             updates: [],
+            relations: [],
           },
           createdBy: 'system' as const,
         },
@@ -357,6 +357,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           sourceType: 'issue',
           sourceId: 'test-issue',
           confidence: 0.9,
+          reason: 'Important knowledge found',
           suggestedKnowledge: 'Test knowledge content',
         },
       };

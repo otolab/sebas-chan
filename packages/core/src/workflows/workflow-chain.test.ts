@@ -3,7 +3,7 @@ import { ingestInputWorkflow } from './a-0.ingest-input/index.js';
 import { processUserRequestWorkflow } from './a-1.process-user-request/index.js';
 import { analyzeIssueImpactWorkflow } from './a-2.analyze-issue-impact/index.js';
 import { extractKnowledgeWorkflow } from './a-3.extract-knowledge/index.js';
-import type { SystemEvent } from '../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './context.js';
 import { createCustomMockContext } from './test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';

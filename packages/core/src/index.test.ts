@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent, generateWorkflowRegistry } from './index.js';
+import { CoreAgent, generateWorkflowRegistry } from './index.js';
+import { SystemEvent } from '@sebas-chan/shared-types';
 import { createMockWorkflowContext } from './workflows/test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 
@@ -27,10 +28,14 @@ describe('CoreAgent', () => {
   });
 
   it('should execute workflow successfully', async () => {
-    const event: AgentEvent = {
-      type: 'PROCESS_USER_REQUEST',
-      payload: { test: true },
-      timestamp: new Date(),
+    const event: SystemEvent = {
+      type: 'USER_REQUEST_RECEIVED',
+      payload: {
+        userId: 'test-user',
+        content: 'Test request',
+        sessionId: 'test-session',
+        timestamp: new Date().toISOString(),
+      },
     };
 
     const mockContext = createMockWorkflowContext();
@@ -53,10 +58,14 @@ describe('CoreAgent', () => {
   });
 
   it('should handle workflow errors', async () => {
-    const event: AgentEvent = {
-      type: 'TEST_ERROR',
-      payload: {},
-      timestamp: new Date(),
+    const event: SystemEvent = {
+      type: 'DATA_ARRIVED',
+      payload: {
+        source: 'test',
+        content: 'Error test',
+        pondEntryId: 'error-test',
+        timestamp: new Date().toISOString(),
+      },
     };
 
     const mockContext = createMockWorkflowContext();
