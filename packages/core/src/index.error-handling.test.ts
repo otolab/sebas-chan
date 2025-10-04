@@ -165,12 +165,12 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           eventTypes: ['LARGE_PAYLOAD_WORKFLOW'],
         },
         executor: async (_event) => {
-          const payload = event.payload as { largeArray?: unknown[] };
+          const payload = _event.payload as { metadata?: { largeArray?: unknown[] } };
           return {
             success: true,
             context: createMockWorkflowContext(),
             output: {
-              processedItems: payload.largeArray?.length || 0,
+              processedItems: payload.metadata?.largeArray?.length || 0,
             },
           };
         },
@@ -226,8 +226,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           eventTypes: ['ERROR_PRONE_WORKFLOW'],
         },
         executor: async (_event) => {
-          const payload = _event.payload as { shouldError?: boolean };
-          if (payload.shouldError) {
+          const payload = _event.payload as { metadata?: { shouldError?: boolean } };
+          if (payload.metadata?.shouldError) {
             errorCount++;
             throw new Error(`Error ${errorCount}`);
           }

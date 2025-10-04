@@ -30,7 +30,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           eventTypes: [name.toUpperCase()],
         },
         executor: async (event) => {
-          executedWorkflows.push(event.type);
+          executedWorkflows.push(name.toUpperCase());
           return {
             success: true,
             context: createMockWorkflowContext(),
@@ -91,9 +91,9 @@ describe('CoreAgent - Comprehensive Tests', () => {
       }
 
       expect(executedWorkflows.length).toBe(3);
-      expect(executedWorkflows).toContain('LOW_PRIORITY');
-      expect(executedWorkflows).toContain('HIGH_PRIORITY');
-      expect(executedWorkflows).toContain('NORMAL_PRIORITY');
+      expect(executedWorkflows).toContain('LOW-PRIORITY');
+      expect(executedWorkflows).toContain('HIGH-PRIORITY');
+      expect(executedWorkflows).toContain('NORMAL-PRIORITY');
     });
 
     it('should handle FIFO order for same priority', async () => {
@@ -157,10 +157,10 @@ describe('CoreAgent - Comprehensive Tests', () => {
           const currentState = context.state;
           stateTransitions.push(currentState);
 
-          const payload = event.payload as { newState?: string };
-          const updatedState = payload.newState || context.state;
-          if (payload.newState) {
-            stateTransitions.push(payload.newState);
+          const payload = event.payload as { metadata?: { newState?: string } };
+          const updatedState = payload.metadata?.newState || context.state;
+          if (payload.metadata?.newState) {
+            stateTransitions.push(payload.metadata.newState);
           }
 
           return {
@@ -201,6 +201,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
           content: 'processing',
           pondEntryId: 'test-2',
           timestamp: new Date().toISOString(),
+          metadata: { newState: 'processing' },
         },
       };
 

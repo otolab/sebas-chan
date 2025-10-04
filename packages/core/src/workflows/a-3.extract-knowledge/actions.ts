@@ -30,7 +30,7 @@ export interface KnowledgeExtractionResult {
  */
 export function determineKnowledgeType(content: string, source?: string): Knowledge['type'] {
   // ソースタイプに基づいて判定
-  if (source === 'high_impact_issue' || source === 'resolution') {
+  if (source === 'issue' || source === 'high_impact_issue' || source === 'resolution') {
     return 'system_rule';
   }
 

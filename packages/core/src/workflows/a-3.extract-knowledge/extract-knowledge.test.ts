@@ -276,6 +276,21 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       },
     };
 
+    // getIssueのモックを設定
+    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
+      id: 'issue-123',
+      title: 'Test Issue',
+      description: 'Test issue description',
+      status: 'open',
+      priority: 80,
+      labels: [],
+      updates: [],
+      relations: [],
+      sourceInputIds: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
         extractedKnowledge: 'このシステムルールに従って、すべてのリクエストを処理する必要があります。セキュリティポリシーにも準拠することが重要です。',

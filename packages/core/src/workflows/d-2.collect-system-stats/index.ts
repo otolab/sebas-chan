@@ -17,6 +17,9 @@ import { RecordType } from '../recorder.js';
 // 閾値の定義（将来的にはKnowledgeから取得）
 const THRESHOLDS = {
   STALLED_DAYS: 3,           // 停滞日数
+  UNCLUSTERED_ISSUES: 20,    // 未整理Issue数の閾値
+  POND_CAPACITY_RATIO: 0.8,  // Pond容量の警告閾値（80%）
+  POND_MAX_ENTRIES: 10000,   // Pond最大エントリ数
 };
 
 /**
@@ -51,6 +54,12 @@ async function executeCollectSystemStats(
       return daysSinceUpdate > THRESHOLDS.STALLED_DAYS;
     });
 
+    // 未整理Issue（Flowに属していないIssue）を検出
+    const unclusteredIssues = issues.filter(issue => {
+      // flowIdsフィールドがないか空の場合、未整理と判断
+      return !(issue as any).flowIds || (issue as any).flowIds.length === 0;
+    });
+
     // 2. Flow統計の収集（記録用）
     const flows = await storage.searchFlows('status:active');
     const staleFlows = flows.filter((flow) => {
@@ -60,9 +69,41 @@ async function executeCollectSystemStats(
       return daysSinceUpdate > 7; // 7日以上更新なし
     });
 
-    // 3. イベント発行
+    // 3. Pond容量の確認
+    const pondEntries = await storage.searchPond('');
+    const pondUsageRatio = pondEntries.length / THRESHOLDS.POND_MAX_ENTRIES;
 
-    // 停滞Issue検出のみ
+    // 4. イベント発行
+
+    // 未整理Issue数が閾値を超えた場合
+    if (unclusteredIssues.length > THRESHOLDS.UNCLUSTERED_ISSUES) {
+      const event = {
+        type: 'UNCLUSTERED_ISSUES_EXCEEDED',
+        payload: {
+          count: unclusteredIssues.length,
+          threshold: THRESHOLDS.UNCLUSTERED_ISSUES,
+          issueIds: unclusteredIssues.map(i => i.id),
+        },
+      } as const;
+      emitter.emit(event as SystemEvent);
+      eventsEmitted.push(event);
+    }
+
+    // Pond容量が閾値を超えた場合
+    if (pondUsageRatio > THRESHOLDS.POND_CAPACITY_RATIO) {
+      const event = {
+        type: 'POND_CAPACITY_WARNING',
+        payload: {
+          usage: pondEntries.length,
+          capacity: THRESHOLDS.POND_MAX_ENTRIES,
+          ratio: pondUsageRatio,
+        },
+      } as const;
+      emitter.emit(event as SystemEvent);
+      eventsEmitted.push(event);
+    }
+
+    // 停滞Issue検出
     for (const issue of stalledIssues) {
       const stalledDays = Math.floor(
         (now.getTime() - new Date(issue.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
@@ -80,29 +121,37 @@ async function executeCollectSystemStats(
       eventsEmitted.push(event);
     }
 
-    // 4. 統計をRecorderに記録
+    // 5. 統計をRecorderに記録
     recorder.record(RecordType.INFO, {
       type: 'SYSTEM_STATS_COLLECTED',
       timestamp: new Date(),
       stats: {
         totalIssues: issues.length,
         stalledCount: stalledIssues.length,
+        unclusteredCount: unclusteredIssues.length,
         totalFlows: flows.length,
         staleFlowsCount: staleFlows.length,
+        pondUsage: pondEntries.length,
+        pondCapacityRatio: pondUsageRatio,
       },
       eventsEmitted: eventsEmitted.length,
     });
 
-    // 5. 結果を返す
+    // 6. 結果を返す
     return {
       success: true,
       context, // Stateの更新は不要（監視のみ）
       output: {
         stats: {
           totalIssues: issues.length,
+          unclusteredIssues: unclusteredIssues.length,
           stalledIssues: stalledIssues.length,
           totalFlows: flows.length,
           staleFlows: staleFlows.length,
+          pondUsage: {
+            entries: pondEntries.length,
+            ratio: pondUsageRatio,
+          },
         },
         eventsEmitted: eventsEmitted.length,
         logs: [
