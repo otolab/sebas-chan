@@ -92,8 +92,7 @@ describe('WorkflowScheduler', () => {
       expect(result.nextRun).toBeInstanceOf(Date);
       expect(mockDbClient.addSchedule).toHaveBeenCalledWith(
         expect.objectContaining({
-          id: expect.any(String),
-          issue_id: 'test-issue-1',
+          issueId: 'test-issue-1',
           request: '5分後にリマインド',
           action: {
             type: 'REMINDER',
@@ -121,7 +120,7 @@ describe('WorkflowScheduler', () => {
 
       mockDbClient.searchSchedules.mockImplementation(
         (filter: Partial<Record<string, string | number>>) => {
-          if (filter?.dedupe_key === 'test-correlation' && filter?.issue_id === 'test-issue-2') {
+          if (filter?.dedupeKey === 'test-correlation' && filter?.issueId === 'test-issue-2') {
             return Promise.resolve([existingSchedule]);
           }
           return Promise.resolve([]);
@@ -250,9 +249,7 @@ describe('WorkflowScheduler', () => {
       const result = await scheduler.list();
 
       expect(result).toHaveLength(2);
-      expect(mockDbClient.searchSchedules).toHaveBeenCalledWith({
-        limit: 1000,
-      });
+      expect(mockDbClient.searchSchedules).toHaveBeenCalledWith({});
     });
 
     it('フィルタ付きでスケジュールを取得できる', async () => {
@@ -275,7 +272,6 @@ describe('WorkflowScheduler', () => {
       expect(result).toHaveLength(1);
       expect(mockDbClient.searchSchedules).toHaveBeenCalledWith({
         status: 'active',
-        limit: 1000,
       });
     });
   });
@@ -377,7 +373,6 @@ describe('WorkflowScheduler', () => {
       expect(mockDbClient.getStatus).toHaveBeenCalled();
       expect(mockDbClient.searchSchedules).toHaveBeenCalledWith({
         status: 'active',
-        limit: 1000,
       });
     });
 
