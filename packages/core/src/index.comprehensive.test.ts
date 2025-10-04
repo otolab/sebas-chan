@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent, WorkflowRecorder } from './index.js';
+import { CoreAgent, WorkflowRecorder } from './index.js';
+import { SystemEvent } from '@sebas-chan/shared-types';
 import { createMockWorkflowContext } from './workflows/test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 import { WorkflowDefinition } from './workflows/workflow-types.js';
@@ -47,7 +48,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       // 異なる優先度のイベントでワークフローを実行
-      const events: AgentEvent[] = [
+      const events: SystemEvent[] = [
         {
           type: 'DATA_ARRIVED',
           payload: {
@@ -57,16 +58,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
             metadata: {},
             timestamp: new Date().toISOString(),
           },
-          timestamp: new Date(),
         },
         {
           type: 'HIGH_PRIORITY_ISSUE_DETECTED',
           payload: {
             issueId: 'issue-1',
-            priority: 'critical',
+            priority: 100,
             reason: 'test',
           },
-          timestamp: new Date(),
         },
         {
           type: 'USER_REQUEST_RECEIVED',
@@ -75,7 +74,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
             content: 'test request',
             timestamp: new Date().toISOString(),
           },
-          timestamp: new Date(),
         },
       ];
 
@@ -126,7 +124,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       // 同じ優先度のイベントを順番に実行
       for (let i = 1; i <= 5; i++) {
-        const event: AgentEvent = {
+        const event: SystemEvent = {
           type: 'DATA_ARRIVED',
           payload: {
             source: 'test',
@@ -135,7 +133,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
             metadata: { id: `event-${i}` },
             timestamp: new Date().toISOString(),
           },
-          timestamp: new Date(),
         };
 
         const _recorder = new WorkflowRecorder('fifo-workflow');
@@ -182,7 +179,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
       };
 
       // 初期状態を確認
-      const event1: AgentEvent = {
+      const event1: SystemEvent = {
         type: 'DATA_ARRIVED',
         payload: {
           source: 'test',
@@ -197,21 +194,29 @@ describe('CoreAgent - Comprehensive Tests', () => {
       const _recorder1 = new WorkflowRecorder('state-workflow');
       await agent.executeWorkflow(stateWorkflow, event1, mockContext, mockEmitter);
 
-      // 状態を変更
-      const event2: AgentEvent = {
-        type: 'UPDATE_STATE',
-        payload: { newState: 'processing' },
-        timestamp: new Date(),
+      // 状態を変更（DATA_ARRIVEDイベントを使用）
+      const event2: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'processing',
+          pondEntryId: 'test-2',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const _recorder2 = new WorkflowRecorder('state-workflow');
       await agent.executeWorkflow(stateWorkflow, event2, mockContext, mockEmitter);
 
-      // 変更後の状態を確認
-      const event3: AgentEvent = {
-        type: 'CHECK_STATE',
-        payload: {},
-        timestamp: new Date(),
+      // 変更後の状態を確認（USER_REQUEST_RECEIVEDイベントを使用）
+      const event3: SystemEvent = {
+        type: 'USER_REQUEST_RECEIVED',
+        payload: {
+          userId: 'test-user',
+          content: 'check state',
+          sessionId: 'test-session',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const _recorder3 = new WorkflowRecorder('state-workflow');
@@ -230,16 +235,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('IngestInput');
 
-      const event: AgentEvent = {
-        type: 'INGEST_INPUT',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: {
-          input: {
-            content: 'Test input',
-            source: 'test',
-            timestamp: new Date(),
-          },
+          content: 'Test input',
+          source: 'test',
+          pondEntryId: 'test-ingest',
+          timestamp: new Date().toISOString(),
         },
-        timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
@@ -268,13 +271,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('ProcessUserRequest');
 
-      const event: AgentEvent = {
-        type: 'PROCESS_USER_REQUEST',
+      const event: SystemEvent = {
+        type: 'USER_REQUEST_RECEIVED',
         payload: {
-          request: 'Test user request',
+          content: 'Test user request',
           userId: 'test-user',
+          sessionId: 'test-session',
+          timestamp: new Date().toISOString(),
         },
-        timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
@@ -302,13 +306,24 @@ describe('CoreAgent - Comprehensive Tests', () => {
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('AnalyzeIssueImpact');
 
-      const event: AgentEvent = {
-        type: 'ANALYZE_ISSUE_IMPACT',
+      const event: SystemEvent = {
+        type: 'ISSUE_CREATED',
         payload: {
           issueId: 'test-issue-123',
-          impact: 'high',
+          issue: {
+            id: 'test-issue-123',
+            title: 'Test Issue',
+            description: 'Test issue with high impact',
+            status: 'open',
+            priority: 80,
+            labels: [],
+            sourceInputIds: [],
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            updates: [],
+          },
+          createdBy: 'system' as const,
         },
-        timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
@@ -336,13 +351,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
       expect(workflow).toBeDefined();
       expect(workflow?.name).toBe('ExtractKnowledge');
 
-      const event: AgentEvent = {
-        type: 'EXTRACT_KNOWLEDGE',
+      const event: SystemEvent = {
+        type: 'KNOWLEDGE_EXTRACTABLE',
         payload: {
-          source: 'test-document',
-          content: 'Test knowledge content',
+          sourceType: 'issue',
+          sourceId: 'test-issue',
+          confidence: 0.9,
+          suggestedKnowledge: 'Test knowledge content',
         },
-        timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
@@ -374,13 +390,28 @@ describe('CoreAgent - Comprehensive Tests', () => {
         name: 'cascading-workflow',
         description: 'Workflow that triggers other events',
         triggers: {
-          eventTypes: ['TRIGGER_CASCADE'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event, context, emitter) => {
           // 新しいイベントを発行
           emitter.emit({
-            type: 'TRIGGERED_EVENT',
-            payload: { triggered: true },
+            type: 'ISSUE_CREATED',
+            payload: {
+              issueId: 'triggered-issue',
+              issue: {
+                id: 'triggered-issue',
+                title: 'Triggered Issue',
+                description: 'Issue created by cascade',
+                status: 'open',
+                priority: 50,
+                labels: [],
+                sourceInputIds: [],
+                createdAt: new Date(),
+                updatedAt: new Date(),
+                updates: [],
+              },
+              createdBy: 'workflow' as const,
+            },
           });
 
           return {
@@ -390,10 +421,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'TRIGGER_CASCADE',
-        payload: {},
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Trigger cascade',
+          pondEntryId: 'cascade-test',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -409,8 +444,10 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       expect(result.success).toBe(true);
       expect(mockEmitter.emit).toHaveBeenCalledWith({
-        type: 'TRIGGERED_EVENT',
-        payload: { triggered: true },
+        type: 'ISSUE_CREATED',
+        payload: expect.objectContaining({
+          issueId: 'triggered-issue',
+        }),
       });
     });
 
@@ -423,16 +460,31 @@ describe('CoreAgent - Comprehensive Tests', () => {
         name: 'multi-emit-workflow',
         description: 'Workflow that emits multiple events',
         triggers: {
-          eventTypes: ['MULTI_EMIT'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event, context, emitter) => {
-          const payload = event.payload as { count?: number };
-          const count = payload.count || 3;
+          const payload = event.payload as any;
+          const count = payload.metadata?.count || 3;
 
           for (let i = 0; i < count; i++) {
             emitter.emit({
-              type: `EVENT_${i}`,
-              payload: { index: i },
+              type: 'ISSUE_CREATED',
+              payload: {
+                issueId: `multi-issue-${i}`,
+                issue: {
+                  id: `multi-issue-${i}`,
+                  title: `Issue ${i}`,
+                  description: `Multi-emit issue ${i}`,
+                  status: 'open',
+                  priority: 50,
+                  labels: [],
+                  sourceInputIds: [],
+                  createdAt: new Date(),
+                  updatedAt: new Date(),
+                  updates: [],
+                },
+                createdBy: 'workflow' as const,
+              },
             });
           }
 
@@ -444,10 +496,15 @@ describe('CoreAgent - Comprehensive Tests', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'MULTI_EMIT',
-        payload: { count: 5 },
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Multi emit test',
+          pondEntryId: 'multi-emit-test',
+          timestamp: new Date().toISOString(),
+          metadata: { count: 5 },
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -551,7 +608,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         name: 'logging-workflow',
         description: 'Workflow with logging',
         triggers: {
-          eventTypes: ['LOG_TEST'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: async () => ({
           success: true,
@@ -560,10 +617,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
         }),
       };
 
-      const event: AgentEvent = {
-        type: 'LOG_TEST',
-        payload: { test: true },
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Logging test',
+          pondEntryId: 'log-test',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockEmitter: WorkflowEventEmitterInterface = {
@@ -585,7 +646,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         name: 'performance-workflow',
         description: 'Performance test workflow',
         triggers: {
-          eventTypes: ['PERFORMANCE_TEST'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: vi.fn().mockImplementation(async () => {
           const start = Date.now();
@@ -606,10 +667,15 @@ describe('CoreAgent - Comprehensive Tests', () => {
 
       // 連続して10回実行
       for (let i = 0; i < 10; i++) {
-        const event: AgentEvent = {
-          type: 'PERFORMANCE_TEST',
-          payload: { index: i },
-          timestamp: new Date(),
+        const event: SystemEvent = {
+          type: 'DATA_ARRIVED',
+          payload: {
+            source: 'test',
+            content: `Performance test ${i}`,
+            pondEntryId: `perf-test-${i}`,
+            timestamp: new Date().toISOString(),
+            metadata: { index: i },
+          },
         };
 
         const _recorder = new WorkflowRecorder('performance-workflow');
@@ -628,12 +694,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
         name: 'concurrent-perf-workflow',
         description: 'Concurrent performance test',
         triggers: {
-          eventTypes: ['CONCURRENT_TEST'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event) => {
-          const payload = event.payload as { delay?: number };
-          if (payload.delay) {
-            await new Promise((resolve) => setTimeout(resolve, payload.delay));
+          const payload = event.payload as any;
+          const delay = payload.metadata?.delay;
+          if (delay) {
+            await new Promise((resolve) => setTimeout(resolve, delay));
           }
           return {
             success: true,
@@ -653,10 +720,15 @@ describe('CoreAgent - Comprehensive Tests', () => {
       // 並行実行
       const promises = [];
       for (let i = 0; i < 5; i++) {
-        const event: AgentEvent = {
-          type: 'CONCURRENT_PERF',
-          payload: { delay: 50 },
-          timestamp: new Date(),
+        const event: SystemEvent = {
+          type: 'DATA_ARRIVED',
+          payload: {
+            source: 'test',
+            content: `Concurrent test ${i}`,
+            pondEntryId: `concurrent-test-${i}`,
+            timestamp: new Date().toISOString(),
+            metadata: { delay: 50 },
+          },
         };
 
         const _recorder = new WorkflowRecorder('concurrent-perf-workflow');

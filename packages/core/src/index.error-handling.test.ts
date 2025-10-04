@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent } from './index.js';
+import { CoreAgent } from './index.js';
+import { SystemEvent } from '@sebas-chan/shared-types';
 import { createMockWorkflowContext } from './workflows/test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 import { WorkflowDefinition } from './workflows/workflow-types.js';
@@ -26,17 +27,21 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         name: 'error-workflow',
         description: 'Workflow that throws synchronous error',
         triggers: {
-          eventTypes: ['ERROR_WORKFLOW'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: () => {
           throw new Error('Synchronous error in workflow');
         },
       };
 
-      const event: AgentEvent = {
-        type: 'ERROR_EVENT',
-        payload: {},
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Error test',
+          pondEntryId: 'error-test',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -72,8 +77,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'ASYNC_ERROR_EVENT',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: {},
         timestamp: new Date(),
       };
@@ -115,8 +120,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'SLOW_EVENT',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: {},
         timestamp: new Date(),
       };
@@ -163,8 +168,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'LARGE_PAYLOAD_EVENT',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: {
           largeArray: new Array(10000).fill('data'),
           nestedObject: {
@@ -177,7 +182,6 @@ describe('CoreAgent - Error Handling and Recovery', () => {
             },
           },
         },
-        timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
@@ -228,8 +232,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       // エラーと成功を交互に実行
       for (let i = 0; i < 20; i++) {
-        const event: AgentEvent = {
-          type: 'REPEATED_ERROR',
+        const event: SystemEvent = {
+          type: 'DATA_ARRIVED',
           payload: { shouldError: i % 2 === 0 },
           timestamp: new Date(),
         };
@@ -269,7 +273,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
+      const event: SystemEvent = {
         type: '',
         payload: {},
         timestamp: new Date(),
@@ -310,7 +314,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
+      const event: SystemEvent = {
         type: longEventType,
         payload: {},
         timestamp: new Date(),
@@ -350,8 +354,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'UNDEFINED_PAYLOAD',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: undefined as unknown as Record<string, unknown>,
         timestamp: new Date(),
       };
@@ -403,7 +407,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const result = await agent.executeWorkflow(
         workflow,
-        invalidEvent as AgentEvent,
+        invalidEvent as SystemEvent,
         mockContext,
 
         mockEmitter
@@ -448,7 +452,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       // 複数のワークフローを並行実行
       const promises = [];
       for (let i = 0; i < 10; i++) {
-        const event: AgentEvent = {
+        const event: SystemEvent = {
           type: `CONCURRENT_${i}`,
           payload: { index: i },
           timestamp: new Date(),
@@ -495,8 +499,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'NESTED_ERROR',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: {},
         timestamp: new Date(),
       };
@@ -535,8 +539,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'REJECTION_EVENT',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: {},
         timestamp: new Date(),
       };
