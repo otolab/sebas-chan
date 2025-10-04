@@ -9,6 +9,7 @@ import {
   PondEntry,
   PondSearchFilters,
   PondSearchResponse,
+  SystemEvent,
 } from '@sebas-chan/shared-types';
 export { Event };
 import { StateManager } from './state-manager.js';
@@ -16,8 +17,6 @@ import { logger } from '../utils/logger.js';
 import { DBClient } from '@sebas-chan/db';
 import {
   CoreAgent,
-  AgentEvent,
-  AgentEventPayload,
   WorkflowRecorder,
   WorkflowResolver,
 } from '@sebas-chan/core';
@@ -526,15 +525,14 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     // イベントを受信したことを通知
     this.emit('event:received', fullEvent);
 
-    // AgentEventに変換
-    const agentEvent: AgentEvent = {
+    // SystemEventに変換
+    const systemEvent = {
       type: fullEvent.type,
-      payload: fullEvent.payload as AgentEventPayload,
-      timestamp: fullEvent.timestamp,
-    };
+      payload: fullEvent.payload,
+    } as SystemEvent;
 
     // イベントから実行すべきワークフローを解決
-    const resolution = this.workflowResolver.resolve(agentEvent);
+    const resolution = this.workflowResolver.resolve(systemEvent);
 
     if (!resolution || resolution.workflows.length === 0) {
       logger.warn(`No workflows found for event type: ${event.type}`);
@@ -557,7 +555,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
     for (const workflow of resolution.workflows) {
       this.workflowQueue.enqueue({
         workflow,
-        event: agentEvent,
+        event: systemEvent,
         priority: workflow.triggers.priority ?? 0,
         timestamp: new Date(),
       });

@@ -308,7 +308,6 @@ export class TestWorkflow {
 
       case 'KNOWLEDGE_EXTRACTABLE':
       case 'ISSUE_STATUS_CHANGED':
-      case 'PATTERN_FOUND':
         await this.extractKnowledge(event);
         break;
 
