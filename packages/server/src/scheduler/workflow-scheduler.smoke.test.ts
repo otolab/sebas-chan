@@ -10,9 +10,7 @@ import type { DBClient } from '@sebas-chan/db';
  */
 describe('WorkflowScheduler (Smoke Test)', () => {
   it('should instantiate without errors', () => {
-    const mockDriverFactory = {
-      getDriver: vi.fn(),
-    } as DriverFactory;
+    const mockDriverFactory = vi.fn() as DriverFactory;
 
     const mockEventEmitter = new EventEmitter();
 
@@ -61,9 +59,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       }),
     };
 
-    const mockDriverFactory = {
-      getDriver: vi.fn().mockResolvedValue(mockDriver),
-    } as DriverFactory;
+    const mockDriverFactory = vi.fn().mockResolvedValue(mockDriver) as DriverFactory;
 
     const mockEventEmitter = new EventEmitter();
 
@@ -86,7 +82,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
     expect(result).toBeDefined();
     expect(result.scheduleId).toBeDefined();
     expect(result.interpretation).toBe('テスト実行');
-    expect(mockDriverFactory.getDriver).toHaveBeenCalled();
+    expect(mockDriverFactory).toHaveBeenCalled();
     expect(mockDriver.query).toHaveBeenCalled();
   });
 
@@ -108,9 +104,7 @@ describe('WorkflowScheduler (Smoke Test)', () => {
       }),
     };
 
-    const mockDriverFactory = {
-      getDriver: vi.fn().mockResolvedValue(mockDriver),
-    } as DriverFactory;
+    const mockDriverFactory = vi.fn().mockResolvedValue(mockDriver) as DriverFactory;
 
     const mockEventEmitter = new EventEmitter();
     const emitSpy = vi.spyOn(mockEventEmitter, 'emit');

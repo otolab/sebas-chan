@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { WorkflowScheduler } from './workflow-scheduler.js';
 import { EventEmitter } from 'events';
-import type { DriverFactory } from '../types.js';
+import type { DriverFactory } from '@sebas-chan/core';
 
 // DBClientのモック
 const mockDbClient = {
