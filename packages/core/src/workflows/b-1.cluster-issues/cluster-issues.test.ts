@@ -247,8 +247,11 @@ describe('ClusterIssues Workflow', () => {
 
     const event: SystemEvent = {
       type: 'USER_REQUEST_RECEIVED',
-      payload: {},
-      timestamp: new Date(),
+      payload: {
+        userId: 'test-user',
+        content: 'クラスタリング実行',
+        timestamp: new Date().toISOString(),
+      },
     };
 
     const result = await clusterIssuesWorkflow.executor(event, mockContext, mockEmitter);
@@ -269,8 +272,11 @@ describe('ClusterIssues Workflow', () => {
 
     const event: SystemEvent = {
       type: 'USER_REQUEST_RECEIVED',
-      payload: {},
-      timestamp: new Date(),
+      payload: {
+        userId: 'test-user',
+        content: 'クラスタリング実行',
+        timestamp: new Date().toISOString(),
+      },
     };
 
     const result = await clusterIssuesWorkflow.executor(event, mockContext, mockEmitter);

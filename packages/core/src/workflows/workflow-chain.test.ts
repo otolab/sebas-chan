@@ -133,7 +133,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 代わりに手動でISSUE_CREATEDイベントを作成してテスト
       const issueCreatedEvent: SystemEvent = {
         type: 'ISSUE_CREATED',
-        timestamp: new Date(),
         payload: {
           issueId: 'issue-456', // A-2が期待するissueId
           issue: {
@@ -419,7 +418,6 @@ describe('Workflow Chain Integration Tests', () => {
       const events: SystemEvent[] = [
         {
           type: 'DATA_ARRIVED',
-          timestamp: new Date(),
           payload: {
             source: 'logs',
             content: '通常のログ情報',
@@ -430,7 +428,6 @@ describe('Workflow Chain Integration Tests', () => {
         },
         {
           type: 'DATA_ARRIVED',
-          timestamp: new Date(),
           payload: {
             source: 'alerts',
             content: 'エラーが検出されました',

@@ -358,7 +358,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
           sourceId: 'test-issue',
           confidence: 0.9,
           reason: 'Important knowledge found',
-          suggestedKnowledge: 'Test knowledge content',
         },
       };
 

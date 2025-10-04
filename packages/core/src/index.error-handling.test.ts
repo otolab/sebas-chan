@@ -286,7 +286,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
         executor: async (_event) => {
           return {
-            success: !event.type || event.type === '',
+            success: !event.type || (event.type as string) === '',
             context: createMockWorkflowContext(),
           };
         },
