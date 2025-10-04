@@ -36,6 +36,8 @@ export type EventType =
   | 'HIGH_PRIORITY_FLOW_DETECTED'
   | 'ISSUES_CLUSTER_DETECTED'
   | 'PERSPECTIVE_TRIGGERED'
+  | 'UNCLUSTERED_ISSUES_EXCEEDED'
+  | 'POND_CAPACITY_WARNING'
 
   // システムイベント
   | 'SCHEDULE_TRIGGERED'
@@ -339,6 +341,30 @@ export interface IdleTimeDetectedEvent {
   };
 }
 
+/**
+ * UNCLUSTERED_ISSUES_EXCEEDED: 未整理Issueが閾値を超えた
+ */
+export interface UnclusteredIssuesExceededEvent {
+  type: 'UNCLUSTERED_ISSUES_EXCEEDED';
+  payload: {
+    count: number;
+    threshold: number;
+    issueIds: string[];
+  };
+}
+
+/**
+ * POND_CAPACITY_WARNING: Pond容量が警告レベルに達した
+ */
+export interface PondCapacityWarningEvent {
+  type: 'POND_CAPACITY_WARNING';
+  payload: {
+    usage: number;
+    capacity: number;
+    ratio: number;
+  };
+}
+
 // ====================
 // ユニオン型定義
 // ====================
@@ -365,7 +391,9 @@ export type SystemEvent =
   | PerspectiveTriggeredEvent
   | ScheduleTriggeredEvent
   | SystemMaintenanceDueEvent
-  | IdleTimeDetectedEvent;
+  | IdleTimeDetectedEvent
+  | UnclusteredIssuesExceededEvent
+  | PondCapacityWarningEvent;
 
 /**
  * イベントのペイロード型を取得するヘルパー型
@@ -448,4 +476,6 @@ export const EVENT_TO_WORKFLOWS: Record<EventType, WorkflowType[]> = {
   SCHEDULE_TRIGGERED: ['HANDLE_SCHEDULED_TASK'],
   SYSTEM_MAINTENANCE_DUE: ['COLLECT_SYSTEM_STATS'],
   IDLE_TIME_DETECTED: ['COLLECT_SYSTEM_STATS'],
+  UNCLUSTERED_ISSUES_EXCEEDED: ['CLUSTER_ISSUES'],
+  POND_CAPACITY_WARNING: [], // 終端イベント（警告のみ）
 };
