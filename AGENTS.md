@@ -41,17 +41,7 @@ npm run lint
 
 ## ドキュメント
 
-### 設計・アーキテクチャ
-- [アーキテクチャ詳細](docs/architecture/ARCHITECTURE.md) - エージェント構成と通信仕様
-- [インターフェース仕様](docs/architecture/INTERFACES.md) - モジュール間の詳細な接続仕様
-- [情報モデル](docs/architecture/INFORMATION_MODEL.md) - データモデル定義
-
-### 開発ガイド
-- [README](README.md) - プロジェクト概要と開発環境
-- [実装状況](docs/IMPLEMENTATION_STATUS.md) - 各フェーズの進捗状況
-
-### 作業指針
-- [ドキュメント・コード・テスト同期管理](prompts/DOCUMENT_CODE_TEST_SYNC.md) - 三位一体の同期管理
+詳細は @docs/README.md を参照してください。
 
 ## 主要コンポーネント
 
