@@ -323,15 +323,18 @@ export class DBClient extends EventEmitter {
    * connect後に明示的に呼び出す
    */
   async initModel(): Promise<boolean> {
-    // すでにモデルが初期化されているか確認
-    try {
-      const status = await this.ping();
-      if (status.status === 'ok' && status.model_loaded) {
-        console.log('Model already initialized, skipping initModel');
-        return true;
+    // 接続チェック（ping経由ではなく直接チェック）
+    if (this.isReady && this.worker) {
+      // すでにモデルが初期化されているか確認
+      try {
+        const status = await this.ping();
+        if (status.status === 'ok' && status.model_loaded) {
+          console.log('Model already initialized, skipping initModel');
+          return true;
+        }
+      } catch (e) {
+        // pingが失敗した場合は続行
       }
-    } catch (e) {
-      // pingが失敗した場合は続行
     }
 
     const result = await this.sendRequest('initModel');
