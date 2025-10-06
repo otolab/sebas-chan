@@ -86,13 +86,18 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       }
 
       this.dbStatus = 'connecting';
-      // 接続状態を確認し、未接続なら接続
+      // 接続状態を確認し、未接続なら接続・モデル初期化
       const status = await this.dbClient.getStatus();
       if (status.status !== 'ok') {
         await this.dbClient.connect();
-        logger.info('DB client connected');
+        await this.dbClient.initModel();
+        logger.info('DB client connected and model initialized');
+      } else if (!status.model_loaded) {
+        // 接続済みだがモデル未初期化の場合
+        await this.dbClient.initModel();
+        logger.info('DB model initialized');
       } else {
-        logger.info('DB client already connected');
+        logger.info('DB client already connected and model loaded');
       }
       this.dbStatus = 'ready';
 

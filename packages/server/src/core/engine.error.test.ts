@@ -112,8 +112,9 @@ describe('CoreEngine Error Handling', () => {
       await expect(engine.initialize()).rejects.toThrow('Connection failed');
     });
 
-    it.skip('should handle DB model initialization failure - CoreEngineはもうinitModelを呼ばない', async () => {
-      // CoreEngine.initialize()はもうinitModelを呼ばないため、このテストは不要
+    it('should handle DB model initialization failure', async () => {
+      // 接続は成功するがモデル初期化が失敗するケース
+      mockDbClient.getStatus.mockResolvedValue({ status: 'ok', model_loaded: false });
       mockDbClient.initModel.mockRejectedValue(new Error('Model init failed'));
 
       await expect(engine.initialize()).rejects.toThrow('Model init failed');
