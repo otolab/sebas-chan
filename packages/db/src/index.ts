@@ -129,9 +129,23 @@ export class DBClient extends EventEmitter {
       pythonArgs.push(`--model=${this.options.embeddingModel}`);
     }
 
+    // デバッグ情報を出力
+    console.log('Starting Python worker with:');
+    console.log('  Command:', pythonCmd);
+    console.log('  Args:', pythonArgs);
+    console.log('  CWD:', packageRoot);
+    console.log('  Script path:', pythonScript);
+    console.log('  Script exists:', fs.existsSync(pythonScript));
+    console.log('  ENV PATH:', process.env.PATH);
+    console.log('  ENV PYTHON_BIN:', process.env.PYTHON_BIN);
+
     this.worker = spawn(pythonCmd, pythonArgs, {
       stdio: ['pipe', 'pipe', 'pipe'],
       cwd: packageRoot, // uvコマンドを正しいディレクトリで実行
+      env: {
+        ...process.env,
+        PYTHONUNBUFFERED: '1', // Pythonの出力をバッファリングしない
+      },
     });
 
     this.worker.stdout?.on('data', (data) => {
@@ -166,8 +180,13 @@ export class DBClient extends EventEmitter {
       }
     });
 
+    // stderrの内容を蓄積
+    let stderrBuffer = '';
+
     this.worker.stderr?.on('data', (data) => {
-      console.error('Python stderr:', data.toString());
+      const output = data.toString();
+      stderrBuffer += output;
+      console.error('Python stderr:', output);
     });
 
     // ワーカープロセスのエラーや異常終了を追跡
@@ -176,16 +195,25 @@ export class DBClient extends EventEmitter {
 
     this.worker.on('error', (error) => {
       console.error('Failed to start Python worker:', error);
+      console.error('  Error code:', (error as any).code);
+      console.error('  Error syscall:', (error as any).syscall);
+      console.error('  Error path:', (error as any).path);
       workerError = error;
       this.emit('error', error);
     });
 
-    this.worker.on('exit', (code) => {
-      console.log(`Python worker exited with code ${code}`);
+    this.worker.on('exit', (code, signal) => {
+      console.log(`Python worker exited with code ${code}, signal ${signal}`);
+      if (stderrBuffer) {
+        console.error('Accumulated stderr output:', stderrBuffer);
+      }
       this.isReady = false;
       workerExited = true;
       if (code !== 0 && !workerError) {
-        workerError = new Error(`Python worker exited with code ${code}`);
+        const errorMsg = stderrBuffer
+          ? `Python worker exited with code ${code}. Stderr: ${stderrBuffer}`
+          : `Python worker exited with code ${code}`;
+        workerError = new Error(errorMsg);
       }
       this.worker = null;
     });
