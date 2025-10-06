@@ -61,9 +61,11 @@ describe('Input to Pond Flow Integration', () => {
       // Search in pond for the processed content
       await engine.searchPond('バックアップ エラー');
 
-      // Since we're using mocked DB in tests, verify the workflow was triggered
-      // WorkflowQueueベースのシステムでは、ワークフローが実行されたことを確認
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+      // ワークフローが実行されたことを確認
+      // 統合テストでは実際の動作を確認（executorMockが呼ばれたことを確認）
+      await vi.waitFor(() => {
+        expect(testWorkflow.executor).toHaveBeenCalled();
+      });
     });
 
     it('should handle multiple inputs in sequence', async () => {
@@ -213,9 +215,11 @@ describe('Input to Pond Flow Integration', () => {
       // Give time for event processing
       await vi.advanceTimersByTimeAsync(200);
 
-      // Manual processing since we're in test mode
-      // WorkflowQueueベースのシステムでは、ワークフローが実行されたことを確認
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+      // ワークフローが実行されたことを確認
+      // 統合テストでは実際の動作を確認（executorMockが呼ばれたことを確認）
+      await vi.waitFor(() => {
+        expect(testWorkflow.executor).toHaveBeenCalled();
+      });
     });
 
     it('should maintain event priority during input processing', async () => {
