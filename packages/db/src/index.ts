@@ -321,23 +321,17 @@ export class DBClient extends EventEmitter {
   /**
    * モデルを初期化
    * connect後に明示的に呼び出す
+   * Python側で冪等性が保証されているため、複数回呼んでも安全
    */
   async initModel(): Promise<boolean> {
-    // 接続チェック（ping経由ではなく直接チェック）
-    if (this.isReady && this.worker) {
-      // すでにモデルが初期化されているか確認
-      try {
-        const status = await this.ping();
-        if (status.status === 'ok' && status.model_loaded) {
-          console.log('Model already initialized, skipping initModel');
-          return true;
-        }
-      } catch (e) {
-        // pingが失敗した場合は続行
-      }
+    // ワーカーが存在しない場合はエラー
+    if (!this.worker) {
+      throw new Error('Not connected to database');
     }
 
-    const result = await this.sendRequest('initModel');
+    // isReadyフラグがfalseでも、ワーカーが生きていればinitModelを送信可能
+    // （connect中に呼ばれる可能性があるため）
+    const result = await this.sendRequestDirect('initModel');
     return result as boolean;
   }
 
@@ -352,6 +346,18 @@ export class DBClient extends EventEmitter {
 
   private async sendRequest(method: string, params?: unknown): Promise<unknown> {
     if (!this.worker || !this.isReady) {
+      throw new Error('Not connected to database');
+    }
+
+    return this.sendRequestDirect(method, params);
+  }
+
+  /**
+   * isReadyチェックをスキップして直接リクエストを送信
+   * connect中やinitModel中に使用
+   */
+  private async sendRequestDirect(method: string, params?: unknown): Promise<unknown> {
+    if (!this.worker) {
       throw new Error('Not connected to database');
     }
 
