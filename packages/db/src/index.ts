@@ -103,6 +103,9 @@ export class DBClient extends EventEmitter {
   }
 
   async connect(): Promise<void> {
+    console.log('[DBClient.connect] Starting connection...');
+    console.log('[DBClient.connect] __dirname:', __dirname);
+
     if (this.worker) {
       // 既に接続済みの場合は何もしない（冪等性）
       console.log('DBClient: Already connected, skipping reconnection');
@@ -112,13 +115,21 @@ export class DBClient extends EventEmitter {
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');
     const packageRoot = path.join(__dirname, '..'); // packages/db
 
+    console.log('[DBClient.connect] packageRoot:', packageRoot);
+    console.log('[DBClient.connect] pythonScript:', pythonScript);
+
     // uvを必須とする（環境未整備の場合はエラー）
     const pyprojectPath = path.join(packageRoot, 'pyproject.toml');
+    console.log('[DBClient.connect] Checking pyproject.toml at:', pyprojectPath);
+    console.log('[DBClient.connect] pyproject.toml exists:', fs.existsSync(pyprojectPath));
+
     if (!fs.existsSync(pyprojectPath)) {
+      console.error('[DBClient.connect] ERROR: pyproject.toml not found at:', pyprojectPath);
       throw new Error(
         'pyproject.toml not found. Please ensure the Python environment is properly set up with uv.'
       );
     }
+    console.log('[DBClient.connect] pyproject.toml found OK');
 
     // uv --project でPythonを実行
     const pythonCmd = 'uv';
