@@ -221,7 +221,7 @@ describe('CoreEngine Error Handling', () => {
       }
 
       // すべての操作で結果が返される（エラーがあっても継続）
-      expect(results.filter(r => r.success)).toHaveLength(3);
+      expect(results.filter((r) => r.success)).toHaveLength(3);
 
       // 2番目の操作はローカルIDで成功
       expect(results[1].data.id).toMatch(/^pond-\d+$/);
@@ -244,9 +244,12 @@ describe('CoreEngine Error Handling', () => {
       expect(engine.getState()).toBe(newState);
 
       // DBへの更新は試行される
-      await vi.waitFor(() => {
-        expect(mockDbClient.updateStateDocument).toHaveBeenCalledWith(newState);
-      }, { timeout: 3000 });
+      await vi.waitFor(
+        () => {
+          expect(mockDbClient.updateStateDocument).toHaveBeenCalledWith(newState);
+        },
+        { timeout: 3000 }
+      );
 
       // エラーがログに記録される
       await vi.waitFor(() => {
