@@ -9,10 +9,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CoreEngine } from '../../packages/server/src/core/engine.js';
-import { DBClient } from '@sebas-chan/db';
-
-// DBClientのみモック（外部システム）
-vi.mock('@sebas-chan/db');
+import { CoreAgent } from '@sebas-chan/core';
 
 // ロガーのモック（ノイズ削減）
 vi.mock('../../packages/server/src/utils/logger', () => ({
@@ -26,51 +23,29 @@ vi.mock('../../packages/server/src/utils/logger', () => ({
 
 describe('CoreEngine と DBClient の統合テスト', () => {
   let engine: CoreEngine;
-  let mockDbClient: Partial<DBClient>;
+  let coreAgent: CoreAgent;
 
-  beforeEach(() => {
-    // DBClientのモック設定
-    mockDbClient = {
-      connect: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
-      initModel: vi.fn().mockResolvedValue(true),
-      getStatus: vi.fn().mockResolvedValue({
-        status: 'ok',
-        model_loaded: true,
-        tables: ['issues', 'pond', 'state'],
-        vector_dimension: 256,
-      }),
-      addPondEntry: vi.fn().mockImplementation(async (entry) => ({
-        ...entry,
-        id: `pond-${Date.now()}`,
-        timestamp: entry.timestamp || new Date(),
-      })),
-      searchPond: vi.fn().mockResolvedValue({
-        data: [],
-        meta: { total: 0, limit: 20, offset: 0, hasMore: false },
-      }),
-      searchIssues: vi.fn().mockResolvedValue([]),
-      updateStateDocument: vi.fn().mockResolvedValue(undefined),
-      getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnull（新規状態）
-      saveStateDocument: vi.fn().mockResolvedValue(undefined),
-    };
+  beforeEach(async () => {
+    // 実際のCoreAgentを使用
+    coreAgent = new CoreAgent();
 
-    vi.mocked(DBClient).mockImplementation(() => mockDbClient as DBClient);
+    // 実際のコンポーネントでEngineを作成（DBClientは内部で作成される）
+    engine = new CoreEngine(coreAgent);
+    await engine.initialize();
 
     // タイマーのモック
     vi.useFakeTimers();
-  });
+  }, 60000); // DB初期化のため長めのタイムアウト
 
-  afterEach(() => {
+  afterEach(async () => {
+    if (engine) {
+      await engine.stop();
+    }
     vi.useRealTimers();
     vi.clearAllMocks();
   });
 
   describe('2.1 Pond操作', () => {
-    beforeEach(async () => {
-      engine = new CoreEngine();
-      await engine.initialize();
-    });
 
     it('TEST-POND-001: createInputからPondへの保存フロー', async () => {
       // Arrange

@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CoreEngine } from '../../packages/server/src/core/engine.js';
 import { CoreAgent } from '@sebas-chan/core';
-import { DBClient } from '@sebas-chan/db';
-
-// モックを作成
-// CoreAgentはモックしない（注入するため）
-vi.mock('@sebas-chan/db');
 vi.mock('../../packages/server/src/utils/logger', () => ({
   logger: {
     info: vi.fn(),
@@ -17,72 +12,23 @@ vi.mock('../../packages/server/src/utils/logger', () => ({
 
 describe('CoreEngine - CoreAgent Integration', () => {
   let engine: CoreEngine;
-  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
-  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
-  let mockWorkflowRegistry: any;
+  let coreAgent: CoreAgent;
 
-  beforeEach(() => {
-    // DBClientモックの設定
-    mockDbClient = {
-      connect: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
-      initModel: vi.fn().mockResolvedValue(true),
-      getStatus: vi.fn().mockResolvedValue({
-        status: 'ok',
-        model_loaded: true,
-        tables: ['issues', 'pond', 'state'],
-        vector_dimension: 256,
-      }),
-      addPondEntry: vi.fn().mockImplementation(async (entry) => {
-        return {
-          ...entry,
-          id: entry.id || `pond-${Date.now()}`,
-          timestamp: entry.timestamp || new Date(),
-        };
-      }),
-      searchPond: vi.fn().mockResolvedValue([]),
-      searchIssues: vi.fn().mockResolvedValue([]),
-      updateStateDocument: vi.fn().mockResolvedValue(undefined),
-      getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnull（新規状態）
-      saveStateDocument: vi.fn().mockResolvedValue(undefined),
-    };
+  beforeEach(async () => {
+    // 実際のCoreAgentを使用
+    coreAgent = new CoreAgent();
 
-    vi.mocked(DBClient).mockImplementation(() => mockDbClient);
+    // 実際のコンポーネントでEngineを作成（DBClientは内部で作成される）
+    engine = new CoreEngine(coreAgent);
+    await engine.initialize();
 
-    // CoreAgentモックの設定
-    mockWorkflowRegistry = {
-      get: vi.fn((eventType: string) => {
-        // INGEST_INPUTなどのイベントタイプに対応するワークフローを返す
-        if (eventType === 'INGEST_INPUT' || eventType === 'PROCESS_USER_REQUEST' || eventType === 'ANALYZE_ISSUE_IMPACT') {
-          return {
-            name: `${eventType}_Workflow`,
-            executor: vi.fn().mockResolvedValue({ success: true }),
-          };
-        }
-        return undefined;
-      }),
-      register: vi.fn(),
-      getAll: vi.fn().mockReturnValue(new Map()),
-      clear: vi.fn(),
-      getEventTypes: vi.fn().mockReturnValue([]),
-    };
-
-    mockCoreAgent = {
-      executeWorkflow: vi.fn().mockResolvedValue({
-        success: true,
-        context: { state: {} },
-      }),
-      getWorkflowRegistry: vi.fn().mockReturnValue(mockWorkflowRegistry),
-      registerWorkflow: vi.fn(),
-    };
-
-    // モックしたCoreAgentをコンストラクタに渡す
-    engine = new CoreEngine(mockCoreAgent as CoreAgent);
     vi.useFakeTimers();
-  });
+  }, 60000); // DB初期化のため長めのタイムアウト
 
-  afterEach(() => {
-    engine.stop();
+  afterEach(async () => {
+    if (engine) {
+      await engine.stop();
+    }
     vi.useRealTimers();
     vi.clearAllMocks();
   });
