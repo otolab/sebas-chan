@@ -165,46 +165,59 @@ export function createCustomMockContext(overrides?: {
  * よく使うモックIssueを生成
  */
 export function createMockIssue(overrides?: Partial<Issue>): Issue {
+  const baseIssue: Issue = {
+    id: 'issue-test-123',
+    title: 'Test Issue',
+    description: 'Test Description',
+    status: 'open',
+    labels: [],
+    sourceInputIds: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    updates: [],
+    relations: [],
+    // priorityはオプショナルなので設定しない
+  };
+
   return {
-    id: overrides?.id || 'issue-test-123',
-    title: overrides?.title || 'Test Issue',
-    description: overrides?.description || 'Test Description',
-    status: overrides?.status || 'open',
-    labels: overrides?.labels || [],
-    priority: overrides?.priority || 50,
-    sourceInputIds: overrides?.sourceInputIds || [],
-    createdAt: overrides?.createdAt || new Date(),
-    updatedAt: overrides?.updatedAt || new Date(),
-    updates: overrides?.updates || [],
-    relations: overrides?.relations || [],
+    ...baseIssue,
     ...overrides,
-  } as Issue;
+  };
 }
 
 /**
  * よく使うモックKnowledgeを生成
  */
 export function createMockKnowledge(overrides?: Partial<Knowledge>): Knowledge {
+  const baseKnowledge: Knowledge = {
+    id: 'knowledge-test-123',
+    type: 'factoid',
+    content: 'Test Knowledge Content',
+    reputation: { upvotes: 0, downvotes: 0 },
+    sources: [],
+    createdAt: new Date(),
+  };
+
   return {
-    id: overrides?.id || 'knowledge-test-123',
-    type: overrides?.type || 'factoid',
-    content: overrides?.content || 'Test Knowledge Content',
-    reputation: overrides?.reputation || { upvotes: 0, downvotes: 0 },
-    sources: overrides?.sources || [],
-    createdAt: overrides?.createdAt || new Date(),
-  } as Knowledge;
+    ...baseKnowledge,
+    ...overrides,
+  };
 }
 
 /**
  * よく使うモックPondEntryを生成
  */
 export function createMockPondEntry(overrides?: Partial<PondEntry>): PondEntry {
+  const basePondEntry: PondEntry = {
+    id: 'pond-test-123',
+    content: 'Test Pond Content',
+    source: 'test',
+    timestamp: new Date(),
+    // metadata, context, vector, score, distanceはオプショナルなので設定しない
+  };
+
   return {
-    id: overrides?.id || 'pond-test-123',
-    content: overrides?.content || 'Test Pond Content',
-    source: overrides?.source || 'test',
-    timestamp: overrides?.timestamp || new Date(),
-    metadata: overrides?.metadata || {},
+    ...basePondEntry,
     ...overrides,
-  } as PondEntry;
+  };
 }
