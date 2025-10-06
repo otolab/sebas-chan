@@ -9,8 +9,8 @@ export default defineConfig({
     environment: 'node',
     setupFiles: [],
     testTimeout: 30000,
-    silent: true,
-    logLevel: 'error',
+    silent: false,  // デバッグのため一時的にfalseに変更
+    logLevel: 'info',  // デバッグのため一時的にinfoに変更
   },
   resolve: {
     alias: {
