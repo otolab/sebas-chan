@@ -22,9 +22,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
     dbClient = await setupTestEnvironment();
   }, 60000);
 
-  afterAll(async () => {
-    await teardownTestEnvironment();
-  });
+  // グローバルなDBClientを使用するため、個別のteardownは不要
 
   beforeEach(async () => {
     // 実際のCoreAgentを使用
