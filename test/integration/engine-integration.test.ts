@@ -52,7 +52,8 @@ describe('CoreEngine - CoreAgent Integration', () => {
       // ヘルスステータスでCoreAgentが初期化済みであることを確認
       const health = engine.getHealthStatus();
       expect(health.agent).toBe('initialized');
-      expect(health.status).toBe('healthy');
+      expect(health.ready).toBe(true);
+      expect(health.engine).toBe('running');
     });
   });
 
