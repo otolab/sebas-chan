@@ -106,9 +106,16 @@ export class DBClient extends EventEmitter {
     console.log('[DBClient.connect] Starting connection...');
     console.log('[DBClient.connect] __dirname:', __dirname);
 
-    if (this.worker) {
-      // 既に接続済みの場合は何もしない（冪等性）
-      console.log('DBClient: Already connected, skipping reconnection');
+    if (this.worker && this.isReady) {
+      // 既に接続済みかつ準備完了の場合は何もしない（冪等性）
+      console.log('DBClient: Already connected and ready, skipping reconnection');
+      return;
+    }
+
+    if (this.worker && !this.isReady) {
+      // ワーカーは存在するが準備未完了の場合は待機
+      console.log('DBClient: Worker exists but not ready, waiting for ready state...');
+      await this.waitForReady(null, () => false); // 既存のワーカーは生きているのでエラーなし、終了もしていない
       return;
     }
 

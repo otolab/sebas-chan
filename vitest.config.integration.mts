@@ -11,6 +11,12 @@ export default defineConfig({
     testTimeout: 30000,
     silent: false,  // デバッグのため一時的にfalseに変更
     logLevel: 'info',  // デバッグのため一時的にinfoに変更
+    pool: 'forks',  // 各テストファイルを独立したプロセスで実行
+    poolOptions: {
+      forks: {
+        singleFork: true,  // 単一のforkで順次実行
+      },
+    },
   },
   resolve: {
     alias: {
