@@ -9,7 +9,7 @@ import { CoreEngine } from './engine.js';
 import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 
-vi.mock('../../utils/logger', () => ({
+vi.mock('../utils/logger', () => ({
   logger: {
     info: vi.fn(),
     debug: vi.fn(),
@@ -120,25 +120,19 @@ describe('CoreEngine Error Handling', () => {
       await expect(engine.initialize()).rejects.toThrow('Model init failed');
     });
 
-    it.skip('should allow retry after DB connection failure', async () => {
-      let connectAttempts = 0;
-      mockDbClient.connect.mockImplementation(async () => {
-        connectAttempts++;
-        if (connectAttempts === 1) {
-          throw new Error('Connection failed');
-        }
-        return undefined;
-      });
-
+    it.skip('should allow retry after DB connection failure - モックの分離が必要', async () => {
       // 最初の接続は失敗
+      mockDbClient.connect.mockRejectedValueOnce(new Error('Connection failed'));
       await expect(engine.initialize()).rejects.toThrow('Connection failed');
+
+      // モックをリセットして、2回目の接続は成功するように設定
+      mockDbClient.connect.mockResolvedValueOnce(undefined);
 
       // 新しいengineインスタンスで再接続試行
       const newEngine = new CoreEngine();
       await newEngine.initialize();
 
       // 2回目の接続が成功
-      expect(mockDbClient.connect).toHaveBeenCalledTimes(2);
       const status = await newEngine.getStatus();
       expect(status.dbStatus).toBe('ready');
 
@@ -147,7 +141,7 @@ describe('CoreEngine Error Handling', () => {
   });
 
   describe('Graceful Degradation', () => {
-    it.skip('should handle DB disconnection gracefully', async () => {
+    it('should handle DB disconnection gracefully', async () => {
       await engine.initialize();
       await engine.start();
 
@@ -235,7 +229,7 @@ describe('CoreEngine Error Handling', () => {
   });
 
   describe('State Management Errors', () => {
-    it.skip('should handle state update errors', async () => {
+    it('should handle state update errors', async () => {
       await engine.initialize();
 
       mockDbClient.updateStateDocument.mockRejectedValue(new Error('Update failed'));
