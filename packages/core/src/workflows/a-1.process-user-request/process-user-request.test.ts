@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { processUserRequestWorkflow } from './index.js';
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import {
   createCustomMockContext,
   createMockWorkflowEmitter,
@@ -12,7 +12,7 @@ import { TestDriver } from '@moduler-prompt/driver';
 describe('ProcessUserRequest Workflow (A-1)', () => {
   let mockContext: ReturnType<typeof createCustomMockContext>;
   let mockEmitter: ReturnType<typeof createMockWorkflowEmitter>;
-  let mockEvent: AgentEvent;
+  let mockEvent: SystemEvent;
 
   beforeEach(() => {
     // モックコンテキストの準備
@@ -53,12 +53,15 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
 
     // モックイベント
     mockEvent = {
-      type: 'USER_REQUEST',
-      timestamp: new Date(),
+      type: 'USER_REQUEST_RECEIVED',
       payload: {
         userId: 'user-123',
         content: 'システムエラーが発生しています',
-        type: 'message',
+        sessionId: 'session-123',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          source: 'web' as const,
+        },
       },
     };
   });
@@ -94,7 +97,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
   });
 
   it('should handle missing request content', async () => {
-    mockEvent.payload.content = undefined;
+    // USER_REQUEST_RECEIVEDイベントのcontentを空文字にする
+    (mockEvent.payload as { content: string }).content = '';
 
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
@@ -115,7 +119,7 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
   });
 
   it('should classify schedule request', async () => {
-    mockEvent.payload.content = '毎日10時にレポートを実行してください';
+    (mockEvent.payload as { content: string }).content = '毎日10時にレポートを実行してください';
 
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({

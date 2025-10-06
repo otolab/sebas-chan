@@ -44,6 +44,11 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
           sources: [],
         }),
         updateKnowledge: vi.fn(),
+        // Flow操作
+        getFlow: vi.fn(),
+        searchFlows: vi.fn().mockResolvedValue([]),
+        createFlow: vi.fn(),
+        updateFlow: vi.fn(),
       },
       createDriver: async () => new TestDriver({
         responses: [JSON.stringify({
@@ -62,7 +67,6 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     // モックイベント
     mockEvent = {
       type: 'KNOWLEDGE_EXTRACTABLE',
-      timestamp: new Date(),
       payload: {
         sourceType: 'issue',
         sourceId: 'issue-123',
@@ -79,7 +83,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'システムエラー',
       description: '重大なシステムエラーが発生',
-      status: 'resolved',
+      status: 'closed',
       updates: [{
         content: 'サービスを再起動して解決',
         timestamp: new Date(),
@@ -129,16 +133,15 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     // ISSUE_STATUS_CHANGEDイベント
     mockEvent = {
       type: 'ISSUE_STATUS_CHANGED',
-      timestamp: new Date(),
       payload: {
         issueId: 'issue-456',
         from: 'open',
-        to: 'resolved',
+        to: 'closed',
         issue: {
           id: 'issue-456',
           title: 'ログインエラー',
           description: 'ログインができない',
-          status: 'resolved',
+          status: 'closed',
           labels: [],
           priority: 50,
           sourceInputIds: [],
@@ -147,7 +150,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
           updates: [{
             content: 'パスワードリセットで解決',
             timestamp: new Date(),
-            author: 'support',
+            author: 'ai',
           }],
           relations: [],
         },
@@ -180,18 +183,15 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
         updatedState: 'Initial state\nパターン発見: メモリリーク対処法'
       })]
     });
-    // PATTERN_FOUNDイベント
+    // RECURRING_PATTERN_DETECTEDイベント
     mockEvent = {
-      type: 'PATTERN_FOUND',
-      timestamp: new Date(),
+      type: 'RECURRING_PATTERN_DETECTED',
       payload: {
-        patternType: 'error_pattern',
-        pattern: {
-          description: 'メモリリークのパターン',
-          occurrences: 5,
-          confidence: 0.9,
-          examples: ['例1', '例2'],
-        },
+        patternType: 'behavioral',  // 'temporal' | 'behavioral' | 'structural' | 'statistical'
+        description: 'メモリリークのパターン',
+        occurrences: 5,
+        confidence: 0.9,
+        entities: ['メモリ', 'リーク'],
       },
     };
 
@@ -217,7 +217,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'テスト',
       description: 'テスト',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
     mockContext.createDriver = async () => new TestDriver({
@@ -269,13 +269,27 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     mockEvent = {
       type: 'KNOWLEDGE_EXTRACTABLE',
       payload: {
-        sourceType: 'high_impact_issue',
+        sourceType: 'issue',
         sourceId: 'issue-123',
         confidence: 0.8,
         reason: 'High impact issue',
       },
-      timestamp: new Date(),
     };
+
+    // getIssueのモックを設定
+    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
+      id: 'issue-123',
+      title: 'Test Issue',
+      description: 'Test issue description',
+      status: 'open',
+      priority: 80,
+      labels: [],
+      updates: [],
+      relations: [],
+      sourceInputIds: [],
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     mockContext.createDriver = async () => new TestDriver({
       responses: [JSON.stringify({
@@ -335,7 +349,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'テストIssue',
       description: 'テスト用のIssue',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
 
@@ -363,7 +377,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'テストIssue',
       description: 'テスト用のIssue',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
 
@@ -382,7 +396,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       id: 'issue-123',
       title: 'test',
       description: 'test',
-      status: 'resolved',
+      status: 'closed',
       updates: [],
     });
     const error = new Error('Knowledge extraction failed');

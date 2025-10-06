@@ -3,9 +3,9 @@
  * イベントから実行すべきワークフローを解決する
  */
 
-import type { AgentEvent } from '../types.js';
 import type { WorkflowDefinition, WorkflowResolution } from './workflow-types.js';
 import type { WorkflowRegistry } from './workflow-registry.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 
 export class WorkflowResolver {
   constructor(private registry: WorkflowRegistry) {}
@@ -13,7 +13,7 @@ export class WorkflowResolver {
   /**
    * イベントにマッチするワークフローを解決
    */
-  resolve(event: AgentEvent): WorkflowResolution {
+  resolve(event: SystemEvent): WorkflowResolution {
     const startTime = Date.now();
     const allWorkflows = this.registry.getAll();
     const debug = {
@@ -106,7 +106,7 @@ export class WorkflowResolver {
   /**
    * デバッグ用：解決のシミュレーション
    */
-  simulate(event: AgentEvent): string[] {
+  simulate(event: SystemEvent): string[] {
     const resolution = this.resolve(event);
     return resolution.workflows.map((w) => w.name);
   }

@@ -1,6 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import { EventEmitter } from 'events';
-import { Issue, Knowledge } from '@sebas-chan/shared-types';
+import { Issue, Knowledge, Flow, Schedule, ScheduleFilter } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -423,6 +423,39 @@ export class DBClient extends EventEmitter {
     return updated;
   }
 
+  // Flow関連のメソッド
+  async addFlow(flow: Omit<Flow, 'id' | 'createdAt' | 'updatedAt'>): Promise<Flow> {
+    const newFlow: Flow = {
+      ...flow,
+      id: nanoid(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await this.sendRequest('addFlow', newFlow);
+    return result as Flow;
+  }
+
+  async getFlow(id: string): Promise<Flow | null> {
+    const result = await this.sendRequest('getFlow', { id });
+    return result as Flow | null;
+  }
+
+  async searchFlows(query: string): Promise<Flow[]> {
+    const result = await this.sendRequest('searchFlows', { query });
+    return result as Flow[];
+  }
+
+  async updateFlow(id: string, update: Partial<Flow>): Promise<Flow> {
+    const result = await this.sendRequest('updateFlow', {
+      id,
+      update: {
+        ...update,
+        updatedAt: new Date(),
+      },
+    });
+    return result as Flow;
+  }
+
   // State文書関連のメソッド
   async getStateDocument(): Promise<string> {
     return (await this.sendRequest('getState')) as string;
@@ -529,20 +562,22 @@ export class DBClient extends EventEmitter {
   }
 
   // Schedule操作メソッド
-  async addSchedule(scheduleData: any): Promise<string> {
+  async addSchedule(
+    scheduleData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<string> {
     return (await this.sendRequest('addSchedule', scheduleData)) as string;
   }
 
-  async getSchedule(id: string): Promise<any | null> {
-    return await this.sendRequest('getSchedule', { id });
+  async getSchedule(id: string): Promise<Schedule | null> {
+    return (await this.sendRequest('getSchedule', { id })) as Schedule | null;
   }
 
-  async updateSchedule(id: string, updates: any): Promise<boolean> {
+  async updateSchedule(id: string, updates: Partial<Schedule>): Promise<boolean> {
     return (await this.sendRequest('updateSchedule', { id, updates })) as boolean;
   }
 
-  async searchSchedules(filters: any): Promise<any[]> {
-    return (await this.sendRequest('searchSchedules', filters)) as any[];
+  async searchSchedules(filters: ScheduleFilter): Promise<Schedule[]> {
+    return (await this.sendRequest('searchSchedules', filters)) as Schedule[];
   }
 
   // テスト用メソッド

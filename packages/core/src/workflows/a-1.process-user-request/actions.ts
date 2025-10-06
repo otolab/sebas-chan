@@ -7,7 +7,7 @@ import type { WorkflowStorageInterface, WorkflowEventEmitterInterface } from '..
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
 import { processUserRequestPromptModule, type RequestAnalysisContext } from './prompts.js';
-import { RecordType } from '../recorder.js';
+import { RecordType, type WorkflowRecorder } from '../recorder.js';
 import { REQUEST_TYPE, ACTION_TYPE } from '../shared/constants.js';
 
 /**
@@ -92,7 +92,7 @@ export async function searchRelatedData(
  */
 export async function createNewIssue(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   title: string,
   description: string,
@@ -137,7 +137,7 @@ export async function createNewIssue(
  */
 export async function updateExistingIssue(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   issue: Issue,
   content: string,
@@ -181,7 +181,7 @@ export async function updateExistingIssue(
  */
 export async function createPondEntryAndEmitEvent(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   content: string,
   metadata?: Record<string, unknown>
@@ -223,9 +223,11 @@ export async function createPondEntryAndEmitEvent(
  * アクションを実行
  * 意図: AI判定に基づいて具体的なアクションを実行
  */
+
+// TODO: アクションタイプが増えすぎた場合はプラグイン化を検討
 export async function executeActions(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   actions: RequestAnalysisResult['actions'],
   content: string | undefined,
@@ -294,7 +296,7 @@ export async function executeActions(
  */
 export async function emitEvents(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   events: RequestAnalysisResult['events'],
   content: string | undefined,
@@ -355,31 +357,40 @@ export function determineDefaultEvents(
 
   switch (requestType) {
     case REQUEST_TYPE.ISSUE:
+      // ISSUE_REPORTEDは削除されたため、ISSUE_CREATEDイベントを直接発火する準備
+      // 実際のIssue作成はexecutorで行い、ここではイベント準備のみ
       events.push({
-        type: 'ISSUE_REPORTED',
+        type: 'ISSUE_CREATED',
         payload: {
           content,
-          reportedBy: 'user',
+          createdBy: 'user' as const,
+          sourceWorkflow: 'ProcessUserRequest',
           timestamp,
         },
       });
       break;
 
     case REQUEST_TYPE.SCHEDULE:
+      // SCHEDULE_REQUESTEDは未定義のため、SCHEDULE_TRIGGEREDを使用
       events.push({
-        type: 'SCHEDULE_REQUESTED',
+        type: 'SCHEDULE_TRIGGERED',
         payload: {
-          content,
-          timestamp,
+          scheduledTask: content,
+          scheduledTime: timestamp,
+          executionTime: timestamp,
         },
       });
       break;
 
     case REQUEST_TYPE.SEARCH:
+      // SEARCH_REQUESTEDは未定義のため、DATA_ARRIVEDを使用
       events.push({
-        type: 'SEARCH_REQUESTED',
+        type: 'DATA_ARRIVED',
         payload: {
-          query: content,
+          source: 'user_search',
+          content: `検索クエリ: ${content}`,
+          pondEntryId: `search-${Date.now()}`,
+          metadata: { searchQuery: content },
           timestamp,
         },
       });

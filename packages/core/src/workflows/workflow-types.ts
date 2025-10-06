@@ -3,7 +3,7 @@
  * 1イベント対nワークフローをサポート
  */
 
-import type { AgentEvent } from '../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './context.js';
 
 /**
@@ -14,7 +14,7 @@ export interface WorkflowTrigger {
   eventTypes: string[];
 
   /** 追加の実行条件（オプション） */
-  condition?: (event: AgentEvent) => boolean;
+  condition?: (event: SystemEvent) => boolean;
 
   /** 実行優先度（大きいほど優先、デフォルト: 0） */
   priority?: number;
@@ -34,7 +34,7 @@ export interface WorkflowResult {
  * ワークフロー実行関数
  */
 export type WorkflowExecutor = (
-  event: AgentEvent,
+  event: SystemEvent,
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ) => Promise<WorkflowResult>;

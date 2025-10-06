@@ -2,12 +2,19 @@
  * ExtractKnowledgeワークフローのアクション関数
  */
 
-import type { Knowledge, KnowledgeSource, Issue } from '@sebas-chan/shared-types';
+import type {
+  Knowledge,
+  KnowledgeSource,
+  Issue,
+  KnowledgeExtractableEvent,
+  IssueStatusChangedEvent,
+  RecurringPatternDetectedEvent
+} from '@sebas-chan/shared-types';
 import type { WorkflowStorageInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
 import { extractKnowledgePromptModule, type KnowledgeExtractionContext } from './prompts.js';
-import { RecordType } from '../recorder.js';
+import { RecordType, type WorkflowRecorder } from '../recorder.js';
 
 /**
  * AI抽出結果の型定義
@@ -23,7 +30,7 @@ export interface KnowledgeExtractionResult {
  */
 export function determineKnowledgeType(content: string, source?: string): Knowledge['type'] {
   // ソースタイプに基づいて判定
-  if (source === 'high_impact_issue' || source === 'resolution') {
+  if (source === 'issue' || source === 'high_impact_issue' || source === 'resolution') {
     return 'system_rule';
   }
 
@@ -63,7 +70,7 @@ export function createKnowledgeSource(sourceType: string, sourceId: string): Kno
  */
 export async function getContentFromEvent(
   eventType: string,
-  payload: any,
+  payload: KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | RecurringPatternDetectedEvent['payload'],
   storage: WorkflowStorageInterface
 ): Promise<{
   content: string;
@@ -77,9 +84,10 @@ export async function getContentFromEvent(
   let confidence = 0.5;
 
   if (eventType === 'KNOWLEDGE_EXTRACTABLE') {
-    sourceType = payload.sourceType;
-    sourceId = payload.sourceId;
-    confidence = payload.confidence;
+    const knowledgePayload = payload as KnowledgeExtractableEvent['payload'];
+    sourceType = knowledgePayload.sourceType;
+    sourceId = knowledgePayload.sourceId;
+    confidence = knowledgePayload.confidence;
 
     // ソースタイプに応じてコンテンツを取得
     if (sourceType === 'issue') {
@@ -98,14 +106,15 @@ export async function getContentFromEvent(
       content = pondEntries.map(e => e.content).join('\n\n');
     } else {
       // その他のソースタイプの場合
-      content = payload.reason;
+      content = knowledgePayload.reason;
     }
   } else if (eventType === 'ISSUE_STATUS_CHANGED') {
+    const statusPayload = payload as IssueStatusChangedEvent['payload'];
     // Issue解決時の知識抽出
-    if (payload.to === 'resolved') {
+    if (statusPayload.to === 'closed') {
       sourceType = 'resolution';
-      sourceId = payload.issueId;
-      const issue = payload.issue as Issue;
+      sourceId = statusPayload.issueId;
+      const issue = statusPayload.issue;
       content = `問題: ${issue.title}\n${issue.description}`;
       if (issue.updates.length > 0) {
         const resolution = issue.updates[issue.updates.length - 1];
@@ -113,12 +122,13 @@ export async function getContentFromEvent(
       }
       confidence = 0.8; // 解決済みIssueは信頼度高
     }
-  } else if (eventType === 'PATTERN_FOUND') {
+  } else if (eventType === 'RECURRING_PATTERN_DETECTED') {
+    const patternPayload = payload as RecurringPatternDetectedEvent['payload'];
     // パターン発見時の知識抽出
     sourceType = 'pattern';
     sourceId = `pattern-${Date.now()}`;
-    content = `パターン: ${payload.pattern.description}\n発生回数: ${payload.pattern.occurrences}\n例:\n${payload.pattern.examples.join('\n')}`;
-    confidence = payload.pattern.confidence;
+    content = `パターン: ${patternPayload.description}\n発生回数: ${patternPayload.occurrences}`;
+    confidence = patternPayload.confidence;
   }
 
   return { content, sourceType, sourceId, confidence };
@@ -162,7 +172,7 @@ export async function extractKnowledge(
  */
 export async function createNewKnowledge(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   emitter: WorkflowEventEmitterInterface,
   extractedKnowledge: string,
   sourceType: string,
@@ -219,7 +229,7 @@ export async function createNewKnowledge(
  */
 export async function updateExistingKnowledge(
   storage: WorkflowStorageInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   targetKnowledge: Knowledge,
   sourceType: string,
   sourceId: string,

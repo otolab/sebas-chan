@@ -1,15 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { analyzeIssueImpactWorkflow } from './index.js';
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent, Issue } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
 import { WorkflowRecorder } from '../recorder.js';
-import type { Issue } from '@sebas-chan/shared-types';
 
 describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   let mockContext: WorkflowContextInterface;
   let mockEmitter: WorkflowEventEmitterInterface;
-  let mockEvent: AgentEvent;
+  let mockEvent: SystemEvent;
 
   // テスト用ユーティリティ: createDriverのモックを設定
   const setupDriverMocks = (analyzeIssueResponse: any) => {
@@ -60,6 +59,11 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
         updateIssue: vi.fn(),
         createKnowledge: vi.fn(),
         updateKnowledge: vi.fn(),
+        // Flow操作
+        getFlow: vi.fn(),
+        searchFlows: vi.fn().mockResolvedValue([]),
+        createFlow: vi.fn(),
+        updateFlow: vi.fn(),
       },
       createDriver: vi.fn(), // 各テストケースで設定
       recorder: new WorkflowRecorder('test'),
@@ -73,14 +77,14 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     // モックイベント
     mockEvent = {
       type: 'ISSUE_CREATED',
-      timestamp: new Date(),
       payload: {
         issueId: 'issue-123',
         issue: {
           id: 'issue-123',
           title: 'Critical system error occurred',
           description: 'The system is down',
-          status: 'open',
+          status: 'open' as const,
+          priority: 50,  // priorityは数値
           labels: [],
           updates: [],
           relations: [],
@@ -88,12 +92,14 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
+        createdBy: 'user' as const,
+        sourceWorkflow: 'ProcessUserRequest',
       },
     };
   });
 
   it('should analyze issue and return impact score', async () => {
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
+    mockContext.storage.getIssue = vi.fn().mockResolvedValue((mockEvent.payload as { issue: Issue }).issue);
 
     setupDriverMocks({
       shouldClose: false,
@@ -125,9 +131,9 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     expect((result.output as any).impactScore).toBeDefined();
   });
 
-  it('should trigger HIGH_PRIORITY_DETECTED for high impact issues', async () => {
+  it('should trigger HIGH_PRIORITY_ISSUE_DETECTED for high impact issues', async () => {
     (mockEvent.payload as any).issue.title = 'Critical urgent crash - system completely down';
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
+    mockContext.storage.getIssue = vi.fn().mockResolvedValue((mockEvent.payload as { issue: Issue }).issue);
 
     setupDriverMocks({
       shouldClose: false,
@@ -147,16 +153,15 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
 
     // 高優先度検出イベントが発行される
     expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'HIGH_PRIORITY_DETECTED',
+      type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: expect.objectContaining({
-        entityType: 'issue',
-        entityId: 'issue-123',
+        issueId: 'issue-123',
       }),
     });
   });
 
   it('should update issue priority when significant difference detected', async () => {
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
+    mockContext.storage.getIssue = vi.fn().mockResolvedValue((mockEvent.payload as { issue: Issue }).issue);
 
     setupDriverMocks({
       shouldClose: false,
@@ -184,7 +189,7 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   });
 
   it('should handle different impact scores', async () => {
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
+    mockContext.storage.getIssue = vi.fn().mockResolvedValue((mockEvent.payload as { issue: Issue }).issue);
 
     // 通常の影響度
     setupDriverMocks({
@@ -268,7 +273,7 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   });
 
   it('should add relations when merge is suggested', async () => {
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue(mockEvent.payload.issue);
+    mockContext.storage.getIssue = vi.fn().mockResolvedValue((mockEvent.payload as { issue: Issue }).issue);
 
     setupDriverMocks({
       shouldClose: false,

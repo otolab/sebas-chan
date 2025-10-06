@@ -71,19 +71,9 @@ class CoreAgent {
 }
 
 // 型の再エクスポート
-export type {
-  AgentEvent,
-  AgentEventPayload,
-  TypedAgentEvent,
-  DataArrivedPayload,
-  ProcessUserRequestPayload,
-  IssueCreatedPayload,
-  IssueUpdatedPayload,
-  HighPriorityDetectedPayload,
-  ErrorDetectedPayload,
-  KnowledgeExtractablePayload,
-  ScheduleTriggeredPayload
-} from './types.js';
+export type { AgentEvent } from './types.js';
+// SystemEventと関連型はshared-typesから直接インポートすること
+export type { SystemEvent } from '@sebas-chan/shared-types';
 export { WorkflowRecorder, RecordType } from './workflows/recorder.js';
 
 // ワークフロー関連のエクスポート

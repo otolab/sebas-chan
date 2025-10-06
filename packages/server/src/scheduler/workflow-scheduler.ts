@@ -174,20 +174,17 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
     const id = nanoid();
     const now = new Date();
 
-    const scheduleData = {
-      id,
-      issue_id: schedule.issueId,
+    const scheduleData: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'> = {
+      issueId: schedule.issueId,
       request: schedule.request,
       action: schedule.action,
-      next_run: schedule.nextRun?.toISOString() || null,
-      last_run: schedule.lastRun?.toISOString() || null,
-      pattern: schedule.pattern || null,
+      nextRun: schedule.nextRun,
+      lastRun: schedule.lastRun,
+      pattern: schedule.pattern,
       occurrences: schedule.occurrences,
-      max_occurrences: schedule.maxOccurrences || null,
-      dedupe_key: schedule.dedupeKey || null,
+      maxOccurrences: schedule.maxOccurrences,
+      dedupeKey: schedule.dedupeKey,
       status: schedule.status,
-      created_at: now.toISOString(),
-      updated_at: now.toISOString(),
     };
 
     // LanceDBに保存
@@ -202,12 +199,12 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
   }
 
   private async updateSchedule(schedule: Schedule): Promise<void> {
-    const updateData = {
-      next_run: schedule.nextRun?.toISOString() || null,
-      last_run: schedule.lastRun?.toISOString() || null,
+    const updateData: Partial<Schedule> = {
+      nextRun: schedule.nextRun,
+      lastRun: schedule.lastRun,
       occurrences: schedule.occurrences,
       status: schedule.status,
-      updated_at: new Date().toISOString(),
+      updatedAt: new Date(),
     };
 
     // LanceDBで更新
@@ -216,34 +213,31 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
   }
 
   private async findByDedupeKey(issueId: string, dedupeKey: string): Promise<Schedule | null> {
-    const results = await this.dbClient.searchSchedules({
-      issue_id: issueId,
-      dedupe_key: dedupeKey,
+    const filter: ScheduleFilter = {
+      issueId: issueId,
+      dedupeKey: dedupeKey,
       status: 'active',
-      limit: 1,
-    });
+    };
+    const results = await this.dbClient.searchSchedules(filter);
 
     if (results && results.length > 0) {
-      return this.rowToSchedule(results[0]);
+      return results[0];
     }
     return null;
   }
 
   private async findById(id: string): Promise<Schedule | null> {
     const result = await this.dbClient.getSchedule(id);
-    if (result) {
-      return this.rowToSchedule(result);
-    }
-    return null;
+    return result;
   }
 
   private async findActive(): Promise<Schedule[]> {
-    const results = await this.dbClient.searchSchedules({
+    const filter: ScheduleFilter = {
       status: 'active',
-      limit: 1000,
-    });
+    };
+    const results = await this.dbClient.searchSchedules(filter);
 
-    return results.map((row: any) => this.rowToSchedule(row));
+    return results;
   }
 
   private async findDue(): Promise<Schedule[]> {
@@ -252,24 +246,6 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 
     // next_runが現在時刻を過ぎているものをフィルタ
     return activeSchedules.filter((schedule) => schedule.nextRun && schedule.nextRun <= now);
-  }
-
-  private rowToSchedule(row: any): Schedule {
-    return {
-      id: row.id,
-      issueId: row.issue_id,
-      request: row.request,
-      action: row.action,
-      nextRun: row.next_run ? new Date(row.next_run) : null,
-      lastRun: row.last_run ? new Date(row.last_run) : null,
-      pattern: row.pattern || undefined,
-      occurrences: row.occurrences,
-      maxOccurrences: row.max_occurrences || undefined,
-      dedupeKey: row.dedupe_key || undefined,
-      status: row.status,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
-    };
   }
 
   private async setTimer(schedule: Schedule): Promise<void> {
@@ -390,23 +366,20 @@ export class WorkflowScheduler implements WorkflowSchedulerInterface {
 
   async list(filter?: ScheduleFilter): Promise<Schedule[]> {
     // フィルタに基づいて検索
-    const searchFilter: any = {};
+    const searchFilter: Partial<ScheduleFilter> = {};
     if (filter?.status) {
       searchFilter.status = filter.status;
     }
     if (filter?.issueId) {
-      searchFilter.issue_id = filter.issueId;
+      searchFilter.issueId = filter.issueId;
     }
     if (filter?.action) {
       searchFilter.action = filter.action;
     }
 
-    const results = await this.dbClient.searchSchedules({
-      ...searchFilter,
-      limit: 1000,
-    });
+    const results = await this.dbClient.searchSchedules(searchFilter);
 
-    let schedules = results.map((row: any) => this.rowToSchedule(row));
+    let schedules = results;
 
     // 日付フィルタを適用
     if (filter?.createdAfter) {

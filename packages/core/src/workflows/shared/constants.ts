@@ -33,3 +33,18 @@ export const AI_CONFIG = {
   MAX_RELATED_ISSUES: 10,
   MAX_RELATED_KNOWLEDGE: 3,
 } as const;
+
+/**
+ * 優先度定数
+ * 数値が大きいほど優先度が高い
+ * Issue作成時などで使用
+ */
+export const PRIORITY = {
+  CRITICAL: 100,
+  HIGH: 80,
+  MEDIUM: 50,
+  LOW: 30,
+  TRIVIAL: 10,
+} as const;
+
+export type Priority = typeof PRIORITY[keyof typeof PRIORITY];

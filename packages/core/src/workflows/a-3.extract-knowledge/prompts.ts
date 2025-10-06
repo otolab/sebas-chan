@@ -84,6 +84,9 @@ const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
       (ctx: KnowledgeExtractionContext) => `信頼度: ${ctx.confidence}`,
       '',
       '内容:',
+
+      // >>> 省略しない
+
       (ctx: KnowledgeExtractionContext) => {
         const lines = ctx.content.split('\n').slice(0, 20);
         return lines.length > 20 ? [...lines, '...'] : lines;

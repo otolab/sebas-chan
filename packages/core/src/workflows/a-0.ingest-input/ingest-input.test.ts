@@ -42,7 +42,6 @@ describe('IngestInput Workflow (Functional)', () => {
     // モックイベント
     mockEvent = {
       type: 'DATA_ARRIVED',
-      timestamp: new Date(),
       payload: {
         source: 'slack',
         content: '来週の水曜日に重要なミーティングがあるそうです。プレゼン資料を準備しておいてください。',
@@ -122,12 +121,12 @@ describe('IngestInput Workflow (Functional)', () => {
       }),
     });
 
-    // 高severity時にHIGH_PRIORITY_DETECTEDイベントも発行される
+    // 高severity時にHIGH_PRIORITY_ISSUE_DETECTEDイベントも発行される
     expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'HIGH_PRIORITY_DETECTED',
+      type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: expect.objectContaining({
         priority: 70,
-        entityType: 'issue',
+        issueId: 'issue-123',
       }),
     });
   });
@@ -227,12 +226,12 @@ describe('IngestInput Workflow (Functional)', () => {
     expect(result.success).toBe(true);
     expect((result.output as any).severity).toBe('critical');
 
-    // HIGH_PRIORITY_DETECTEDイベントが発行されることを確認
+    // HIGH_PRIORITY_ISSUE_DETECTEDイベントが発行されることを確認
     expect(mockEmitter.emit).toHaveBeenCalledWith({
-      type: 'HIGH_PRIORITY_DETECTED',
+      type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: expect.objectContaining({
         priority: 90,
-        entityType: 'issue',
+        issueId: 'issue-critical',
         reason: 'High severity critical issue detected',
       }),
     });

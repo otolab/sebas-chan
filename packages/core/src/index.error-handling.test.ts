@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { CoreAgent, AgentEvent } from './index.js';
+import { CoreAgent } from './index.js';
+import { SystemEvent } from '@sebas-chan/shared-types';
 import { createMockWorkflowContext } from './workflows/test-utils.js';
 import { WorkflowEventEmitterInterface } from './workflows/context.js';
 import { WorkflowDefinition } from './workflows/workflow-types.js';
@@ -26,17 +27,21 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         name: 'error-workflow',
         description: 'Workflow that throws synchronous error',
         triggers: {
-          eventTypes: ['ERROR_WORKFLOW'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: () => {
           throw new Error('Synchronous error in workflow');
         },
       };
 
-      const event: AgentEvent = {
-        type: 'ERROR_EVENT',
-        payload: {},
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Error test',
+          pondEntryId: 'error-test',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -64,7 +69,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         name: 'async-error-workflow',
         description: 'Workflow that throws asynchronous error',
         triggers: {
-          eventTypes: ['ASYNC_ERROR_WORKFLOW'],
+          eventTypes: ['DATA_ARRIVED'],
         },
         executor: async () => {
           await new Promise((resolve) => setTimeout(resolve, 10));
@@ -72,10 +77,14 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'ASYNC_ERROR_EVENT',
-        payload: {},
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Test content',
+          pondEntryId: 'test-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -115,10 +124,14 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'SLOW_EVENT',
-        payload: {},
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Test content',
+          pondEntryId: 'test-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -152,32 +165,37 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           eventTypes: ['LARGE_PAYLOAD_WORKFLOW'],
         },
         executor: async (_event) => {
-          const payload = event.payload as { largeArray?: unknown[] };
+          const payload = _event.payload as { metadata?: { largeArray?: unknown[] } };
           return {
             success: true,
             context: createMockWorkflowContext(),
             output: {
-              processedItems: payload.largeArray?.length || 0,
+              processedItems: payload.metadata?.largeArray?.length || 0,
             },
           };
         },
       };
 
-      const event: AgentEvent = {
-        type: 'LARGE_PAYLOAD_EVENT',
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
         payload: {
-          largeArray: new Array(10000).fill('data'),
-          nestedObject: {
-            level1: {
-              level2: {
-                level3: {
-                  data: new Array(1000).fill('nested'),
+          source: 'test',
+          content: 'Large payload test',
+          pondEntryId: 'large-test',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            largeArray: new Array(10000).fill('data'),
+            nestedObject: {
+              level1: {
+                level2: {
+                  level3: {
+                    data: new Array(1000).fill('nested'),
+                  },
                 },
               },
             },
           },
         },
-        timestamp: new Date(),
       };
 
       const mockContext = createMockWorkflowContext();
@@ -208,8 +226,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
           eventTypes: ['ERROR_PRONE_WORKFLOW'],
         },
         executor: async (_event) => {
-          const payload = _event.payload as { shouldError?: boolean };
-          if (payload.shouldError) {
+          const payload = _event.payload as { metadata?: { shouldError?: boolean } };
+          if (payload.metadata?.shouldError) {
             errorCount++;
             throw new Error(`Error ${errorCount}`);
           }
@@ -228,10 +246,15 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       // エラーと成功を交互に実行
       for (let i = 0; i < 20; i++) {
-        const event: AgentEvent = {
-          type: 'REPEATED_ERROR',
-          payload: { shouldError: i % 2 === 0 },
-          timestamp: new Date(),
+        const event: SystemEvent = {
+          type: 'DATA_ARRIVED',
+          payload: {
+            source: 'test',
+            content: `Repeated test ${i}`,
+            pondEntryId: `repeated-test-${i}`,
+            timestamp: new Date().toISOString(),
+            metadata: { shouldError: i % 2 === 0 },
+          },
         };
 
         const result = await agent.executeWorkflow(
@@ -263,17 +286,21 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
         executor: async (_event) => {
           return {
-            success: !event.type || event.type === '',
+            success: !event.type || (event.type as string) === '',
             context: createMockWorkflowContext(),
           };
         },
       };
 
-      const event: AgentEvent = {
-        type: '',
-        payload: {},
-        timestamp: new Date(),
-      };
+      const event = {
+        type: '' as const,
+        payload: {
+          source: 'test',
+          content: 'Test content',
+          pondEntryId: 'test-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        },
+      } as unknown as SystemEvent;
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
@@ -310,11 +337,15 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
+      const event = {
         type: longEventType,
-        payload: {},
-        timestamp: new Date(),
-      };
+        payload: {
+          source: 'test',
+          content: 'Test content',
+          pondEntryId: 'test-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        },
+      } as unknown as SystemEvent;
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
@@ -350,11 +381,10 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'UNDEFINED_PAYLOAD',
-        payload: undefined as unknown as Record<string, unknown>,
-        timestamp: new Date(),
-      };
+      const event = {
+        type: 'DATA_ARRIVED',
+        payload: undefined as any,
+      } as SystemEvent;
 
       const mockContext = createMockWorkflowContext();
       // Logger is now part of context
@@ -391,8 +421,12 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const invalidEvent = {
         type: 'INVALID_PRIORITY',
-        payload: {},
-        timestamp: new Date(),
+        payload: {
+          source: 'test',
+          content: 'Test content',
+          pondEntryId: 'test-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -403,7 +437,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const result = await agent.executeWorkflow(
         workflow,
-        invalidEvent as AgentEvent,
+        invalidEvent as SystemEvent,
         mockContext,
 
         mockEmitter
@@ -448,10 +482,15 @@ describe('CoreAgent - Error Handling and Recovery', () => {
       // 複数のワークフローを並行実行
       const promises = [];
       for (let i = 0; i < 10; i++) {
-        const event: AgentEvent = {
-          type: `CONCURRENT_${i}`,
-          payload: { index: i },
-          timestamp: new Date(),
+        const event: SystemEvent = {
+          type: 'DATA_ARRIVED',
+          payload: {
+            source: 'test',
+            content: `Concurrent test ${i}`,
+            pondEntryId: `concurrent-${i}`,
+            timestamp: new Date().toISOString(),
+            metadata: { index: i },
+          },
         };
 
         promises.push(agent.executeWorkflow(concurrentWorkflow, event, mockContext, mockEmitter));
@@ -495,10 +534,14 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'NESTED_ERROR',
-        payload: {},
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Test content',
+          pondEntryId: 'test-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();
@@ -535,10 +578,14 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         },
       };
 
-      const event: AgentEvent = {
-        type: 'REJECTION_EVENT',
-        payload: {},
-        timestamp: new Date(),
+      const event: SystemEvent = {
+        type: 'DATA_ARRIVED',
+        payload: {
+          source: 'test',
+          content: 'Test content',
+          pondEntryId: 'test-' + Date.now(),
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const mockContext = createMockWorkflowContext();

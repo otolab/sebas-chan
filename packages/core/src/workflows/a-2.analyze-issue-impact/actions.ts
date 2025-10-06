@@ -7,7 +7,7 @@ import type { WorkflowEventEmitterInterface } from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
 import { analyzeImpactPromptModule, type ImpactAnalysisContext } from './prompts.js';
-import { RecordType } from '../recorder.js';
+import { RecordType, type WorkflowRecorder } from '../recorder.js';
 
 /**
  * AI分析結果の型定義
@@ -113,7 +113,7 @@ export function buildIssueUpdates(issue: Issue, analysis: ImpactAnalysisResult):
  */
 export function emitFollowupEvents(
   emitter: WorkflowEventEmitterInterface,
-  recorder: any,
+  recorder: WorkflowRecorder,
   analysis: ImpactAnalysisResult,
   issueId: string,
   issue: Issue
@@ -146,20 +146,19 @@ export function emitFollowupEvents(
   // 意図: 緊急対応が必要なIssueをシステム全体に通知
   if (analysis.suggestedPriority > 80 || analysis.impactScore > 0.8) {
     emitter.emit({
-      type: 'HIGH_PRIORITY_DETECTED',
+      type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: {
-        entityType: 'issue',
-        entityId: issueId,
+        issueId: issueId,
         priority: analysis.suggestedPriority || Math.round(analysis.impactScore * 100),
         reason: `影響スコア: ${analysis.impactScore}, 影響コンポーネント: ${analysis.impactedComponents.join(', ')}`,
         requiredAction: analysis.shouldClose ? 'レビューと承認' : '緊急対応が必要',
       },
     });
-    emittedEvents.push('HIGH_PRIORITY_DETECTED');
+    emittedEvents.push('HIGH_PRIORITY_ISSUE_DETECTED');
 
     recorder.record(RecordType.INFO, {
       step: 'eventEmitted',
-      eventType: 'HIGH_PRIORITY_DETECTED',
+      eventType: 'HIGH_PRIORITY_ISSUE_DETECTED',
       priority: analysis.suggestedPriority || Math.round(analysis.impactScore * 100),
     });
   }

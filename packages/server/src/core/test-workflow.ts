@@ -36,7 +36,7 @@ export class TestWorkflow {
    * 確定的なレスポンスを返す
    */
   async processUserRequest(event: Event): Promise<void> {
-    const payload = event.payload as any; // TODO: 適切な型定義に更新
+    const payload = event.payload as { content?: string; request?: string; sessionId?: string };
     const request = payload.content || payload.request || '';
 
     // テスト用の確定的な処理
@@ -73,7 +73,7 @@ export class TestWorkflow {
    * 確定的にIssueを生成
    */
   async ingestInput(event: Event): Promise<void> {
-    const payload = event.payload as any; // TODO: 適切な型定義に更新
+    const payload = event.payload as { pondEntryId?: string; content?: string; source?: string };
     const input = {
       id: payload.pondEntryId || 'unknown',
       content: payload.content || '',
@@ -308,7 +308,6 @@ export class TestWorkflow {
 
       case 'KNOWLEDGE_EXTRACTABLE':
       case 'ISSUE_STATUS_CHANGED':
-      case 'PATTERN_FOUND':
         await this.extractKnowledge(event);
         break;
 

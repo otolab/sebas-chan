@@ -10,7 +10,7 @@
  * - 解決済みかどうかを判定し、必要に応じてクローズを提案
  */
 
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult } from '../workflow-types.js';
 import type { WorkflowDefinition } from '../workflow-types.js';
@@ -22,7 +22,7 @@ import { analyzeIssue, buildIssueUpdates, emitFollowupEvents } from './actions.j
  * A-2: ANALYZE_ISSUE_IMPACT ワークフロー実行関数
  */
 async function executeAnalyzeIssueImpact(
-  event: AgentEvent,
+  event: SystemEvent,
   context: WorkflowContextInterface,
   emitter: WorkflowEventEmitterInterface
 ): Promise<WorkflowResult> {
