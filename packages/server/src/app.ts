@@ -18,7 +18,11 @@ export async function createApp() {
     next();
   });
 
-  const coreEngine = new CoreEngine();
+  // DBClientを作成（本番用）
+  const { DBClient } = await import('@sebas-chan/db');
+  const dbClient = new DBClient();
+
+  const coreEngine = new CoreEngine(undefined, dbClient);
   await coreEngine.initialize();
 
   // E2Eテストでもstart()を呼ぶ

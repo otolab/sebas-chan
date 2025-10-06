@@ -328,7 +328,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
   describe('Error handling without CoreAgent', () => {
     it('should handle events for undefined workflows gracefully', async () => {
       // CoreAgentなしでEngineインスタンスを作成（DBClientは共有）
-      const testEngine = new CoreEngine(null, dbClient);
+      const testEngine = new CoreEngine(undefined, dbClient);
 
       // 初期化と開始
       await testEngine.initialize();
