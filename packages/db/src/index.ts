@@ -104,7 +104,9 @@ export class DBClient extends EventEmitter {
 
   async connect(): Promise<void> {
     if (this.worker) {
-      throw new Error('Already connected');
+      // 既に接続済みの場合は何もしない（冪等性）
+      console.log('DBClient: Already connected, skipping reconnection');
+      return;
     }
 
     const pythonScript = path.join(__dirname, '../src/python/lancedb_worker.py');

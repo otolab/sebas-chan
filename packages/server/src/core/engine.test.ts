@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreEngine } from './engine.js';
 import { CoreAgent } from '@sebas-chan/core';
-import { DBClient } from '@sebas-chan/db';
 import { Event } from '@sebas-chan/shared-types';
 
 vi.mock('@sebas-chan/core', async () => {
@@ -56,9 +55,17 @@ describe('CoreEngine', () => {
       searchIssues: vi.fn().mockResolvedValue([]),
       updateStateDocument: vi.fn().mockResolvedValue(undefined),
       getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnullを返す（新規状態）
+      getStatus: vi.fn().mockResolvedValue({ status: 'error', model_loaded: false }), // 未接続状態
+      updateIssue: vi.fn().mockImplementation(() => {
+        throw new Error('Not implemented');
+      }),
+      addIssue: vi.fn().mockImplementation(() => {
+        throw new Error('Not implemented');
+      }),
+      getIssue: vi.fn().mockImplementation(() => {
+        throw new Error('Not implemented');
+      }),
     };
-
-    vi.mocked(DBClient).mockImplementation(() => mockDbClient);
 
     // CoreAgentモックの設定
     mockCoreAgent = {
@@ -85,7 +92,7 @@ describe('CoreEngine', () => {
 
     vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
 
-    engine = new CoreEngine();
+    engine = new CoreEngine(mockCoreAgent as any, mockDbClient as any);
     vi.useFakeTimers();
   });
 

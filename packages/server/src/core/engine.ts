@@ -44,7 +44,7 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private workflowRegistry: WorkflowRegistry;
   private workflowResolver: WorkflowResolver;
 
-  constructor(coreAgent?: CoreAgent) {
+  constructor(coreAgent?: CoreAgent, dbClient?: DBClient) {
     super();
     this.stateManager = new StateManager();
     this.workflowQueue = new WorkflowQueue();
@@ -56,6 +56,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     // CoreAgentが提供された場合はそれを使用
     this.coreAgent = coreAgent || null;
+
+    // DBClientが提供された場合はそれを使用
+    this.dbClient = dbClient || null;
 
     // AIServiceを初期化（デフォルト設定）
     const aiServiceConfig: ApplicationConfig = {
@@ -77,13 +80,22 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       // AIServiceの設定は現在コンストラクタで初期化済み
       // TODO: 設定ファイルパスを環境変数または設定から取得して動的に設定
 
-      // DBクライアントを初期化
+      // DBクライアントの確認（外部から提供される必要がある）
+      if (!this.dbClient) {
+        throw new Error('DBClient must be provided before initialization');
+      }
+
       this.dbStatus = 'connecting';
-      this.dbClient = new DBClient();
-      await this.dbClient.connect();
-      await this.dbClient.initModel();
+      // 接続状態を確認し、未接続なら接続
+      const status = await this.dbClient.getStatus();
+      if (status.status !== 'ok') {
+        await this.dbClient.connect();
+        await this.dbClient.initModel();
+        logger.info('DB client connected and initialized');
+      } else {
+        logger.info('DB client already connected');
+      }
       this.dbStatus = 'ready';
-      logger.info('DB client connected and initialized');
 
       // CoreAgentを初期化（ステートレス）- 既に注入されていない場合のみ
       if (!this.coreAgent) {

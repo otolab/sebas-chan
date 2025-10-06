@@ -1,6 +1,8 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { CoreEngine } from '../../packages/server/src/core/engine.js';
 import { CoreAgent } from '@sebas-chan/core';
+import { DBClient } from '@sebas-chan/db';
+import { setupTestEnvironment, teardownTestEnvironment } from './setup.js';
 
 vi.mock('../../packages/server/src/utils/logger', () => ({
   logger: {
@@ -14,13 +16,22 @@ vi.mock('../../packages/server/src/utils/logger', () => ({
 describe('CoreEngine - CoreAgent Integration', () => {
   let engine: CoreEngine;
   let coreAgent: CoreAgent;
+  let dbClient: DBClient;
+
+  beforeAll(async () => {
+    dbClient = await setupTestEnvironment();
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownTestEnvironment();
+  });
 
   beforeEach(async () => {
     // 実際のCoreAgentを使用
     coreAgent = new CoreAgent();
 
-    // 実際のコンポーネントでEngineを作成（DBClientは内部で作成される）
-    engine = new CoreEngine(coreAgent);
+    // 実際のコンポーネントでEngineを作成（共有DBClientを使用）
+    engine = new CoreEngine(coreAgent, dbClient);
     await engine.initialize();
 
     vi.useFakeTimers();
@@ -316,8 +327,8 @@ describe('CoreEngine - CoreAgent Integration', () => {
 
   describe('Error handling without CoreAgent', () => {
     it('should handle events for undefined workflows gracefully', async () => {
-      // 新しいEngineインスタンスを作成
-      const testEngine = new CoreEngine();
+      // CoreAgentなしでEngineインスタンスを作成（DBClientは共有）
+      const testEngine = new CoreEngine(null, dbClient);
 
       // 初期化と開始
       await testEngine.initialize();

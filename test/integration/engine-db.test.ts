@@ -7,9 +7,11 @@
  * - 状態管理
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 import { CoreEngine } from '../../packages/server/src/core/engine.js';
 import { CoreAgent } from '@sebas-chan/core';
+import { DBClient } from '@sebas-chan/db';
+import { setupTestEnvironment, teardownTestEnvironment } from './setup.js';
 
 // ロガーのモック（ノイズ削減）
 vi.mock('../../packages/server/src/utils/logger', () => ({
@@ -24,13 +26,22 @@ vi.mock('../../packages/server/src/utils/logger', () => ({
 describe('CoreEngine と DBClient の統合テスト', () => {
   let engine: CoreEngine;
   let coreAgent: CoreAgent;
+  let dbClient: DBClient;
+
+  beforeAll(async () => {
+    dbClient = await setupTestEnvironment();
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownTestEnvironment();
+  });
 
   beforeEach(async () => {
     // 実際のCoreAgentを使用
     coreAgent = new CoreAgent();
 
-    // 実際のコンポーネントでEngineを作成（DBClientは内部で作成される）
-    engine = new CoreEngine(coreAgent);
+    // 実際のコンポーネントでEngineを作成（共有DBClientを使用）
+    engine = new CoreEngine(coreAgent, dbClient);
     await engine.initialize();
 
     // タイマーのモック
@@ -139,7 +150,8 @@ describe('CoreEngine と DBClient の統合テスト', () => {
 
   describe('状態管理', () => {
     beforeEach(async () => {
-      engine = new CoreEngine();
+      coreAgent = new CoreAgent();
+      engine = new CoreEngine(coreAgent, dbClient);
       await engine.initialize();
     });
 
@@ -160,7 +172,8 @@ describe('CoreEngine と DBClient の統合テスト', () => {
       await vi.advanceTimersByTimeAsync(100);
 
       // 新しいインスタンスを作成して状態が復元されるか確認
-      const newEngine = new CoreEngine();
+      const newAgent = new CoreAgent();
+      const newEngine = new CoreEngine(newAgent, dbClient);
       await newEngine.initialize();
 
       // 実DBの場合、永続化にタイムラグがある可能性
@@ -173,7 +186,8 @@ describe('CoreEngine と DBClient の統合テスト', () => {
 
   describe('リソース管理', () => {
     beforeEach(async () => {
-      engine = new CoreEngine();
+      coreAgent = new CoreAgent();
+      engine = new CoreEngine(coreAgent, dbClient);
       await engine.initialize();
     });
 

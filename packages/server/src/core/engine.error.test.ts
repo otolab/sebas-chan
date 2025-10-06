@@ -7,7 +7,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreEngine } from './engine.js';
 import { CoreAgent } from '@sebas-chan/core';
-import { DBClient } from '@sebas-chan/db';
 
 vi.mock('../utils/logger', () => ({
   logger: {
@@ -74,9 +73,8 @@ describe('CoreEngine Error Handling', () => {
       searchIssues: vi.fn().mockResolvedValue([]),
       updateStateDocument: vi.fn().mockResolvedValue(undefined),
       getStateDocument: vi.fn().mockResolvedValue(null),
+      getStatus: vi.fn().mockResolvedValue({ status: 'error', model_loaded: false }), // 未接続状態
     };
-
-    vi.mocked(DBClient).mockImplementation(() => mockDbClient);
 
     // CoreAgentモックの設定
     mockCoreAgent = {
@@ -97,7 +95,7 @@ describe('CoreEngine Error Handling', () => {
 
     vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
 
-    engine = new CoreEngine();
+    engine = new CoreEngine(mockCoreAgent as any, mockDbClient as any);
     vi.useFakeTimers();
   });
 
@@ -129,7 +127,7 @@ describe('CoreEngine Error Handling', () => {
       mockDbClient.connect.mockResolvedValueOnce(undefined);
 
       // 新しいengineインスタンスで再接続試行
-      const newEngine = new CoreEngine();
+      const newEngine = new CoreEngine(mockCoreAgent as any, mockDbClient as any);
       await newEngine.initialize();
 
       // 2回目の接続が成功

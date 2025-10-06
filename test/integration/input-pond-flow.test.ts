@@ -1,11 +1,22 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { CoreEngine } from '../../packages/server/src/core/engine.js';
 import { CoreAgent } from '@sebas-chan/core';
+import { DBClient } from '@sebas-chan/db';
 import { Input } from '@sebas-chan/shared-types';
+import { setupTestEnvironment, teardownTestEnvironment } from './setup.js';
 
 describe('Input to Pond Flow Integration', () => {
   let engine: CoreEngine;
   let coreAgent: CoreAgent;
+  let dbClient: DBClient;
+
+  beforeAll(async () => {
+    dbClient = await setupTestEnvironment();
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownTestEnvironment();
+  });
 
   beforeEach(async () => {
     // タイマーのモック
@@ -14,8 +25,8 @@ describe('Input to Pond Flow Integration', () => {
     // 実際のCoreAgentを使用
     coreAgent = new CoreAgent();
 
-    // 実際のコンポーネントでEngineを作成（DBClientは内部で作成される）
-    engine = new CoreEngine(coreAgent);
+    // 実際のコンポーネントでEngineを作成（共有DBClientを使用）
+    engine = new CoreEngine(coreAgent, dbClient);
     await engine.initialize();
   }, 60000); // DB初期化のため長めのタイムアウト
 

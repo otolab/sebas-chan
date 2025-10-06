@@ -26,6 +26,7 @@ vi.mock('../../packages/server/src/utils/logger', () => ({
 describe('CoreEngine と CoreAgent の統合テスト', () => {
   let engine: CoreEngine;
   let coreAgent: CoreAgent;
+  let dbClient: DBClient;
 
   // テスト用のワークフロー定義（WorkflowDefinitionとして）
   const testWorkflow = {
@@ -75,8 +76,14 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     }),
   };
 
-  // 統合テストではCoreEngineが内部でDBClientを作成するため、
-  // setupTestEnvironmentは使用しない（実際の統合をテスト）
+  // 共有DBClientを使用して統合テストを実行
+  beforeAll(async () => {
+    dbClient = await setupTestEnvironment();
+  }, 60000);
+
+  afterAll(async () => {
+    await teardownTestEnvironment();
+  });
 
   beforeEach(() => {
     // 実際のCoreAgentを使用（モックしない）
@@ -94,13 +101,13 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     }
     vi.useRealTimers();
     vi.clearAllMocks();
-  });
+  }, 30000); // クリーンアップのため長めのタイムアウト
 
   describe('1.1 初期化と接続', () => {
     it('TEST-INIT-001: CoreEngineがCoreAgentとDBClientを正しく初期化できる', async () => {
       // Arrange
-      // 実際のCoreAgentを使用、DBClientは内部で作成される
-      engine = new CoreEngine(coreAgent);
+      // 実際のCoreAgentと共有DBClientを使用
+      engine = new CoreEngine(coreAgent, dbClient);
 
       // Act
       await engine.initialize();
@@ -123,14 +130,14 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
 
   describe('1.2 イベント処理の流れ', () => {
     beforeEach(async () => {
-      engine = new CoreEngine(coreAgent);
+      engine = new CoreEngine(coreAgent, dbClient);
       await engine.initialize();
 
       // ワークフローを登録（WorkflowRegistryを使用）
       const registry = (engine as any).workflowRegistry;
       registry.register(testWorkflow);
       registry.register(ingestInputWorkflow);
-    });
+    }, 30000); // タイムアウトを30秒に設定
 
     it('TEST-EVENT-001: InputからDATA_ARRIVEDイベントが生成される', async () => {
       // Arrange
@@ -233,7 +240,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     let capturedContext: any;
 
     beforeEach(async () => {
-      engine = new CoreEngine(coreAgent);
+      engine = new CoreEngine(coreAgent, dbClient);
       await engine.initialize();
 
       // コンテキストをキャプチャするワークフロー
@@ -255,7 +262,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
         event: { type: 'TEST_EVENT' },
         workflows: [contextCaptureWorkflow],
       });
-    });
+    }, 30000); // タイムアウトを30秒に設定
 
     it('TEST-CONTEXT-001: WorkflowContextにstorageが正しく提供される', async () => {
       // Arrange
@@ -361,7 +368,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
 
   describe('1.4 複数イベントの処理', () => {
     beforeEach(async () => {
-      engine = new CoreEngine(coreAgent);
+      engine = new CoreEngine(coreAgent, dbClient);
       await engine.initialize();
 
       // WorkflowResolverをモック
@@ -370,7 +377,7 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
         event,
         workflows: [testWorkflow],
       }));
-    });
+    }, 30000); // タイムアウトを30秒に設定
 
     it('TEST-MULTI-001: 複数のイベントが順次処理される', async () => {
       // Arrange
