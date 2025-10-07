@@ -43,8 +43,9 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
   private workflowQueue: WorkflowQueue;
   private workflowRegistry: WorkflowRegistry;
   private workflowResolver: WorkflowResolver;
+  private dbClientProvidedExternally: boolean = false;
 
-  constructor(coreAgent?: CoreAgent) {
+  constructor(coreAgent?: CoreAgent, dbClient?: DBClient) {
     super();
     this.stateManager = new StateManager();
     this.workflowQueue = new WorkflowQueue();
@@ -56,6 +57,10 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     // CoreAgentが提供された場合はそれを使用
     this.coreAgent = coreAgent || null;
+
+    // DBClientが提供された場合はそれを使用
+    this.dbClient = dbClient || null;
+    this.dbClientProvidedExternally = !!dbClient;
 
     // AIServiceを初期化（デフォルト設定）
     const aiServiceConfig: ApplicationConfig = {
@@ -77,13 +82,28 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
       // AIServiceの設定は現在コンストラクタで初期化済み
       // TODO: 設定ファイルパスを環境変数または設定から取得して動的に設定
 
-      // DBクライアントを初期化
-      this.dbStatus = 'connecting';
-      this.dbClient = new DBClient();
-      await this.dbClient.connect();
-      await this.dbClient.initModel();
-      this.dbStatus = 'ready';
-      logger.info('DB client connected and initialized');
+      // DBクライアントの確認（外部から提供される必要がある）
+      if (!this.dbClient) {
+        throw new Error('DBClient must be provided before initialization');
+      }
+
+      // 外部から提供されたDBClientは接続済みであることを期待
+      if (this.dbClientProvidedExternally) {
+        // 接続状態の確認のみ
+        const status = await this.dbClient.getStatus();
+        if (status.status !== 'ok' || !status.model_loaded) {
+          throw new Error(
+            'Externally provided DBClient must be connected and initialized. ' +
+              `Current status: ${JSON.stringify(status)}`
+          );
+        }
+        this.dbStatus = 'ready';
+        logger.info('Using externally provided DB client');
+      } else {
+        // 将来的に内部でDBClientを作成する場合のプレースホルダー
+        // 現在はDBClientは必ず外部から提供される
+        throw new Error('DBClient must be provided externally');
+      }
 
       // CoreAgentを初期化（ステートレス）- 既に注入されていない場合のみ
       if (!this.coreAgent) {
@@ -137,17 +157,17 @@ export class CoreEngine extends EventEmitter implements CoreAPI {
 
     this.isRunning = false;
 
-    // DBクライアントを切断
-    if (this.dbClient) {
-      try {
-        await this.dbClient.disconnect();
-        this.dbStatus = 'disconnected';
-      } catch (error) {
-        logger.error('Error disconnecting DB client:', error);
-      }
-    }
+    // 停止前のhookイベントを発行
+    this.emit('stopping');
+
+    // DBClientは外部で管理されるため、ここではdisconnectしない
+    // 外部がstoppingイベントを受けて必要に応じてdisconnectする
+    this.dbStatus = 'disconnected';
 
     logger.info('Core Engine stopped');
+
+    // 停止完了のhookイベントを発行
+    this.emit('stopped');
   }
 
   /**

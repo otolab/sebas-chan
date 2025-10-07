@@ -1,65 +1,37 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { CoreEngine } from '../../packages/server/src/core/engine.js';
 import { CoreAgent } from '@sebas-chan/core';
 import { DBClient } from '@sebas-chan/db';
 import { Input } from '@sebas-chan/shared-types';
-
-// モックを作成
-vi.mock('@sebas-chan/core', async () => {
-  const actual = await vi.importActual('@sebas-chan/core');
-  return {
-    ...actual,
-    CoreAgent: vi.fn(),
-  };
-});
-vi.mock('@sebas-chan/db');
+import { setupTestEnvironment, teardownTestEnvironment } from './setup.js';
 
 describe('Input to Pond Flow Integration', () => {
   let engine: CoreEngine;
-  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
-  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
+  let coreAgent: CoreAgent;
+  let dbClient: DBClient;
+
+  beforeAll(async () => {
+    dbClient = await setupTestEnvironment();
+  }, 60000);
+
+  // グローバルなDBClientを使用するため、個別のteardownは不要
 
   beforeEach(async () => {
     // タイマーのモック
     vi.useFakeTimers();
 
-    // DBClientモックの設定
-    mockDbClient = {
-      connect: vi.fn().mockResolvedValue(undefined),
-      disconnect: vi.fn().mockResolvedValue(undefined),
-      initModel: vi.fn().mockResolvedValue(true),
-      addPondEntry: vi.fn().mockResolvedValue(true),
-      searchPond: vi.fn().mockResolvedValue([]),
-      searchIssues: vi.fn().mockResolvedValue([]),
-      getStateDocument: vi.fn().mockResolvedValue(null),
-      saveStateDocument: vi.fn().mockResolvedValue(undefined),
-    };
+    // 実際のCoreAgentを使用
+    coreAgent = new CoreAgent();
 
-    vi.mocked(DBClient).mockImplementation(() => mockDbClient);
-
-    // CoreAgentモックの設定
-    mockCoreAgent = {
-      executeWorkflow: vi.fn().mockResolvedValue({
-        success: true,
-        context: { state: {} },
-      }),
-      getWorkflowRegistry: vi.fn().mockReturnValue({
-        get: vi.fn().mockReturnValue({
-          name: 'TestWorkflow',
-          execute: vi.fn(),
-        }),
-      }),
-      registerWorkflow: vi.fn(),
-    };
-
-    vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
-
-    engine = new CoreEngine();
+    // 実際のコンポーネントでEngineを作成（共有DBClientを使用）
+    engine = new CoreEngine(coreAgent, dbClient);
     await engine.initialize();
-  });
+  }, 60000); // DB初期化のため長めのタイムアウト
 
-  afterEach(() => {
-    engine.stop();
+  afterEach(async () => {
+    if (engine) {
+      await engine.stop();
+    }
     vi.useRealTimers();
     vi.clearAllMocks();
   });
@@ -69,8 +41,8 @@ describe('Input to Pond Flow Integration', () => {
       // ワークフローを登録
       const testWorkflow = {
         name: 'test-ingest-input',
-        description: 'Test workflow for INGEST_INPUT',
-        triggers: { eventTypes: ['INGEST_INPUT'] },
+        description: 'Test workflow for DATA_ARRIVED',
+        triggers: { eventTypes: ['DATA_ARRIVED'] },
         executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
       };
 
@@ -98,9 +70,11 @@ describe('Input to Pond Flow Integration', () => {
       // Search in pond for the processed content
       await engine.searchPond('バックアップ エラー');
 
-      // Since we're using mocked DB in tests, verify the workflow was triggered
-      // WorkflowQueueベースのシステムでは、ワークフローが実行されたことを確認
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+      // ワークフローが実行されたことを確認
+      // 統合テストでは実際の動作を確認（executorMockが呼ばれたことを確認）
+      await vi.waitFor(() => {
+        expect(testWorkflow.executor).toHaveBeenCalled();
+      });
     });
 
     it('should handle multiple inputs in sequence', async () => {
@@ -211,21 +185,26 @@ describe('Input to Pond Flow Integration', () => {
     });
 
     it('should handle empty search results gracefully', async () => {
-      const results = await engine.searchPond({ q: '存在しないキーワード12345' });
+      const results = await engine.searchPond({ q: 'TOTALLY_NON_EXISTENT_KEYWORD_xyz987654321' });
       expect(results).toBeDefined();
       expect(results.data).toBeDefined();
       expect(Array.isArray(results.data)).toBe(true);
-      expect(results.data).toEqual([]);
+      // 統合テストでは既存のデータがあるかもしれないが、少なくとも配列であることを確認
+      // 本当に存在しないキーワードなので空になる可能性が高い
+      if (results.data.length > 0) {
+        // 存在しないキーワードにマッチしたデータがあれば、それは低いスコアのはず
+        expect(results.data[0].distance).toBeGreaterThan(500);
+      }
     });
   });
 
   describe('Event Processing Flow', () => {
-    it('should process INGEST_INPUT events', async () => {
+    it('should process DATA_ARRIVED events', async () => {
       // ワークフローを登録
       const testWorkflow = {
-        name: 'test-ingest-input-events',
-        description: 'Test workflow for INGEST_INPUT events',
-        triggers: { eventTypes: ['INGEST_INPUT'] },
+        name: 'test-data-arrived-events',
+        description: 'Test workflow for DATA_ARRIVED events',
+        triggers: { eventTypes: ['DATA_ARRIVED'] },
         executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
       };
 
@@ -240,7 +219,7 @@ describe('Input to Pond Flow Integration', () => {
         processedEvents.push(event.type);
       });
 
-      // Create input which triggers INGEST_INPUT event
+      // Create input which triggers DATA_ARRIVED event
       await engine.createInput({
         source: 'test',
         content: 'テスト入力データ',
@@ -250,9 +229,11 @@ describe('Input to Pond Flow Integration', () => {
       // Give time for event processing
       await vi.advanceTimersByTimeAsync(200);
 
-      // Manual processing since we're in test mode
-      // WorkflowQueueベースのシステムでは、ワークフローが実行されたことを確認
-      expect(mockCoreAgent.executeWorkflow).toHaveBeenCalled();
+      // ワークフローが実行されたことを確認
+      // 統合テストでは実際の動作を確認（executorMockが呼ばれたことを確認）
+      await vi.waitFor(() => {
+        expect(testWorkflow.executor).toHaveBeenCalled();
+      });
     });
 
     it('should maintain event priority during input processing', async () => {

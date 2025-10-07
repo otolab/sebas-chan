@@ -697,5 +697,22 @@ class LanceDBWorker:
                 sys.stderr.flush()
 
 if __name__ == "__main__":
-    worker = LanceDBWorker()
-    worker.run()
+    # 起動時のデバッグ情報を出力
+    import os
+    sys.stderr.write(f"[DEBUG] Python worker starting...\n")
+    sys.stderr.write(f"[DEBUG] Python version: {sys.version}\n")
+    sys.stderr.write(f"[DEBUG] Script path: {__file__}\n")
+    sys.stderr.write(f"[DEBUG] Working directory: {os.getcwd()}\n")
+    sys.stderr.write(f"[DEBUG] Command line args: {sys.argv}\n")
+    sys.stderr.flush()
+
+    try:
+        worker = LanceDBWorker()
+        sys.stderr.write(f"[DEBUG] Worker initialized successfully\n")
+        sys.stderr.flush()
+        worker.run()
+    except Exception as e:
+        sys.stderr.write(f"[ERROR] Failed to initialize worker: {e}\n")
+        sys.stderr.write(f"[ERROR] Traceback: {traceback.format_exc()}\n")
+        sys.stderr.flush()
+        sys.exit(1)

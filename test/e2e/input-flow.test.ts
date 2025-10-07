@@ -188,7 +188,7 @@ describe('Input処理フローのE2Eテスト', () => {
   describe('3.1 基本フロー', () => {
     it('TEST-FLOW-001: Input投稿 → イベント生成 → ワークフロー実行 → Pond保存', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(undefined, mockDbClient as DBClient);
       await engine.initialize();
 
       // ワークフローを登録
@@ -258,7 +258,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
     it('TEST-FLOW-003: 複数のInput投稿が順次処理される', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(undefined, mockDbClient as DBClient);
       await engine.initialize();
 
       // ワークフローを登録
@@ -319,7 +319,7 @@ describe('Input処理フローのE2Eテスト', () => {
   describe('3.2 エラー検出フロー', () => {
     it('TEST-FLOW-002: エラーキーワードを含むInputが分析イベントをトリガー', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(undefined, mockDbClient as DBClient);
       await engine.initialize();
 
       // 両方のワークフローを登録
@@ -384,7 +384,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
     it('TEST-FLOW-004: 正常なInputはエラー分析をトリガーしない', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(undefined, mockDbClient as DBClient);
       await engine.initialize();
 
       // ワークフローを登録
@@ -429,7 +429,7 @@ describe('Input処理フローのE2Eテスト', () => {
   describe('3.3 状態管理とコンテキスト', () => {
     it('TEST-FLOW-005: ワークフロー実行を通じて状態が維持される', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(undefined, mockDbClient as DBClient);
       await engine.initialize();
 
       // 状態を記録するワークフロー
@@ -506,7 +506,7 @@ describe('Input処理フローのE2Eテスト', () => {
   describe('3.4 エラーハンドリングとリカバリー', () => {
     it('TEST-FLOW-006: ワークフローエラー時はリトライせず失敗する', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(undefined, mockDbClient as DBClient);
       await engine.initialize();
 
       let attemptCount = 0;
@@ -556,7 +556,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
     it('TEST-FLOW-007: 部分的な失敗でも処理が継続される', async () => {
       // Arrange
-      engine = new CoreEngine();
+      engine = new CoreEngine(undefined, mockDbClient as DBClient);
       await engine.initialize();
 
       let processCount = 0;

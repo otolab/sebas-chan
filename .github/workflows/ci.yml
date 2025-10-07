@@ -160,6 +160,9 @@ jobs:
       - name: Extract build artifacts
         run: tar -xzf build-artifacts.tar.gz
 
+      - name: Rebuild packages for latest changes
+        run: npm run build
+
       - name: Run integration tests
         run: npm run test:integration
         env:
@@ -209,6 +212,9 @@ jobs:
 
       - name: Extract build artifacts
         run: tar -xzf build-artifacts.tar.gz
+
+      - name: Rebuild packages for latest changes
+        run: npm run build
 
       - name: Run E2E tests
         run: npm run test:e2e

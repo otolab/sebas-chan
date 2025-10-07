@@ -18,7 +18,23 @@ export async function createApp() {
     next();
   });
 
-  const coreEngine = new CoreEngine();
+  // DBClientを作成（本番用）
+  const { DBClient } = await import('@sebas-chan/db');
+  const dbClient = new DBClient();
+
+  // DBClientを接続・初期化
+  await dbClient.connect();
+  await dbClient.initModel();
+  logger.info('DB Client connected and initialized');
+
+  const coreEngine = new CoreEngine(undefined, dbClient);
+
+  // Engineのstop時にDBClientを切断するhookを設定
+  coreEngine.on('stopping', async () => {
+    logger.info('Engine stopping, disconnecting DB...');
+    await dbClient.disconnect();
+  });
+
   await coreEngine.initialize();
 
   // E2Eテストでもstart()を呼ぶ

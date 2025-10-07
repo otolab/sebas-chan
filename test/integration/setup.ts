@@ -29,9 +29,19 @@ export async function setupTestEnvironment(): Promise<DBClient> {
   initializationPromise = (async () => {
     console.log('🚀 Initializing test environment...');
     const startTime = Date.now();
-    
+
+    console.log('[setupTestEnvironment] Creating DBClient instance...');
     globalDbClient = new DBClient();
-    await globalDbClient.connect(); // waitForReadyを内部で呼ぶ
+
+    console.log('[setupTestEnvironment] Calling DBClient.connect()...');
+    try {
+      await globalDbClient.connect(); // waitForReadyを内部で呼ぶ
+    } catch (error) {
+      console.error('[setupTestEnvironment] DBClient.connect() failed:', error);
+      throw error;
+    }
+
+    console.log('[setupTestEnvironment] Calling DBClient.initModel()...');
     await globalDbClient.initModel();
     
     // 追加の確認：DBが本当に使える状態か確認

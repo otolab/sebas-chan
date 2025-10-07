@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { DBClient } from '../../packages/db/src/index';
 import { Issue } from '@sebas-chan/shared-types';
 import { nanoid } from 'nanoid';
+import { setupTestEnvironment, teardownTestEnvironment } from './setup.js';
 
 // テスト環境向けの初期化設定
 const TEST_TIMEOUT = 60000; // 60秒（モデルダウンロードが必要な場合のため）
@@ -10,17 +11,13 @@ describe('DBClient - CRUD Operations', () => {
   let client: DBClient;
 
   beforeAll(async () => {
-    client = new DBClient();
-    // テスト用DBに接続
-    await client.connect();
-    // モデルを初期化（初回はダウンロードが発生）
-    await client.initModel();
+    // 共有DBClientを使用
+    client = await setupTestEnvironment();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
-    if (client) {
-      await client.disconnect();
-    }
+    // 共有DBClientのクリーンアップはsetupTestEnvironmentに任せる
+    // 各テストファイルでdisconnectしないように注意
   });
 
   beforeEach(async () => {
@@ -218,15 +215,12 @@ describe('DBClient - Schema Validation', () => {
   let client: DBClient;
 
   beforeAll(async () => {
-    client = new DBClient();
-    await client.connect();
-    await client.initModel();
+    // 共有DBClientを使用
+    client = await setupTestEnvironment();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
-    if (client) {
-      await client.disconnect();
-    }
+    // 共有DBClientのクリーンアップはsetupTestEnvironmentに任せる
   });
 
   it(
@@ -372,15 +366,12 @@ describe('DBClient - Vector Search', () => {
   let client: DBClient;
 
   beforeAll(async () => {
-    client = new DBClient();
-    await client.connect();
-    await client.initModel();
+    // 共有DBClientを使用
+    client = await setupTestEnvironment();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
-    if (client) {
-      await client.disconnect();
-    }
+    // 共有DBClientのクリーンアップはsetupTestEnvironmentに任せる
   });
 
   it(
@@ -595,15 +586,12 @@ describe('DBClient - Error Handling', () => {
   let client: DBClient;
 
   beforeAll(async () => {
-    client = new DBClient();
-    await client.connect();
-    await client.initModel();
+    // 共有DBClientを使用
+    client = await setupTestEnvironment();
   }, TEST_TIMEOUT);
 
   afterAll(async () => {
-    if (client) {
-      await client.disconnect();
-    }
+    // 共有DBClientのクリーンアップはsetupTestEnvironmentに任せる
   });
 
   it('should handle connection errors gracefully', async () => {
