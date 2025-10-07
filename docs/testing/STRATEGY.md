@@ -27,6 +27,18 @@
 - StateManagerの状態管理ロジック
 - 純粋関数の入出力検証
 
+**重点項目**:
+
+- **コードカバレッジ（目標: 80%以上）** - ロジックの網羅性を確保
+- **ロジックの正確性** - 処理フローが意図通りであることを確認
+- **エラーハンドリング** - 異常系の処理が適切であることを検証
+- **境界値テスト** - エッジケースでの動作を確認
+
+**注意点**:
+
+- **AI生成内容の詳細は検証しない** - プロンプトの結果より処理フローを重視
+- **出力の正確性より処理の流れを確認** - ワークフローが正しく実行されることが重要
+
 ### 2. インターフェーステスト (Interface Tests)
 
 **定義**: モジュールの公開インターフェース仕様を検証するテスト
@@ -173,6 +185,74 @@ npm run test:all                     # 全テスト段階実行
 3. **リファクタリング時**:
    - インターフェーステストが通ることを確認
    - 内部実装（ユニットテスト）は必要に応じて更新
+
+## ユニットテストのベストプラクティス
+
+### モックの適切な使用
+
+**推奨パターン: createCustomMockContext**
+```typescript
+const mockContext = createCustomMockContext({
+  driverResponses: [JSON.stringify({
+    result: 'success',
+    updatedState: 'updated'
+  })],
+  storageOverrides: {
+    getItem: vi.fn().mockResolvedValue(mockItem)
+  }
+});
+```
+
+**避けるべきパターン: 二重モック**
+```typescript
+// ❌ 不要な複雑性
+mockContext.createDriver = vi.fn().mockResolvedValue(
+  new TestDriver({ responses: [...] })
+);
+```
+
+### 型チェックを活用した検証
+
+**推奨: 構造の検証**
+```typescript
+expect(result.output).toMatchObject({
+  id: expect.any(String),
+  score: expect.any(Number),
+  items: expect.arrayContaining([
+    expect.objectContaining({
+      type: expect.any(String)
+    })
+  ])
+});
+```
+
+**避ける: AI生成内容の詳細検証**
+```typescript
+// ❌ ユニットテストでは不適切
+expect(result.output.description).toBe('特定の文字列');
+```
+
+### エラーケースの網羅
+
+```typescript
+describe('エラーハンドリング', () => {
+  it('ストレージエラーを適切に処理', async () => {
+    const error = new Error('Database connection failed');
+    mockContext.storage.getItem = vi.fn().mockRejectedValue(error);
+
+    const result = await workflow.execute(input);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe(error);
+  });
+});
+```
+
+### テストの焦点を絞る
+
+- **単一の振る舞いをテスト** - 1つのテストで1つの事項を検証
+- **Arrange-Act-Assert パターン** - テストを3段階で構成
+- **説明的なテスト名** - 何をテストしているか明確に
 
 ## CI/CDでの実行順序
 

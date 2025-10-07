@@ -100,8 +100,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
     // USER_REQUEST_RECEIVEDイベントのcontentを空文字にする
     (mockEvent.payload as { content: string }).content = '';
 
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         interpretation: '内容なしリクエスト',
         requestType: 'other',
         events: [],
@@ -111,6 +111,7 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
         updatedState: 'Initial state\n内容なしリクエスト処理'
       })]
     });
+    mockEmitter = createMockWorkflowEmitter();
 
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
@@ -121,8 +122,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
   it('should classify schedule request', async () => {
     (mockEvent.payload as { content: string }).content = '毎日10時にレポートを実行してください';
 
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         interpretation: 'レポートの定期実行設定',
         requestType: 'schedule',
         events: [{
@@ -142,6 +143,7 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
         updatedState: 'Initial state\nスケジュール設定: 毎日10時'
       })]
     });
+    mockEmitter = createMockWorkflowEmitter();
 
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
