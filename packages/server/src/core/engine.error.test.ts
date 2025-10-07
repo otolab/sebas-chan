@@ -73,7 +73,7 @@ describe('CoreEngine Error Handling', () => {
       searchIssues: vi.fn().mockResolvedValue([]),
       updateStateDocument: vi.fn().mockResolvedValue(undefined),
       getStateDocument: vi.fn().mockResolvedValue(null),
-      getStatus: vi.fn().mockResolvedValue({ status: 'error', model_loaded: false }), // 未接続状態
+      getStatus: vi.fn().mockResolvedValue({ status: 'ok', model_loaded: true }), // 接続済み状態（デフォルト）
     };
 
     // CoreAgentモックの設定
@@ -107,17 +107,21 @@ describe('CoreEngine Error Handling', () => {
 
   describe('DB Connection Errors', () => {
     it('should handle DB connection failure during initialization', async () => {
-      mockDbClient.connect.mockRejectedValue(new Error('Connection failed'));
+      // 外部提供のDBClientが未接続の場合
+      mockDbClient.getStatus.mockResolvedValue({ status: 'error', model_loaded: false });
 
-      await expect(engine.initialize()).rejects.toThrow('Connection failed');
+      await expect(engine.initialize()).rejects.toThrow(
+        'Externally provided DBClient must be connected'
+      );
     });
 
     it('should handle DB model initialization failure', async () => {
-      // 接続は成功するがモデル初期化が失敗するケース
+      // 接続はされているがモデル未初期化の場合
       mockDbClient.getStatus.mockResolvedValue({ status: 'ok', model_loaded: false });
-      mockDbClient.initModel.mockRejectedValue(new Error('Model init failed'));
 
-      await expect(engine.initialize()).rejects.toThrow('Model init failed');
+      await expect(engine.initialize()).rejects.toThrow(
+        'Externally provided DBClient must be connected'
+      );
     });
 
     it.skip('should allow retry after DB connection failure - モックの分離が必要', async () => {
@@ -278,21 +282,29 @@ describe('CoreEngine Error Handling', () => {
 
       engine.stop();
 
-      expect(mockDbClient.disconnect).toHaveBeenCalled();
+      // 新しいアーキテクチャでは、外部提供のDBClientはdisconnectされない
+      expect(mockDbClient.disconnect).not.toHaveBeenCalled();
 
       // 停止後の操作はエラーにならない（graceful）
       const result = await engine.searchPond({ q: 'test' });
       expect(result.data).toEqual([]);
     });
 
-    it('should handle disconnect errors gracefully', async () => {
+    it('should emit stop events', async () => {
       await engine.initialize();
       await engine.start();
 
-      mockDbClient.disconnect.mockRejectedValue(new Error('Disconnect failed'));
+      const stoppingHandler = vi.fn();
+      const stoppedHandler = vi.fn();
 
-      // エラーが発生してもstopは完了する
-      expect(() => engine.stop()).not.toThrow();
+      engine.on('stopping', stoppingHandler);
+      engine.on('stopped', stoppedHandler);
+
+      await engine.stop();
+
+      // stop時のイベントが発行される
+      expect(stoppingHandler).toHaveBeenCalled();
+      expect(stoppedHandler).toHaveBeenCalled();
     });
   });
 });

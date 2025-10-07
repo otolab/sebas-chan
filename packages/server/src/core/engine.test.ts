@@ -55,7 +55,7 @@ describe('CoreEngine', () => {
       searchIssues: vi.fn().mockResolvedValue([]),
       updateStateDocument: vi.fn().mockResolvedValue(undefined),
       getStateDocument: vi.fn().mockResolvedValue(null), // デフォルトはnullを返す（新規状態）
-      getStatus: vi.fn().mockResolvedValue({ status: 'error', model_loaded: false }), // 未接続状態
+      getStatus: vi.fn().mockResolvedValue({ status: 'ok', model_loaded: true }), // 接続済み状態
       updateIssue: vi.fn().mockImplementation(() => {
         throw new Error('Not implemented');
       }),
