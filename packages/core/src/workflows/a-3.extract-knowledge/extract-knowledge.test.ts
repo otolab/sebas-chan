@@ -5,10 +5,11 @@ import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '..
 import { TestDriver } from '@moduler-prompt/driver';
 import { WorkflowRecorder } from '../recorder.js';
 import type { Knowledge } from '@sebas-chan/shared-types';
+import { createCustomMockContext, createMockWorkflowEmitter } from '../test-utils.js';
 
 describe('ExtractKnowledge Workflow (A-3)', () => {
-  let mockContext: WorkflowContextInterface;
-  let mockEmitter: WorkflowEventEmitterInterface;
+  let mockContext: ReturnType<typeof createCustomMockContext>;
+  let mockEmitter: ReturnType<typeof createMockWorkflowEmitter>;
   let mockEvent: AgentEvent;
 
   const mockKnowledge: Knowledge = {
@@ -25,17 +26,12 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
 
   beforeEach(() => {
     // モックコンテキストの準備
-    mockContext = {
-      state: 'Initial state',
-      storage: {
-        addPondEntry: vi.fn(),
-        searchIssues: vi.fn().mockResolvedValue([]),
-        searchKnowledge: vi.fn().mockResolvedValue([]),
-        searchPond: vi.fn().mockResolvedValue([]),
-        getIssue: vi.fn(),
-        getKnowledge: vi.fn(),
-        createIssue: vi.fn(),
-        updateIssue: vi.fn(),
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
+        extractedKnowledge: 'システムエラーが発生した場合は、まずログを確認し、エラーコードを記録してから再起動を試みる。それでも解決しない場合は、サポートチームに連絡する。',
+        updatedState: 'Initial state\n知識抽出完了: システムエラー対処法'
+      })],
+      storageOverrides: {
         createKnowledge: vi.fn().mockResolvedValue({
           id: 'knowledge-123',
           type: 'system_rule',
@@ -43,26 +39,11 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
           reputation: { upvotes: 0, downvotes: 0 },
           sources: [],
         }),
-        updateKnowledge: vi.fn(),
-        // Flow操作
-        getFlow: vi.fn(),
-        searchFlows: vi.fn().mockResolvedValue([]),
-        createFlow: vi.fn(),
-        updateFlow: vi.fn(),
-      },
-      createDriver: async () => new TestDriver({
-        responses: [JSON.stringify({
-          extractedKnowledge: 'システムエラーが発生した場合は、まずログを確認し、エラーコードを記録してから再起動を試みる。それでも解決しない場合は、サポートチームに連絡する。',
-          updatedState: 'Initial state\n知識抽出完了: システムエラー対処法'
-        })]
-      }),
-      recorder: new WorkflowRecorder('test'),
-    };
+      }
+    });
 
     // モックイベントエミッター
-    mockEmitter = {
-      emit: vi.fn(),
-    };
+    mockEmitter = createMockWorkflowEmitter();
 
     // モックイベント
     mockEvent = {
@@ -123,13 +104,23 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   });
 
   it('should extract knowledge from resolved issue', async () => {
-    // 長い応答を返すモック
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    // 長い応答を返すモック - createCustomMockContextで再作成
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         extractedKnowledge: 'ログインエラーの解決方法：パスワードリセットを実行し、キャッシュをクリアしてから再度ログインを試みる。それでも問題が解決しない場合は、システム管理者に連絡する。',
         updatedState: 'Initial state\n知識抽出完了: ログインエラー解決法'
-      })]
+      })],
+      storageOverrides: {
+        createKnowledge: vi.fn().mockResolvedValue({
+          id: 'knowledge-123',
+          type: 'system_rule',
+          content: '重要なシステムルール',
+          reputation: { upvotes: 0, downvotes: 0 },
+          sources: [],
+        }),
+      }
     });
+    mockEmitter = createMockWorkflowEmitter();
     // ISSUE_STATUS_CHANGEDイベント
     mockEvent = {
       type: 'ISSUE_STATUS_CHANGED',
@@ -177,12 +168,22 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
 
   it('should extract knowledge from pattern found', async () => {
     // 長い応答を返すモック
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         extractedKnowledge: 'メモリリークパターンの解決方法：メモリプールの設定を確認し、不要なオブジェクトを適切に解放する。ガベージコレクションの調整も検討する。',
         updatedState: 'Initial state\nパターン発見: メモリリーク対処法'
-      })]
+      })],
+      storageOverrides: {
+        createKnowledge: vi.fn().mockResolvedValue({
+          id: 'knowledge-123',
+          type: 'system_rule',
+          content: '重要なシステムルール',
+          reputation: { upvotes: 0, downvotes: 0 },
+          sources: [],
+        }),
+      }
     });
+    mockEmitter = createMockWorkflowEmitter();
     // RECURRING_PATTERN_DETECTEDイベント
     mockEvent = {
       type: 'RECURRING_PATTERN_DETECTED',
@@ -212,20 +213,31 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   });
 
   it('should update existing knowledge reputation when duplicate found', async () => {
-    mockContext.storage.searchKnowledge = vi.fn().mockResolvedValue([mockKnowledge]);
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
-      id: 'issue-123',
-      title: 'テスト',
-      description: 'テスト',
-      status: 'closed',
-      updates: [],
-    });
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         extractedKnowledge: mockKnowledge.content, // 完全に同じ内容を返す
         updatedState: 'Initial state\n重複知識検出'
-      })]
+      })],
+      storageOverrides: {
+        searchKnowledge: vi.fn().mockResolvedValue([mockKnowledge]),
+        getIssue: vi.fn().mockResolvedValue({
+          id: 'issue-123',
+          title: 'テスト',
+          description: 'テスト',
+          status: 'closed',
+          updates: [],
+        }),
+        createKnowledge: vi.fn().mockResolvedValue({
+          id: 'knowledge-123',
+          type: 'system_rule',
+          content: '重要なシステムルール',
+          reputation: { upvotes: 0, downvotes: 0 },
+          sources: [],
+        }),
+        updateKnowledge: vi.fn(),
+      }
     });
+    mockEmitter = createMockWorkflowEmitter();
 
     const result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
@@ -240,20 +252,29 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   });
 
   it('should not create knowledge if content is too short', async () => {
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         extractedKnowledge: '短いコンテンツ', // 50文字未満
         updatedState: 'Initial state\n短いコンテンツのため知識作成せず'
-      })]
+      })],
+      storageOverrides: {
+        getIssue: vi.fn().mockResolvedValue({
+          id: 'issue-123',
+          title: '短い',
+          description: '短い',
+          status: 'open',
+          updates: [],
+        }),
+        createKnowledge: vi.fn().mockResolvedValue({
+          id: 'knowledge-123',
+          type: 'system_rule',
+          content: '重要なシステムルール',
+          reputation: { upvotes: 0, downvotes: 0 },
+          sources: [],
+        }),
+      }
     });
-
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
-      id: 'issue-123',
-      title: '短い',
-      description: '短い',
-      status: 'open',
-      updates: [],
-    });
+    mockEmitter = createMockWorkflowEmitter();
 
     const result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
@@ -266,6 +287,36 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
 
   it('should determine knowledge type based on source type', async () => {
     // high_impact_issue ソースタイプは system_rule になる
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
+        extractedKnowledge: 'このシステムルールに従って、すべてのリクエストを処理する必要があります。セキュリティポリシーにも準拠することが重要です。',
+        updatedState: 'Initial state\nシステムルール抽出完了'
+      })],
+      storageOverrides: {
+        getIssue: vi.fn().mockResolvedValue({
+          id: 'issue-123',
+          title: 'Test Issue',
+          description: 'Test issue description',
+          status: 'open',
+          priority: 80,
+          labels: [],
+          updates: [],
+          relations: [],
+          sourceInputIds: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        }),
+        createKnowledge: vi.fn().mockResolvedValue({
+          id: 'knowledge-123',
+          type: 'system_rule',
+          content: '重要なシステムルール',
+          reputation: { upvotes: 0, downvotes: 0 },
+          sources: [],
+        }),
+      }
+    });
+    mockEmitter = createMockWorkflowEmitter();
+
     mockEvent = {
       type: 'KNOWLEDGE_EXTRACTABLE',
       payload: {
@@ -276,28 +327,6 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       },
     };
 
-    // getIssueのモックを設定
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
-      id: 'issue-123',
-      title: 'Test Issue',
-      description: 'Test issue description',
-      status: 'open',
-      priority: 80,
-      labels: [],
-      updates: [],
-      relations: [],
-      sourceInputIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
-
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
-        extractedKnowledge: 'このシステムルールに従って、すべてのリクエストを処理する必要があります。セキュリティポリシーにも準拠することが重要です。',
-        updatedState: 'Initial state\nシステムルール抽出完了'
-      })]
-    });
-
     let result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
     expect(result.success).toBe(true);
 
@@ -307,26 +336,29 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       })
     );
 
-    // pattern ソースタイプは process_manual になる
-    mockEvent.payload.sourceType = 'pattern';
-    mockContext.storage.createKnowledge = vi.fn().mockResolvedValue({
-      id: 'knowledge-456',
-      type: 'process_manual',
-      content: 'プロセス手順',
-      reputation: { upvotes: 0, downvotes: 0 },
-      sources: [],
-      createdAt: new Date(),
-    });
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    // pattern ソースタイプは process_manual になる - 新しいコンテキストを作成
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         extractedKnowledge: '以下の手順に従ってprocessを実行してください。1. ログイン 2. 設定確認 3. 実行 4. 結果の確認 5. 必要に応じて再実行',
         updatedState: 'Initial state\nプロセス手順抽出完了'
-      })]
+      })],
+      storageOverrides: {
+        createKnowledge: vi.fn().mockResolvedValue({
+          id: 'knowledge-456',
+          type: 'process_manual',
+          content: 'プロセス手順',
+          reputation: { upvotes: 0, downvotes: 0 },
+          sources: [],
+          createdAt: new Date(),
+        }),
+        searchPond: vi.fn().mockResolvedValue([
+          { id: 'pond-123', content: 'パターンデータ', metadata: {} },
+        ]),
+      }
     });
+    mockEmitter = createMockWorkflowEmitter();
 
-    mockContext.storage.searchPond = vi.fn().mockResolvedValue([
-      { id: 'pond-123', content: 'パターンデータ', metadata: {} },
-    ]);
+    mockEvent.payload.sourceType = 'pattern';
 
     result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
     expect(result.success).toBe(true);
@@ -339,19 +371,29 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   });
 
   it('should include correct source type in created knowledge', async () => {
-    mockContext.createDriver = async () => new TestDriver({
-      responses: [JSON.stringify({
+    mockContext = createCustomMockContext({
+      driverResponses: [JSON.stringify({
         extractedKnowledge: 'これは重要な知識です。システムを正しく動作させるためには、定期的なメンテナンスと監視が必要です。',
         updatedState: 'Initial state\n知識抽出: メンテナンス手順'
-      })]
+      })],
+      storageOverrides: {
+        getIssue: vi.fn().mockResolvedValue({
+          id: 'issue-123',
+          title: 'テストIssue',
+          description: 'テスト用のIssue',
+          status: 'closed',
+          updates: [],
+        }),
+        createKnowledge: vi.fn().mockResolvedValue({
+          id: 'knowledge-123',
+          type: 'system_rule',
+          content: '重要なシステムルール',
+          reputation: { upvotes: 0, downvotes: 0 },
+          sources: [],
+        }),
+      }
     });
-    mockContext.storage.getIssue = vi.fn().mockResolvedValue({
-      id: 'issue-123',
-      title: 'テストIssue',
-      description: 'テスト用のIssue',
-      status: 'closed',
-      updates: [],
-    });
+    mockEmitter = createMockWorkflowEmitter();
 
     const result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
