@@ -460,3 +460,13 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     expect(result.error).toEqual(new Error('No content to extract knowledge from'));
   });
 });
+
+describe.skipIf(!process.env.ENABLE_AI_TESTS)('ExtractKnowledge Workflow - AI Tests', () => {
+  // AI駆動テストはここに追加
+  // 実際のAIサービスを使用してワークフローの品質を確認
+
+  it.todo('should extract meaningful knowledge items with actual AI');
+  it.todo('should properly categorize knowledge types');
+  it.todo('should identify relationships between knowledge items');
+  it.todo('should handle technical content with domain-specific extraction');
+});

@@ -15,6 +15,8 @@
     "test:integration": "NODE_OPTIONS='--no-warnings' vitest run --config vitest.config.integration.mts",
     "test:system": "echo 'System tests not yet configured'",
     "test:e2e": "NODE_OPTIONS='--no-warnings' vitest run --config vitest.config.e2e.mts",
+    "test:without-ai": "SKIP_AI_TESTS=true NODE_OPTIONS='--no-warnings' npm test",
+    "test:ci": "SKIP_AI_TESTS=true NODE_OPTIONS='--no-warnings' npm run test:unit && NODE_OPTIONS='--no-warnings' npm run test:integration",
     "typecheck": "npm run typecheck -w @sebas-chan/shared-types && npm run typecheck -w @sebas-chan/reporter-sdk && npm run typecheck -w @sebas-chan/db && npm run typecheck -w @sebas-chan/core && npm run typecheck -w @sebas-chan/reporters && npm run typecheck -w @sebas-chan/server && npm run typecheck -w @sebas-chan/mcp-server && npm run typecheck -w @sebas-chan/web-ui",
     "lint": "npm run lint -w @sebas-chan/shared-types && npm run lint -w @sebas-chan/reporter-sdk && npm run lint -w @sebas-chan/db && npm run lint -w @sebas-chan/core && npm run lint -w @sebas-chan/reporters && npm run lint -w @sebas-chan/server && npm run lint -w @sebas-chan/mcp-server && npm run lint -w @sebas-chan/web-ui",
     "lint:fix": "npm run lint:fix -w @sebas-chan/shared-types && npm run lint:fix -w @sebas-chan/reporter-sdk && npm run lint:fix -w @sebas-chan/db && npm run lint:fix -w @sebas-chan/core && npm run lint:fix -w @sebas-chan/reporters && npm run lint:fix -w @sebas-chan/server && npm run lint:fix -w @sebas-chan/mcp-server && npm run lint:fix -w @sebas-chan/web-ui",

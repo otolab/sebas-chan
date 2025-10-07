@@ -19,7 +19,9 @@
 - 内部実装の詳細をテスト
 - ホワイトボックステスト
 
-**配置**: `packages/*/src/**/*.test.ts`
+**配置**:
+- 基本: `packages/*/src/**/*.test.ts`
+- AI駆動テスト（将来）: `packages/*/src/**/*.ai-test.ts`
 
 **例**:
 
@@ -38,6 +40,34 @@
 
 - **AI生成内容の詳細は検証しない** - プロンプトの結果より処理フローを重視
 - **出力の正確性より処理の流れを確認** - ワークフローが正しく実行されることが重要
+
+#### 1.1 AI駆動ユニットテスト
+
+**定義**: AIサービスを使用して実際のAI出力品質を検証するユニットテスト
+
+**特徴**:
+- 実際のAIモデルを使用（OpenAI、Anthropic等）
+- 環境依存を許容（API key必要）
+- 非決定的な出力を検証
+- `ENABLE_AI_TESTS`環境変数で制御
+
+**テスト構造**:
+```typescript
+describe('Workflow Name', () => {
+  describe('Unit Tests', () => {
+    // TestDriverでのテスト（カバレッジ重視）
+  });
+
+  describe.skipIf(!process.env.ENABLE_AI_TESTS)('AI Tests', () => {
+    // AIServiceでの品質確認テスト
+  });
+});
+```
+
+**検証項目**:
+- AI出力の構造的妥当性
+- 意味的な整合性
+- プロンプトエンジニアリングの効果
 
 ### 2. インターフェーステスト (Interface Tests)
 
@@ -154,6 +184,10 @@ npm test                              # 全パッケージのユニットテス�
 npm test -w @sebas-chan/core        # 特定パッケージのユニットテスト
 npm run test:unit                    # 明示的にユニットテストのみ
 
+# AI駆動ユニットテスト
+npm run test:ai                      # AI駆動テストのみ実行
+ENABLE_AI_TESTS=true npm test        # 通常テスト＋AI駆動テスト
+
 # インターフェーステスト
 npm run test:interface               # 全インターフェーステスト
 
@@ -169,6 +203,7 @@ npm run test:e2e                     # E2Eテスト実行（完全な環境）
 # 組み合わせ実行
 npm run test:ci                      # CI用（ユニット＋統合）
 npm run test:all                     # 全テスト段階実行
+npm run test:all-with-ai             # 全テスト＋AI駆動テスト
 ```
 
 ## テストの実装指針

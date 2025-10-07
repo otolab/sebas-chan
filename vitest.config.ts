@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts'],
+    include: ['packages/**/*.test.ts', 'packages/**/*.spec.ts', 'packages/**/*.ai-test.ts'],
     exclude: ['node_modules', 'dist', 'packages/web-ui'],
     silent: true, // テスト実行時のログを抑制
     logLevel: 'error', // エラーレベル以上のみ表示

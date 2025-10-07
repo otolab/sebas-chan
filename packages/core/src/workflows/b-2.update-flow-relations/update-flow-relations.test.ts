@@ -441,3 +441,12 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
     });
   });
 });
+
+describe.skipIf(!process.env.ENABLE_AI_TESTS)('UpdateFlowRelations Workflow - AI Tests', () => {
+  // AI駆動テストはここに追加
+  // 実際のAIサービスを使用してワークフローの品質を確認
+
+  it.todo('should identify complex relationships between flows with actual AI');
+  it.todo('should suggest appropriate flow merging based on content similarity');
+  it.todo('should detect conflicting flow priorities and suggest resolutions');
+});
