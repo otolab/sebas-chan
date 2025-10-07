@@ -13,11 +13,11 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   // テスト用ユーティリティ: createDriverのモックを設定
   const setupDriverMocks = (analyzeIssueResponse: any) => {
     // 1つのドライバーインスタンスで1つの応答を返す（updatedStateは分析結果に含まれる）
-    mockContext.createDriver = vi.fn().mockResolvedValue(
+    // シンプルな関数として実装（二重モックを避ける）
+    mockContext.createDriver = async () =>
       new TestDriver({
         responses: [JSON.stringify(analyzeIssueResponse)],
-      })
-    );
+      });
   };
 
   const mockIssue: Issue = {
