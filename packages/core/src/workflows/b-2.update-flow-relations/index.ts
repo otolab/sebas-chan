@@ -167,14 +167,20 @@ export const updateFlowRelationsWorkflow: WorkflowDefinition = {
     condition: (event) => {
       // ISSUE_STATUS_CHANGEDでstatusがclosedの場合は重要
       if (event.type === 'ISSUE_STATUS_CHANGED') {
-        const payload = event.payload as { newStatus?: string };
-        if (payload.newStatus === 'closed') {
+        const payload = event.payload as { to?: string };
+        if (payload.to === 'closed') {
           return true;
         }
       }
-      // それ以外は高優先度Issueの場合のみ
-      const payload = event.payload as { priority?: number };
-      return (payload.priority ?? 0) > 50;
+      // ISSUE_UPDATEDで優先度が高い場合
+      if (event.type === 'ISSUE_UPDATED') {
+        const payload = event.payload as { updates?: { after?: { priority?: number } } };
+        const priority = payload.updates?.after?.priority;
+        if (priority !== undefined && priority > 50) {
+          return true;
+        }
+      }
+      return false;
     },
   },
   executor: executeUpdateFlowRelations,
