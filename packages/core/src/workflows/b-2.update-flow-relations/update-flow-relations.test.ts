@@ -83,8 +83,11 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
       type: 'ISSUE_UPDATED',
       payload: {
         issueId: 'issue-1',
-        issue: mockIssues[0],
-        updates: { status: 'closed' },
+        updates: {
+          before: { status: 'open' },
+          after: { status: 'closed' },
+          changedFields: ['status'],
+        },
         updatedBy: 'user',
       },
     };
@@ -113,9 +116,17 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
     });
 
     it('特定のFlowIDが指定された場合、そのFlowのみを処理する', async () => {
-      mockEvent.payload = {
-        flowId: 'flow-1',
-        trigger: 'issue_changed',
+      mockEvent = {
+        type: 'FLOW_UPDATED',
+        payload: {
+          flowId: 'flow-1',
+          updates: {
+            before: {},
+            after: {},
+            changedFields: [],
+          },
+          updatedBy: 'system',
+        },
       };
 
       const result = await updateFlowRelationsWorkflow.executor(
@@ -130,8 +141,14 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
     });
 
     it('FlowIDが指定されない場合、アクティブなFlow全てを処理する', async () => {
-      mockEvent.payload = {
-        trigger: 'scheduled',
+      mockEvent = {
+        type: 'SCHEDULE_TRIGGERED',
+        payload: {
+          issueId: 'issue-1',
+          scheduleId: 'schedule-1',
+          scheduledTime: new Date().toISOString(),
+          action: 'follow_up',
+        },
       };
 
       const result = await updateFlowRelationsWorkflow.executor(
@@ -280,7 +297,7 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
 
       expect(result.success).toBe(true);
       // 空のissues配列で処理が継続されることを確認
-      expect(result.output?.updatedFlows).toBeDefined();
+      expect((result.output as any)?.updatedFlows).toBeDefined();
     });
 
     it('複数のFlowを処理する', async () => {
@@ -335,9 +352,9 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.output?.updatedFlows).toHaveLength(2);
-      expect(result.output?.updatedFlows).toContain('flow-1');
-      expect(result.output?.updatedFlows).toContain('flow-2');
+      expect((result.output as any)?.updatedFlows).toHaveLength(2);
+      expect((result.output as any)?.updatedFlows).toContain('flow-1');
+      expect((result.output as any)?.updatedFlows).toContain('flow-2');
     });
   });
 
@@ -379,7 +396,7 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
           issueId: 'issue-1',
           from: 'open',
           to: 'closed',
-          newStatus: 'closed',
+          issue: mockIssues[0],
         },
       };
 
@@ -392,7 +409,12 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
         type: 'ISSUE_UPDATED',
         payload: {
           issueId: 'issue-1',
-          priority: 75,
+          updates: {
+            before: { priority: 30 },
+            after: { priority: 75 },
+            changedFields: ['priority'],
+          },
+          updatedBy: 'system',
         },
       };
 
@@ -405,7 +427,12 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
         type: 'ISSUE_UPDATED',
         payload: {
           issueId: 'issue-1',
-          priority: 30,
+          updates: {
+            before: { priority: 20 },
+            after: { priority: 30 },
+            changedFields: ['priority'],
+          },
+          updatedBy: 'system',
         },
       };
 
