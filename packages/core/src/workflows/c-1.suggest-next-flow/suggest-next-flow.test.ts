@@ -21,6 +21,7 @@ describe('C-1: SuggestNextFlow', () => {
           title: 'Daily Review',
           description: '日次レビュー',
           status: 'active',
+          priorityScore: 80,
           issueIds: [],
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -30,6 +31,7 @@ describe('C-1: SuggestNextFlow', () => {
           title: 'Weekly Planning',
           description: '週次計画',
           status: 'active',
+          priorityScore: 70,
           issueIds: [],
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -77,11 +79,11 @@ describe('C-1: SuggestNextFlow', () => {
       const mockEmitter = createMockWorkflowEmitter();
 
       const event: SystemEvent = {
-        type: 'FLOW_COMPLETED',
+        type: 'FLOW_STATUS_CHANGED',
         payload: {
-          trigger: 'flow_completed',
-          completedFlowId: 'flow-0',
-          currentTime: new Date().toISOString(),
+          flowId: 'flow-0',
+          oldStatus: 'active' as const,
+          newStatus: 'completed' as const,
         },
       };
 
@@ -184,11 +186,12 @@ describe('C-1: SuggestNextFlow', () => {
       const mockEmitter = createMockWorkflowEmitter();
 
       const event: SystemEvent = {
-        type: 'SCHEDULED_TIME_REACHED',
+        type: 'SCHEDULE_TRIGGERED',
         payload: {
-          trigger: 'morning',
-          currentTime: '2024-01-01T09:00:00Z',
-          timezone: 'Asia/Tokyo',
+          issueId: 'issue-1',
+          scheduleId: 'schedule-1',
+          scheduledTime: '2024-01-01T09:00:00Z',
+          action: 'reminder',
         },
       };
 
@@ -260,11 +263,9 @@ describe('C-1: SuggestNextFlow', () => {
       const event: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
         payload: {
-          trigger: 'user_request',
-          userState: {
-            energy: 'low',
-            availableTime: 15,
-          },
+          userId: 'user-1',
+          content: 'Next flow suggestion with low energy',
+          timestamp: new Date().toISOString(),
         },
       };
 
@@ -290,7 +291,11 @@ describe('C-1: SuggestNextFlow', () => {
 
       const event: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
-        payload: {},
+        payload: {
+          userId: 'user-1',
+          content: 'Test request',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const result = await suggestNextFlowWorkflow.executor(event, mockContext, mockEmitter);
@@ -351,9 +356,11 @@ describe('C-1: SuggestNextFlow', () => {
       const mockEmitter = createMockWorkflowEmitter();
 
       const event: SystemEvent = {
-        type: 'FLOW_COMPLETED',
+        type: 'FLOW_STATUS_CHANGED',
         payload: {
-          completedFlowId: 'non-existent',
+          flowId: 'non-existent',
+          oldStatus: 'active' as const,
+          newStatus: 'completed' as const,
         },
       };
 
@@ -431,11 +438,11 @@ describe('C-1: SuggestNextFlow', () => {
       const mockEmitter = createMockWorkflowEmitter();
 
       const event: SystemEvent = {
-        type: 'CONTEXT_SWITCHED',
+        type: 'USER_REQUEST_RECEIVED',
         payload: {
-          constraints: {
-            excludeFlowIds: ['flow-1', 'flow-2'],
-          },
+          userId: 'user-1',
+          content: 'Context switch with constraints',
+          timestamp: new Date().toISOString(),
         },
       };
 
@@ -461,7 +468,11 @@ describe('C-1: SuggestNextFlow', () => {
 
       const event: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
-        payload: {},
+        payload: {
+          userId: 'user-1',
+          content: 'Test request',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const result = await suggestNextFlowWorkflow.executor(event, mockContext, mockEmitter);
@@ -505,7 +516,11 @@ describe('C-1: SuggestNextFlow', () => {
 
       const event: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
-        payload: {},
+        payload: {
+          userId: 'user-1',
+          content: 'Test request',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const result = await suggestNextFlowWorkflow.executor(event, mockContext, mockEmitter);
@@ -522,26 +537,35 @@ describe('C-1: SuggestNextFlow', () => {
   });
 
   describe('トリガー条件', () => {
-    it('FLOW_COMPLETEDイベントで起動する', () => {
+    it('FLOW_STATUS_CHANGEDイベントで起動する', () => {
       const event: SystemEvent = {
-        type: 'FLOW_COMPLETED',
-        payload: {},
+        type: 'FLOW_STATUS_CHANGED',
+        payload: {
+          flowId: 'flow-1',
+          oldStatus: 'active' as const,
+          newStatus: 'completed' as const,
+        },
       };
 
-      const canTrigger = suggestNextFlowWorkflow.triggers.condition(event);
+      const canTrigger = suggestNextFlowWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
-      expect(suggestNextFlowWorkflow.triggers.eventTypes).toContain('FLOW_COMPLETED');
+      expect(suggestNextFlowWorkflow.triggers.eventTypes).toContain('FLOW_STATUS_CHANGED');
     });
 
-    it('SCHEDULED_TIME_REACHEDイベントで起動する', () => {
+    it('SCHEDULE_TRIGGEREDイベントで起動する', () => {
       const event: SystemEvent = {
-        type: 'SCHEDULED_TIME_REACHED',
-        payload: {},
+        type: 'SCHEDULE_TRIGGERED',
+        payload: {
+          issueId: 'issue-1',
+          scheduleId: 'schedule-1',
+          scheduledTime: new Date().toISOString(),
+          action: 'reminder' as const,
+        },
       };
 
-      const canTrigger = suggestNextFlowWorkflow.triggers.condition(event);
+      const canTrigger = suggestNextFlowWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
-      expect(suggestNextFlowWorkflow.triggers.eventTypes).toContain('SCHEDULED_TIME_REACHED');
+      expect(suggestNextFlowWorkflow.triggers.eventTypes).toContain('SCHEDULE_TRIGGERED');
     });
 
     it('優先度が適切に設定されている', () => {

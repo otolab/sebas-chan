@@ -209,10 +209,9 @@ export const suggestNextFlowWorkflow: WorkflowDefinition = {
   description: '次に取り組むべき最適なFlowを提案',
   triggers: {
     eventTypes: [
-      'FLOW_COMPLETED',
-      'SCHEDULED_TIME_REACHED',
+      'FLOW_STATUS_CHANGED',
+      'SCHEDULE_TRIGGERED',
       'USER_REQUEST_RECEIVED',
-      'CONTEXT_SWITCHED',
     ],
     priority: 25,
     condition: (event) => {

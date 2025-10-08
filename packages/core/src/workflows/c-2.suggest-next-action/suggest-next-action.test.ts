@@ -83,7 +83,8 @@ describe('C-2: SuggestNextActionForIssue', () => {
         type: 'HIGH_PRIORITY_ISSUE_DETECTED',
         payload: {
           issueId: 'issue-1',
-          trigger: 'requested',
+          priority: 80,
+          reason: 'High priority issue detected',
         },
       };
 
@@ -174,8 +175,8 @@ describe('C-2: SuggestNextActionForIssue', () => {
         type: 'ISSUE_STALLED',
         payload: {
           issueId: 'stalled-issue',
-          trigger: 'stalled',
           stalledDays: 7,
+          lastUpdate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
         },
       };
 
@@ -231,12 +232,9 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const event: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
         payload: {
-          issueId: 'issue-2',
-          trigger: 'user_stuck',
-          userContext: {
-            previousAttempts: ['Direct fix attempt 1', 'Direct fix attempt 2'],
-            blockers: ['Cannot reproduce locally'],
-          },
+          userId: 'user-1',
+          content: 'Help with issue-2, stuck and cannot reproduce locally',
+          timestamp: new Date().toISOString(),
         },
       };
 
@@ -303,6 +301,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
         payload: {
           issueId: 'current-issue',
           priority: 90,
+          reason: 'Similar issues found',
         },
       };
 
@@ -331,6 +330,8 @@ describe('C-2: SuggestNextActionForIssue', () => {
         type: 'HIGH_PRIORITY_ISSUE_DETECTED',
         payload: {
           issueId: 'non-existent',
+          priority: 90,
+          reason: 'Non-existent issue test',
         },
       };
 
@@ -388,7 +389,11 @@ describe('C-2: SuggestNextActionForIssue', () => {
         type: 'ISSUE_CREATED',
         payload: {
           issueId: 'issue-no-knowledge',
-          trigger: 'new_issue',
+          issue: createMockIssue({
+            id: 'issue-no-knowledge',
+            title: 'New issue without knowledge',
+          }),
+          createdBy: 'user' as const,
         },
       };
 
@@ -439,13 +444,9 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const event: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
         payload: {
-          issueId: 'issue-quick',
-          requestDetail: {
-            level: 'quick',
-            constraints: {
-              timeLimit: 10,
-            },
-          },
+          userId: 'user-1',
+          content: 'Quick action for issue-quick, time limit 10 minutes',
+          timestamp: new Date().toISOString(),
         },
       };
 
@@ -474,6 +475,8 @@ describe('C-2: SuggestNextActionForIssue', () => {
         type: 'HIGH_PRIORITY_ISSUE_DETECTED',
         payload: {
           issueId: 'issue-1',
+          priority: 90,
+          reason: 'Database error test',
         },
       };
 
@@ -514,6 +517,8 @@ describe('C-2: SuggestNextActionForIssue', () => {
         type: 'HIGH_PRIORITY_ISSUE_DETECTED',
         payload: {
           issueId: 'issue-1',
+          priority: 90,
+          reason: 'AI service error test',
         },
       };
 
@@ -534,7 +539,11 @@ describe('C-2: SuggestNextActionForIssue', () => {
     it('HIGH_PRIORITY_ISSUE_DETECTEDイベントで起動する', () => {
       const event: SystemEvent = {
         type: 'HIGH_PRIORITY_ISSUE_DETECTED',
-        payload: { priority: 90 },
+        payload: {
+          issueId: 'test-issue',
+          priority: 90,
+          reason: 'Trigger test',
+        },
       };
 
       const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
@@ -545,7 +554,11 @@ describe('C-2: SuggestNextActionForIssue', () => {
     it('低優先度のISSUE_CREATEDイベントでは起動しない', () => {
       const event: SystemEvent = {
         type: 'ISSUE_CREATED',
-        payload: { priority: 30 },
+        payload: {
+          issueId: 'low-priority-issue',
+          issue: createMockIssue({ id: 'low-priority-issue' }),
+          createdBy: 'user' as const,
+        },
       };
 
       const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
@@ -555,7 +568,11 @@ describe('C-2: SuggestNextActionForIssue', () => {
     it('高優先度のISSUE_CREATEDイベントで起動する', () => {
       const event: SystemEvent = {
         type: 'ISSUE_CREATED',
-        payload: { priority: 80 },
+        payload: {
+          issueId: 'high-priority-issue',
+          issue: createMockIssue({ id: 'high-priority-issue', priority: 80 }),
+          createdBy: 'user' as const,
+        },
       };
 
       const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
@@ -565,7 +582,11 @@ describe('C-2: SuggestNextActionForIssue', () => {
     it('USER_REQUEST_RECEIVEDイベントで起動する', () => {
       const event: SystemEvent = {
         type: 'USER_REQUEST_RECEIVED',
-        payload: {},
+        payload: {
+          userId: 'user-1',
+          content: 'Trigger test',
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
