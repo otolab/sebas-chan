@@ -56,7 +56,7 @@ export async function setupAIServiceForTest(): Promise<AIService | null> {
     console.error('AI Service initialization failed:', error);
     console.error('Error details:', {
       message: (error as Error).message,
-      stack: (error as Error).stack
+      stack: (error as Error).stack,
     });
     return null;
   }
