@@ -221,3 +221,24 @@ export function createMockPondEntry(overrides?: Partial<PondEntry>): PondEntry {
     ...overrides,
   };
 }
+
+/**
+ * よく使うモックFlowを生成
+ */
+export function createMockFlow(overrides?: Partial<Flow>): Flow {
+  const baseFlow: Flow = {
+    id: 'flow-test-123',
+    title: 'Test Flow',
+    description: 'Test Flow Description',
+    status: 'active',
+    priorityScore: 0.5,
+    issueIds: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  return {
+    ...baseFlow,
+    ...overrides,
+  };
+}
