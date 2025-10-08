@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { CoreEngine } from './engine.js';
 import { CoreAgent } from '@sebas-chan/core';
+import type { DBClient } from '@sebas-chan/db';
 import { Event } from '@sebas-chan/shared-types';
 
 vi.mock('@sebas-chan/core', async () => {
@@ -41,8 +42,8 @@ vi.mock('@sebas-chan/db');
 
 describe('CoreEngine', () => {
   let engine: CoreEngine;
-  let mockDbClient: Partial<import('@sebas-chan/db').DBClient>;
-  let mockCoreAgent: Partial<import('@sebas-chan/core').CoreAgent>;
+  let mockDbClient: Partial<DBClient>;
+  let mockCoreAgent: Partial<CoreAgent>;
 
   beforeEach(async () => {
     // DBClientモックの設定
@@ -92,7 +93,7 @@ describe('CoreEngine', () => {
 
     vi.mocked(CoreAgent).mockImplementation(() => mockCoreAgent);
 
-    engine = new CoreEngine(mockCoreAgent as any, mockDbClient as any);
+    engine = new CoreEngine(mockCoreAgent as CoreAgent, mockDbClient as DBClient);
     vi.useFakeTimers();
   });
 

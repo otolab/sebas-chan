@@ -213,9 +213,10 @@ export class DBClient extends EventEmitter {
 
     this.worker.on('error', (error) => {
       console.error('Failed to start Python worker:', error);
-      console.error('  Error code:', (error as any).code);
-      console.error('  Error syscall:', (error as any).syscall);
-      console.error('  Error path:', (error as any).path);
+      const errorWithCode = error as NodeJS.ErrnoException;
+      console.error('  Error code:', errorWithCode.code);
+      console.error('  Error syscall:', errorWithCode.syscall);
+      console.error('  Error path:', errorWithCode.path);
       workerError = error;
       this.emit('error', error);
     });
