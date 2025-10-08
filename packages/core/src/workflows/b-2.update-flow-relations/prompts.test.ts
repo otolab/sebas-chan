@@ -10,8 +10,9 @@ import { z } from 'zod';
 import type { Flow, Issue } from '@sebas-chan/shared-types';
 import type { FlowAnalysis } from './actions.js';
 import { flowRelationPromptModule } from './prompts.js';
-import { setupAIServiceForTest } from '../../ai/test-helper.js';
+import { setupAIServiceForTest } from '../test-ai-helper.js';
 import { createMockFlow, createMockIssue } from '../test-utils.js';
+import type { MaterialElement } from '../shared/material-utils.js';
 
 /**
  * 出力スキーマのZodバリデータ
@@ -75,7 +76,7 @@ describe('UpdateFlowRelations Prompts', () => {
         createMockIssue({
           id: 'issue-001',
           title: 'ログイン機能実装',
-          status: 'in_progress'
+          status: 'open'
         }),
         createMockIssue({
           id: 'issue-002',
@@ -99,7 +100,7 @@ describe('UpdateFlowRelations Prompts', () => {
         ],
         recentChanges: ['issue-001'],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const compiled = compile(flowRelationPromptModule, context);
@@ -137,21 +138,21 @@ describe('UpdateFlowRelations Prompts', () => {
         ],
         recentChanges: [],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const compiled = compile(flowRelationPromptModule, context);
-      const materials = compiled.data.filter((item: any) => item.type === 'material');
+      const materials = compiled.data.filter((item) => item.type === 'material') as MaterialElement[];
 
       // Flow分析のマテリアルが存在することを確認
-      const flowMaterial = materials.find((m: any) => m.id === 'flow-analysis-flow-001');
+      const flowMaterial = materials.find((m) => m.id === 'flow-analysis-flow-001');
       expect(flowMaterial).toBeDefined();
       expect(flowMaterial?.title).toContain('Flow分析: テストFlow');
       expect(flowMaterial?.content).toContain('完了率: 75%');
       expect(flowMaterial?.content).toContain('停滞期間: 10日');
 
       // Issueのマテリアルも存在することを確認
-      const issueMaterial = materials.find((m: any) => m.id === 'issue-issue-001');
+      const issueMaterial = materials.find((m) => m.id === 'issue-issue-001');
       expect(issueMaterial).toBeDefined();
       expect(issueMaterial?.title).toContain('テストIssue');
       expect(issueMaterial?.title).toContain('(Flow: flow-001)');
@@ -173,7 +174,7 @@ describe('UpdateFlowRelations Prompts', () => {
         flowAnalysis: [createFlowAnalysis(flow, issues, 50, 0)],
         recentChanges: ['issue-001', 'issue-002'],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const compiled = compile(flowRelationPromptModule, context);
@@ -187,7 +188,7 @@ describe('UpdateFlowRelations Prompts', () => {
         flowAnalysis: [],
         recentChanges: [],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const compiled = compile(flowRelationPromptModule, context);
@@ -202,17 +203,17 @@ describe('UpdateFlowRelations Prompts', () => {
         flowAnalysis: [],
         recentChanges: [],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const compiled = compile(flowRelationPromptModule, context);
-      const instructions = compiled.data.find((item: any) => item.type === 'instructions');
+      const instructionsData = compiled.data.find((item: any) => item.type === 'instructions') as any;
 
-      expect(instructions).toBeDefined();
-      expect(instructions?.content).toContain('healthy');
-      expect(instructions?.content).toContain('needs_attention');
-      expect(instructions?.content).toContain('stale');
-      expect(instructions?.content).toContain('obsolete');
+      expect(instructionsData).toBeDefined();
+      expect(instructionsData?.content).toContain('healthy');
+      expect(instructionsData?.content).toContain('needs_attention');
+      expect(instructionsData?.content).toContain('stale');
+      expect(instructionsData?.content).toContain('obsolete');
     });
 
     it('観点の妥当性評価の指示が含まれる', () => {
@@ -220,15 +221,15 @@ describe('UpdateFlowRelations Prompts', () => {
         flowAnalysis: [],
         recentChanges: [],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const compiled = compile(flowRelationPromptModule, context);
-      const instructions = compiled.data.find((item: any) => item.type === 'instructions');
+      const instructionsData = compiled.data.find((item: any) => item.type === 'instructions') as any;
 
-      expect(instructions?.content).toContain('観点（perspective）の妥当性');
-      expect(instructions?.content).toContain('現在も有効か');
-      expect(instructions?.content).toContain('更新が必要か');
+      expect(instructionsData?.content).toContain('観点（perspective）の妥当性');
+      expect(instructionsData?.content).toContain('現在も有効か');
+      expect(instructionsData?.content).toContain('更新が必要か');
     });
   });
 
@@ -255,7 +256,7 @@ describe('UpdateFlowRelations Prompts', () => {
         createMockIssue({
           id: 'issue-001',
           title: '新機能の実装',
-          status: 'in_progress'
+          status: 'open'
         }),
         createMockIssue({
           id: 'issue-002',
@@ -270,7 +271,7 @@ describe('UpdateFlowRelations Prompts', () => {
         ],
         recentChanges: ['issue-001'],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
@@ -315,7 +316,7 @@ describe('UpdateFlowRelations Prompts', () => {
         ],
         recentChanges: [],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
@@ -359,7 +360,7 @@ describe('UpdateFlowRelations Prompts', () => {
         ],
         recentChanges: [],
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
@@ -409,7 +410,7 @@ describe('UpdateFlowRelations Prompts', () => {
         ],
         recentChanges: ['issue-002'], // APIクライアントが変更された
         knowledgeBase: [],
-        state: {}
+        currentState: '初期状態'
       };
 
       const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
