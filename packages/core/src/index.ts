@@ -2,7 +2,7 @@ import { RecordType } from './workflows/recorder.js';
 import { WorkflowRegistry } from './workflows/workflow-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './workflows/context.js';
-import type { AgentEvent } from './types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import {
   ingestInputWorkflow,
   processUserRequestWorkflow,
@@ -27,7 +27,7 @@ class CoreAgent {
    */
   public async executeWorkflow(
     workflow: WorkflowDefinition,
-    event: AgentEvent,
+    event: SystemEvent,
     context: WorkflowContextInterface,
     emitter: WorkflowEventEmitterInterface
   ): Promise<WorkflowResult> {
@@ -71,7 +71,6 @@ class CoreAgent {
 }
 
 // 型の再エクスポート
-export type { AgentEvent } from './types.js';
 // SystemEventと関連型はshared-typesから直接インポートすること
 export type { SystemEvent } from '@sebas-chan/shared-types';
 export { WorkflowRecorder, RecordType } from './workflows/recorder.js';

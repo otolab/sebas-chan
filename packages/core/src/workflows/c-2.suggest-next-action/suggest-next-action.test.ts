@@ -4,7 +4,7 @@
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { suggestNextActionWorkflow } from './index.js';
-import type { SystemEvent, Issue, Knowledge, Flow } from '@sebas-chan/shared-types';
+import type { Issue, Knowledge, Flow, SystemEvent } from '@sebas-chan/shared-types';
 import { createCustomMockContext, createMockWorkflowEmitter, createMockIssue, createMockKnowledge, createMockWorkflowRecorder } from '../test-utils.js';
 import { RecordType } from '../recorder.js';
 
@@ -261,7 +261,6 @@ describe('C-2: SuggestNextActionForIssue', () => {
           id: 'resolved-issue-1',
           title: 'Similar DB timeout',
           status: 'closed',
-          resolution: 'Increased connection pool size',
         }),
       ];
 
@@ -538,7 +537,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
         payload: { priority: 90 },
       };
 
-      const canTrigger = suggestNextActionWorkflow.triggers.condition(event);
+      const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
       expect(suggestNextActionWorkflow.triggers.eventTypes).toContain('HIGH_PRIORITY_ISSUE_DETECTED');
     });
@@ -549,7 +548,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
         payload: { priority: 30 },
       };
 
-      const canTrigger = suggestNextActionWorkflow.triggers.condition(event);
+      const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(false);
     });
 
@@ -559,7 +558,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
         payload: { priority: 80 },
       };
 
-      const canTrigger = suggestNextActionWorkflow.triggers.condition(event);
+      const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
     });
 
@@ -569,7 +568,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
         payload: {},
       };
 
-      const canTrigger = suggestNextActionWorkflow.triggers.condition(event);
+      const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
     });
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { extractKnowledgeWorkflow } from './index.js';
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { TestDriver } from '@moduler-prompt/driver';
 import { WorkflowRecorder } from '../recorder.js';
@@ -10,7 +10,7 @@ import { createCustomMockContext, createMockWorkflowEmitter } from '../test-util
 describe('ExtractKnowledge Workflow (A-3)', () => {
   let mockContext: ReturnType<typeof createCustomMockContext>;
   let mockEmitter: ReturnType<typeof createMockWorkflowEmitter>;
-  let mockEvent: AgentEvent;
+  let mockEvent: SystemEvent;
 
   const mockKnowledge: Knowledge = {
     id: 'knowledge-existing',
