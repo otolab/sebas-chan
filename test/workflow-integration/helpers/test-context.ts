@@ -9,37 +9,43 @@ import type { Storage } from '@sebas-chan/shared-types';
  * 利用可能なドライバーを環境から自動選択
  */
 export async function createTestAIService(): Promise<AIService | null> {
-  const aiService = new AIService();
+  // テスト用のデフォルト設定
+  // 環境に応じて、実際の設定ファイルを読み込むか、このデフォルトを使用
+  const config = {
+    models: [
+      {
+        model: 'test-model',
+        provider: 'test' as const,
+        capabilities: ['fast', 'structured'] as any,
+        priority: 10,
+        enabled: true
+      },
+      {
+        model: 'mlx-community/gemma-3-27b-it-qat-4bit',
+        provider: 'mlx' as const,
+        capabilities: ['local', 'fast', 'structured'] as any,
+        priority: 30,
+        enabled: true
+      }
+    ],
+    drivers: {
+      test: {},
+      mlx: {}
+    }
+  };
 
-  // 利用可能なドライバーをチェック
-  const availableDrivers = await aiService.getAvailableDrivers();
+  const aiService = new AIService(config);
 
-  if (availableDrivers.length === 0) {
-    console.warn('No AI drivers available for testing. Tests will be skipped.');
+  // 利用可能なモデルをチェック
+  const models = aiService.selectModels([]);
+
+  if (models.length === 0) {
+    console.warn('No AI models available for testing. Tests will be skipped.');
     return null;
   }
 
-  // MLXドライバーが利用可能な場合は優先
-  const mlxDriver = availableDrivers.find(d => d.name === 'mlx');
-  if (mlxDriver) {
-    // MLXドライバー用の設定
-    await aiService.configure({
-      defaultDriver: 'mlx',
-      drivers: {
-        mlx: {
-          model: 'mlx-community/gemma-3-27b-it-qat-4bit'
-        }
-      }
-    });
-    console.info('Using MLX driver with gemma-3-27b-it-qat-4bit for testing');
-  } else {
-    // 他の利用可能なドライバーを使用
-    const firstDriver = availableDrivers[0];
-    await aiService.configure({
-      defaultDriver: firstDriver.name
-    });
-    console.info(`Using ${firstDriver.name} driver for testing`);
-  }
+  // 利用可能なモデルの情報を出力
+  console.info(`Available models: ${models.map(m => `${m.provider}:${m.model}`).join(', ')}`);
 
   return aiService;
 }

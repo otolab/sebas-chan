@@ -1,0 +1,36 @@
+{
+  "_comment": "AI駆動テスト用の設定ファイル例",
+  "_note": "このファイルをai-test-config.jsonとしてコピーし、環境に応じて設定してください",
+  "models": [
+    {
+      "model": "gpt-4o-mini",
+      "provider": "openai",
+      "capabilities": ["streaming", "japanese", "fast", "structured"],
+      "priority": 10,
+      "enabled": true
+    },
+    {
+      "model": "claude-3-5-sonnet-20241022",
+      "provider": "anthropic",
+      "capabilities": ["streaming", "reasoning", "coding", "structured"],
+      "priority": 20,
+      "enabled": true
+    },
+    {
+      "model": "mlx-community/gemma-3-27b-it-qat-4bit",
+      "provider": "mlx",
+      "capabilities": ["local", "fast", "structured"],
+      "priority": 30,
+      "enabled": true
+    }
+  ],
+  "drivers": {
+    "openai": {
+      "apiKey": "sk-..."
+    },
+    "anthropic": {
+      "apiKey": "sk-ant-..."
+    },
+    "mlx": {}
+  }
+}

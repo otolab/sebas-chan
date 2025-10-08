@@ -162,3 +162,12 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
     expect(result.error).toBe(error);
   });
 });
+
+describe.skipIf(!process.env.ENABLE_AI_TESTS)('ProcessUserRequest Workflow - AI Tests', () => {
+  // AI駆動テストはここに追加
+  // 実際のAIサービスを使用してワークフローの品質を確認
+
+  it.todo('should correctly classify request types with actual AI');
+  it.todo('should generate appropriate Flows from complex user requests');
+  it.todo('should handle multi-intent requests properly');
+});

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { ingestInputWorkflow } from './index.js';
 import type { AgentEvent } from '../../types.js';
 import {
@@ -8,6 +8,7 @@ import {
   createMockPondEntry
 } from '../test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';
+import type { AIService } from '@moduler-prompt/driver';
 
 describe('IngestInput Workflow (Functional)', () => {
   // このテストは「ユーザーに代わってAIが追跡すべき事項」を
@@ -242,5 +243,31 @@ describe('IngestInput Workflow (Functional)', () => {
         reason: 'High severity critical issue detected',
       }),
     });
+  });
+});
+
+// AI品質確認テスト（AIServiceが利用可能な場合のみ実行）
+describe('IngestInput Workflow - with AI Quality Checks', () => {
+  let aiService: AIService | null = null;
+
+  beforeAll(async () => {
+    // AIServiceの利用可能性をチェック
+    const { setupAIServiceForTest } = await import('../test-ai-helper.js');
+    aiService = await setupAIServiceForTest();
+  });
+
+  it.skipIf(() => !aiService)('should classify user inputs with actual AI service', async () => {
+    // 実際のAIを使った品質確認テスト
+    // TODO: 実装
+  });
+
+  it.skipIf(() => !aiService)('should extract appropriate tags from real content', async () => {
+    // 実際のAIを使ったタグ抽出の品質確認
+    // TODO: 実装
+  });
+
+  it.skipIf(() => !aiService)('should handle ambiguous input with AI reasoning', async () => {
+    // 実際のAIを使った曖昧な入力の処理確認
+    // TODO: 実装
   });
 });

@@ -38,6 +38,9 @@ Thumbs.db
 .env.test.local
 .env.production.local
 
+# AI Test Configuration
+ai-test-config.json
+
 # Python
 __pycache__/
 *.py[cod]

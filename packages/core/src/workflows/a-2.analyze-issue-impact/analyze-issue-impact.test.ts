@@ -305,3 +305,12 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
     );
   });
 });
+
+describe.skipIf(!process.env.ENABLE_AI_TESTS)('AnalyzeIssueImpact Workflow - AI Tests', () => {
+  // AI駆動テストはここに追加
+  // 実際のAIサービスを使用してワークフローの品質を確認
+
+  it.todo('should accurately analyze impact scores with actual AI');
+  it.todo('should identify correct relationships between issues');
+  it.todo('should handle context-rich issues with nuanced analysis');
+});
