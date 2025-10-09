@@ -4,11 +4,5 @@
  * イベント型定義は @sebas-chan/shared-types に移行済み
  */
 
-import type { SystemEvent } from '@sebas-chan/shared-types';
-
-/**
- * エージェントイベント
- * ワークフローで使用するイベント型
- * SystemEventの型エイリアスとして定義
- */
-export type AgentEvent = SystemEvent;
+// イベント型定義は @sebas-chan/shared-types に移行済み
+// SystemEventを直接インポートして使用してください

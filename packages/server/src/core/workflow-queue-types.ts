@@ -4,7 +4,7 @@
  */
 
 import type { WorkflowDefinition } from '@sebas-chan/core';
-import type { AgentEvent } from '@sebas-chan/core';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 
 /**
  * ワークフローキューのアイテム
@@ -17,7 +17,7 @@ export interface WorkflowQueueItem {
   workflow: WorkflowDefinition;
 
   /** トリガーとなったイベント */
-  event: AgentEvent;
+  event: SystemEvent;
 
   /** 実行優先度 */
   priority: number;

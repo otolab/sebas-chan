@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 import { ingestInputWorkflow } from './index.js';
-import type { AgentEvent } from '../../types.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
 import {
   createCustomMockContext,
   createMockWorkflowEmitter,
@@ -15,7 +15,7 @@ describe('IngestInput Workflow (Functional)', () => {
   // システムがどう取り込み、Issueとして管理するかを検証します
   let mockContext: ReturnType<typeof createCustomMockContext>;
   let mockEmitter: ReturnType<typeof createMockWorkflowEmitter>;
-  let mockEvent: AgentEvent;
+  let mockEvent: SystemEvent;
 
   beforeEach(() => {
     // モックコンテキストの準備

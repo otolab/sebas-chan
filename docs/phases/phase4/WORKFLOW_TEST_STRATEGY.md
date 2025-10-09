@@ -278,10 +278,13 @@ const driver = await createDriver({
 
 ## まとめ
 
-### 成果（2025-10-07更新）
+### 成果（2025-10-08更新）
 - A系ワークフローのTestDriverパターン統一完了
 - B-2 UpdateFlowRelationsのテスト実装完了
-- テスト総数: 92（13テスト追加）
+- **プロンプトテスト実装開始（Issue #38）**
+  - A-0, A-1のprompts.test.ts実装完了
+  - プロンプトテストガイドライン文書化
+- テスト総数: 106（プロンプトテスト14件追加）
 - ユニットテストの基準を明文化
 
 ### 課題
@@ -297,5 +300,7 @@ const driver = await createDriver({
 ---
 **関連資料**:
 - [Issue #32: TestDriverとAIServiceの適切な使用パターン統一](https://github.com/otolab/sebas-chan/issues/32)
+- [Issue #38: A系統ワークフローのAI駆動テスト実装](https://github.com/otolab/sebas-chan/issues/38)
 - [ISSUE_32_TESTDRIVER_REFACTOR.md](./ISSUE_32_TESTDRIVER_REFACTOR.md)
+- [プロンプトテストガイドライン](../../testing/PROMPT_TESTING_GUIDE.md)
 - [ワークフロー仕様書](../../workflows/SPECIFICATION.md)

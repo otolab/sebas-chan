@@ -218,12 +218,23 @@ export const suggestNextActionWorkflow: WorkflowDefinition = {
     ],
     priority: 25,
     condition: (event) => {
-      // 高優先度Issueの場合のみ（ACTION_REQUESTEDとUSER_STUCKは削除済み）
+      // 高優先度Issueの場合のみ
       if (event.type === 'HIGH_PRIORITY_ISSUE_DETECTED' || event.type === 'USER_REQUEST_RECEIVED') {
         return true;
       }
-      const payload = event.payload as { priority?: number };
-      return (payload.priority ?? 0) > 70;
+
+      // ISSUE_CREATEDイベントの場合はissue.priorityをチェック
+      if (event.type === 'ISSUE_CREATED') {
+        const payload = event.payload as { issue?: { priority?: number } };
+        return (payload.issue?.priority ?? 0) > 70;
+      }
+
+      // ISSUE_STALLEDは常に対応
+      if (event.type === 'ISSUE_STALLED') {
+        return true;
+      }
+
+      return false;
     },
   },
   executor: executeSuggestNextAction,
