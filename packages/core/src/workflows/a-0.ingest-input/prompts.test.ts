@@ -52,7 +52,7 @@ describe('IngestInput Prompts', () => {
         title: '既存のバグ',
         description: 'テストバグの詳細',
         status: 'open',
-        priority: 'high',
+        priority: 80,
         labels: ['bug', 'critical']
       });
 

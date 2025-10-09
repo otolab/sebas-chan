@@ -70,7 +70,7 @@ describe('ProcessUserRequest Prompts', () => {
         id: 'issue-001',
         title: '既存タスク',
         status: 'open',
-        priority: 'high',
+        priority: 80,
         labels: ['urgent']
       });
 
@@ -90,7 +90,7 @@ describe('ProcessUserRequest Prompts', () => {
       expect(issueMaterial).toBeDefined();
       expect(issueMaterial?.title).toContain('既存タスク');
       expect(issueMaterial?.content).toContain('ステータス: open');
-      expect(issueMaterial?.content).toContain('優先度: high');
+      expect(issueMaterial?.content).toContain('優先度: 80');
     });
 
     it('関連Knowledgeがmaterialsセクションに展開される', () => {
@@ -249,7 +249,7 @@ describe('ProcessUserRequest Prompts', () => {
     it('質問リクエストに適切に応答する', async () => {
       const knowledge = createMockKnowledge({
         id: 'know-001',
-        type: 'faq',
+        type: 'factoid',
         content: 'システムのメンテナンス時間は毎週日曜日の深夜2時から4時です'
       });
 
@@ -281,13 +281,13 @@ describe('ProcessUserRequest Prompts', () => {
             id: 'issue-001',
             title: '緊急バグ修正',
             status: 'open',
-            priority: 'high'
+            priority: 80
           }),
           createMockIssue({
             id: 'issue-002',
             title: '重要な機能追加',
-            status: 'in_progress',
-            priority: 'high'
+            status: 'open',
+            priority: 80
           })
         ],
         relatedKnowledge: [],
