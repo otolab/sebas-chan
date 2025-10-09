@@ -73,7 +73,7 @@ describe('analyzeIssueImpact prompts', () => {
             {
               timestamp: new Date(),
               content: 'バグを修正しました',
-              author: 'system',
+              author: 'ai',
             },
           ],
         }),
@@ -123,7 +123,7 @@ describe('analyzeIssueImpact prompts', () => {
           {
             timestamp: new Date(),
             content: '優先度をcriticalに変更しました',
-            author: 'system',
+            author: 'ai',
           },
         ],
       });
@@ -153,7 +153,7 @@ describe('analyzeIssueImpact prompts', () => {
           {
             timestamp: new Date(),
             content: '実装完了、テスト合格',
-            author: 'developer',
+            author: 'user',
           },
         ],
         createdAt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
@@ -185,7 +185,7 @@ describe('analyzeIssueImpact prompts', () => {
           {
             timestamp: new Date(),
             content: '優先度をcriticalに変更',
-            author: 'system',
+            author: 'ai',
           },
         ],
       });
