@@ -72,7 +72,7 @@ describe('IngestInput Prompts', () => {
       expect(issueMaterial).toBeDefined();
       expect(issueMaterial?.title).toContain('既存のバグ');
       expect(issueMaterial?.content).toContain('ステータス: open');
-      expect(issueMaterial?.content).toContain('優先度: high');
+      expect(issueMaterial?.content).toContain('優先度: 80');
       expect(issueMaterial?.content).toContain('ラベル: bug, critical');
     });
 
