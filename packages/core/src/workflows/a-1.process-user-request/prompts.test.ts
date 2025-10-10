@@ -209,6 +209,10 @@ describe('ProcessUserRequest Prompts', () => {
     });
 
     it('Issue作成リクエストを正しく分類する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const context = {
         content: '新しいバグを見つけました。ログイン画面でエラーが発生します。',
         relatedIssues: [],
@@ -221,7 +225,7 @@ describe('ProcessUserRequest Prompts', () => {
         lenient: true,
       });
       const compiled = compile(processUserRequestPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       // スキーマバリデーション
       const output = outputSchemaValidator.parse(result.structuredOutput);
@@ -233,6 +237,10 @@ describe('ProcessUserRequest Prompts', () => {
     });
 
     it('検索リクエストを正しく処理する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const existingIssue = createMockIssue({
         id: 'issue-001',
         title: 'データベースパフォーマンス問題',
@@ -252,7 +260,7 @@ describe('ProcessUserRequest Prompts', () => {
         lenient: true,
       });
       const compiled = compile(processUserRequestPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 
@@ -263,6 +271,10 @@ describe('ProcessUserRequest Prompts', () => {
     });
 
     it('質問リクエストに適切に応答する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const knowledge = createMockKnowledge({
         id: 'know-001',
         type: 'factoid',
@@ -281,7 +293,7 @@ describe('ProcessUserRequest Prompts', () => {
         lenient: true,
       });
       const compiled = compile(processUserRequestPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 
@@ -292,6 +304,10 @@ describe('ProcessUserRequest Prompts', () => {
     });
 
     it('アクションリクエストで適切なイベントを発行する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const context = {
         content: 'すべての高優先度タスクをレビューして、ステータスを更新してください',
         relatedIssues: [
@@ -317,7 +333,7 @@ describe('ProcessUserRequest Prompts', () => {
         lenient: true,
       });
       const compiled = compile(processUserRequestPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 

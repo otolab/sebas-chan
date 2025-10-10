@@ -87,7 +87,7 @@ describe('extractKnowledge prompts', () => {
 
   describe.skipIf(() => process.env.SKIP_AI_TESTS === 'true')('AI実行テスト', () => {
     let aiService: AIService | null;
-    let driver: AIDriver;
+    let driver: AIDriver | null;
 
     beforeAll(async () => {
       aiService = await setupAIServiceForTest();
@@ -105,6 +105,10 @@ describe('extractKnowledge prompts', () => {
     });
 
     it('技術的な知識を正しく抽出できる', async () => {
+      if (!driver) {
+        throw new Error('AI Driver is required for this test');
+      }
+
       const content = `GraphQL APIの実装
 RESTful APIからGraphQLへの移行を完了しました。
 GraphQLスキーマ設計完了。Apollo Serverを採用。
@@ -128,6 +132,10 @@ GraphQLスキーマ設計完了。Apollo Serverを採用。
     });
 
     it('ビジネス知識を正しく抽出できる', async () => {
+      if (!driver) {
+        throw new Error('AI Driver is required for this test');
+      }
+
       const content = `ユーザーオンボーディング改善
 新規ユーザーの離脱率を30%削減することに成功しました。
 ユーザーインタビュー実施。主な離脱要因を特定。
@@ -144,6 +152,10 @@ A/Bテスト完了。離脱率30%削減を確認。`;
     });
 
     it('抽出すべき知識がない場合を正しく判定できる', async () => {
+      if (!driver) {
+        throw new Error('AI Driver is required for this test');
+      }
+
       const content = `定期メンテナンス
 毎月の定期メンテナンスを実施しました。
 ログファイルのローテーション実施。

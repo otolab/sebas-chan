@@ -157,6 +157,10 @@ describe('IngestInput Prompts', () => {
     });
 
     it('エラーメッセージから高優先度Issueを判定する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const context = {
         source: 'error-monitor',
         format: 'text/plain',
@@ -169,7 +173,7 @@ describe('IngestInput Prompts', () => {
         lenient: true,
       });
       const compiled = compile(ingestInputPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       // スキーマバリデーション
       const output = outputSchemaValidator.parse(result.structuredOutput);
@@ -181,6 +185,10 @@ describe('IngestInput Prompts', () => {
     });
 
     it('既存Issueとの関連性を正しく判定する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const existingIssue = createMockIssue({
         id: 'issue-001',
         title: 'データベース接続エラー',
@@ -201,7 +209,7 @@ describe('IngestInput Prompts', () => {
         lenient: true,
       });
       const compiled = compile(ingestInputPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 
@@ -211,6 +219,10 @@ describe('IngestInput Prompts', () => {
     });
 
     it('通常のメッセージを低優先度として分類する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const context = {
         source: 'user-input',
         format: 'text',
@@ -223,7 +235,7 @@ describe('IngestInput Prompts', () => {
         lenient: true,
       });
       const compiled = compile(ingestInputPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 
@@ -233,6 +245,10 @@ describe('IngestInput Prompts', () => {
     });
 
     it('複数の関連Issueから最も適切なものを選択する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const issues = [
         createMockIssue({
           id: 'issue-001',
@@ -266,7 +282,7 @@ describe('IngestInput Prompts', () => {
         lenient: true,
       });
       const compiled = compile(ingestInputPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 

@@ -64,7 +64,7 @@ function createMockContext(
         records.push({ type, data });
       },
       getRecords: () => records,
-    } as WorkflowRecorder,
+    } as unknown as WorkflowRecorder,
   };
 }
 
@@ -135,9 +135,11 @@ describe('CollectSystemStats Workflow', () => {
     const unclusteredEvent = emittedEvents.find((e) => e.type === 'UNCLUSTERED_ISSUES_EXCEEDED');
 
     expect(unclusteredEvent).toBeDefined();
-    expect(unclusteredEvent.payload.count).toBe(21);
-    expect(unclusteredEvent.payload.threshold).toBe(20);
-    expect(unclusteredEvent.payload.issueIds).toHaveLength(21);
+    if (unclusteredEvent && unclusteredEvent.type === 'UNCLUSTERED_ISSUES_EXCEEDED') {
+      expect(unclusteredEvent.payload.count).toBe(21);
+      expect(unclusteredEvent.payload.threshold).toBe(20);
+      expect(unclusteredEvent.payload.issueIds).toHaveLength(21);
+    }
   });
 
   it('should emit ISSUE_STALLED events for stalled issues', async () => {
@@ -218,8 +220,10 @@ describe('CollectSystemStats Workflow', () => {
     const capacityWarning = emittedEvents.find((e) => e.type === 'POND_CAPACITY_WARNING');
 
     expect(capacityWarning).toBeDefined();
-    expect(capacityWarning.payload.usage).toBe(8001);
-    expect(capacityWarning.payload.ratio).toBeGreaterThan(0.8);
+    if (capacityWarning && capacityWarning.type === 'POND_CAPACITY_WARNING') {
+      expect(capacityWarning.payload.usage).toBe(8001);
+      expect(capacityWarning.payload.ratio).toBeGreaterThan(0.8);
+    }
   });
 
   it('should collect and return system statistics', async () => {

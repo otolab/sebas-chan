@@ -249,6 +249,10 @@ describe('UpdateFlowRelations Prompts', () => {
     });
 
     it('健全なFlowを正しく評価する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const flow = createMockFlow({
         id: 'flow-001',
         title: 'アクティブな開発タスク',
@@ -283,7 +287,7 @@ describe('UpdateFlowRelations Prompts', () => {
         lenient: true,
       });
       const compiled = compile(flowRelationPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       // スキーマバリデーション
       const output = outputSchemaValidator.parse(result.structuredOutput);
@@ -296,6 +300,10 @@ describe('UpdateFlowRelations Prompts', () => {
     });
 
     it('停滞しているFlowを検出する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const flow = createMockFlow({
         id: 'flow-001',
         title: '放置されたタスク',
@@ -330,7 +338,7 @@ describe('UpdateFlowRelations Prompts', () => {
         lenient: true,
       });
       const compiled = compile(flowRelationPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 
@@ -343,6 +351,10 @@ describe('UpdateFlowRelations Prompts', () => {
     });
 
     it('完了したFlowを適切に識別する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const flow = createMockFlow({
         id: 'flow-001',
         title: '完了したプロジェクト',
@@ -376,7 +388,7 @@ describe('UpdateFlowRelations Prompts', () => {
         lenient: true,
       });
       const compiled = compile(flowRelationPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 
@@ -390,6 +402,10 @@ describe('UpdateFlowRelations Prompts', () => {
     });
 
     it('複数Flowの関係性を分析する', async () => {
+      if (!aiService) {
+        throw new Error('AI Service is required for this test');
+      }
+
       const flow1 = createMockFlow({
         id: 'flow-001',
         title: 'フロントエンド開発',
@@ -428,7 +444,7 @@ describe('UpdateFlowRelations Prompts', () => {
         lenient: true,
       });
       const compiled = compile(flowRelationPromptModule, context);
-      const result = await driver.query(compiled);
+      const result = await driver!.query(compiled);
 
       const output = outputSchemaValidator.parse(result.structuredOutput);
 

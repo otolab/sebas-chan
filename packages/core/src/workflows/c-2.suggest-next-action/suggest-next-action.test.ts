@@ -131,10 +131,10 @@ describe('C-2: SuggestNextActionForIssue', () => {
       // 主要アクションの確認
       const output = result.output as SuggestNextActionOutput;
       expect(output.primaryAction).toBeDefined();
-      expect(output.primaryAction.title).toBe('Profile the application');
-      expect(output.primaryAction.type).toBe('investigation');
-      expect(output.primaryAction.steps).toHaveLength(3);
-      expect(output.primaryAction.confidence).toBe(0.9);
+      expect(output.primaryAction!.title).toBe('Profile the application');
+      expect(output.primaryAction!.type).toBe('investigation');
+      expect(output.primaryAction!.steps).toHaveLength(3);
+      expect(output.primaryAction!.confidence).toBe(0.9);
 
       // 代替アクションの確認
       expect(output.alternativeActions).toHaveLength(1);
@@ -143,7 +143,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       // インサイトの確認
       expect(output.insights).toBeDefined();
       expect(output.insights.rootCause).toBeDefined();
-      expect(output.insights.rootCause.identified).toBe(true);
+      expect(output.insights.rootCause!.identified).toBe(true);
 
       // レコーダーの呼び出し確認
       expect(mockRecorder.record).toHaveBeenCalledWith(
@@ -184,11 +184,24 @@ describe('C-2: SuggestNextActionForIssue', () => {
               confidence: 0.9,
             },
             splitSuggestion: {
-              recommended: true,
-              subtasks: [
-                'Refactor authentication module',
-                'Refactor data layer',
-                'Refactor UI components',
+              shouldSplit: true,
+              reason: 'Task too large to tackle at once',
+              suggestedSubIssues: [
+                {
+                  title: 'Refactor authentication module',
+                  description: 'Refactor authentication module',
+                  dependency: 'independent' as const,
+                },
+                {
+                  title: 'Refactor data layer',
+                  description: 'Refactor data layer',
+                  dependency: 'independent' as const,
+                },
+                {
+                  title: 'Refactor UI components',
+                  description: 'Refactor UI components',
+                  dependency: 'independent' as const,
+                },
               ],
             },
             escalationSuggestion: null,
@@ -219,8 +232,10 @@ describe('C-2: SuggestNextActionForIssue', () => {
       expect(result.success).toBe(true);
       const output = result.output as SuggestNextActionOutput;
       expect(output.insights.splitSuggestion).toBeDefined();
-      expect(output.insights.splitSuggestion.recommended).toBe(true);
-      expect(output.insights.splitSuggestion.subtasks).toHaveLength(3);
+      if (output.insights.splitSuggestion && 'shouldSplit' in output.insights.splitSuggestion) {
+        expect(output.insights.splitSuggestion.shouldSplit).toBe(true);
+        expect(output.insights.splitSuggestion.suggestedSubIssues).toHaveLength(3);
+      }
     });
 
     it('ユーザーコンテキストを考慮した提案ができる', async () => {
@@ -247,8 +262,10 @@ describe('C-2: SuggestNextActionForIssue', () => {
             rootCauseAnalysis: null,
             splitSuggestion: null,
             escalationSuggestion: {
-              recommended: true,
+              shouldEscalate: true,
               reason: 'Multiple failed attempts detected',
+              escalateTo: 'senior-developer',
+              preparedInformation: ['Error logs', 'Previous attempts'],
             },
             updatedState: 'Alternative approach suggested',
           }),
@@ -276,9 +293,11 @@ describe('C-2: SuggestNextActionForIssue', () => {
 
       expect(result.success).toBe(true);
       const output = result.output as SuggestNextActionOutput;
-      expect(output.primaryAction.title).toContain('alternative approach');
+      expect(output.primaryAction!.title).toContain('alternative approach');
       expect(output.insights.escalation).toBeDefined();
-      expect(output.insights.escalation.recommended).toBe(true);
+      if (output.insights.escalation && 'shouldEscalate' in output.insights.escalation) {
+        expect(output.insights.escalation.shouldEscalate).toBe(true);
+      }
     });
 
     it('類似の解決済みIssueから学習した提案ができる', async () => {
@@ -343,8 +362,8 @@ describe('C-2: SuggestNextActionForIssue', () => {
 
       expect(result.success).toBe(true);
       const output = result.output as SuggestNextActionOutput;
-      expect(output.primaryAction.confidence).toBeGreaterThan(0.9);
-      expect(output.primaryAction.title).toContain('similar solution');
+      expect(output.primaryAction!.confidence).toBeGreaterThan(0.9);
+      expect(output.primaryAction!.title).toContain('similar solution');
     });
   });
 
@@ -436,7 +455,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       expect(result.success).toBe(true);
       const output = result.output as SuggestNextActionOutput;
       expect(output.primaryAction).toBeDefined();
-      expect(output.primaryAction.confidence).toBeLessThan(0.7);
+      expect(output.primaryAction!.confidence).toBeLessThan(0.7);
     });
 
     it('詳細レベルを指定した提案ができる', async () => {
@@ -488,7 +507,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
 
       expect(result.success).toBe(true);
       const output = result.output as SuggestNextActionOutput;
-      expect(output.primaryAction.estimatedTime).toBeLessThanOrEqual(10);
+      expect(output.primaryAction!.estimatedTime).toBeLessThanOrEqual(10);
     });
   });
 

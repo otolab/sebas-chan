@@ -98,7 +98,7 @@ describe('analyzeIssueImpact prompts', () => {
 
   describe.skipIf(() => process.env.SKIP_AI_TESTS === 'true')('AI実行テスト', () => {
     let aiService: AIService | null;
-    let driver: AIDriver;
+    let driver: AIDriver | null;
 
     beforeAll(async () => {
       aiService = await setupAIServiceForTest();
@@ -116,6 +116,10 @@ describe('analyzeIssueImpact prompts', () => {
     });
 
     it('優先度変更の影響を正しく分析できる', async () => {
+      if (!driver) {
+        throw new Error('AI Driver is required for this test');
+      }
+
       const issue = createMockIssue({
         id: 'critical-bug',
         title: '本番環境でのデータ損失バグ',
@@ -141,6 +145,10 @@ describe('analyzeIssueImpact prompts', () => {
     });
 
     it('Issue完了時の知識抽出可否を判定できる', async () => {
+      if (!driver) {
+        throw new Error('AI Driver is required for this test');
+      }
+
       const issue = createMockIssue({
         id: 'completed-feature',
         title: 'ユーザー認証機能の実装',
@@ -168,6 +176,10 @@ describe('analyzeIssueImpact prompts', () => {
     });
 
     it('関連Issueへの影響を検出できる', async () => {
+      if (!driver) {
+        throw new Error('AI Driver is required for this test');
+      }
+
       const issue = createMockIssue({
         id: 'auth-blocked',
         title: '認証システムのブロッキング問題',

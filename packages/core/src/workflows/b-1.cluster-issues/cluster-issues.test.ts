@@ -82,7 +82,7 @@ function createMockContext(issues: Issue[] = [], flows: Flow[] = []): WorkflowCo
         records.push({ type, data });
       },
       getRecords: () => records,
-    } as WorkflowContextInterface['recorder'],
+    } as unknown as WorkflowContextInterface['recorder'],
   };
 }
 
@@ -191,9 +191,8 @@ describe('ClusterIssues Workflow', () => {
       type: 'PERSPECTIVE_TRIGGERED',
       payload: {
         perspective: '週末の予定',
-        requestedBy: 'test-user',
-        context: 'クラスタリングをお願いします',
-        timestamp: new Date().toISOString(),
+        source: 'user',
+        triggerReason: 'クラスタリングをお願いします',
       },
     };
 
@@ -218,9 +217,8 @@ describe('ClusterIssues Workflow', () => {
       type: 'PERSPECTIVE_TRIGGERED',
       payload: {
         perspective: 'プロジェクトA',
-        requestedBy: 'test-user',
-        context: 'クラスタリングをお願いします',
-        timestamp: new Date().toISOString(),
+        source: 'user',
+        triggerReason: 'クラスタリングをお願いします',
       },
     };
 
@@ -281,9 +279,8 @@ describe('ClusterIssues Workflow', () => {
       type: 'PERSPECTIVE_TRIGGERED',
       payload: {
         perspective: 'タスク整理',
-        requestedBy: 'test-user',
-        context: 'クラスタリング実行',
-        timestamp: new Date().toISOString(),
+        source: 'user',
+        triggerReason: 'クラスタリング実行',
       },
     };
 
@@ -307,9 +304,8 @@ describe('ClusterIssues Workflow', () => {
       type: 'PERSPECTIVE_TRIGGERED',
       payload: {
         perspective: 'タスク整理',
-        requestedBy: 'test-user',
-        context: 'クラスタリング実行',
-        timestamp: new Date().toISOString(),
+        source: 'user',
+        triggerReason: 'クラスタリング実行',
       },
     };
 
