@@ -70,12 +70,19 @@ describe('API Unit Tests', () => {
     });
 
     // エラーハンドリングミドルウェア（JSONパースエラーを含む）
-    app.use((err: Error & { status?: number; body?: unknown }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      if (err instanceof SyntaxError && 'body' in err) {
-        return res.status(400).json({ error: 'Invalid JSON' });
+    app.use(
+      (
+        err: Error & { status?: number; body?: unknown },
+        _req: express.Request,
+        res: express.Response,
+        _next: express.NextFunction
+      ) => {
+        if (err instanceof SyntaxError && 'body' in err) {
+          return res.status(400).json({ error: 'Invalid JSON' });
+        }
+        res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
       }
-      res.status(err.status || 500).json({ error: err.message || 'Internal Server Error' });
-    });
+    );
   });
 
   describe('GET /health', () => {
