@@ -1,10 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { extractKnowledgeWorkflow } from './index.js';
-import type { SystemEvent } from '@sebas-chan/shared-types';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
-import { TestDriver } from '@moduler-prompt/driver';
-import { WorkflowRecorder } from '../recorder.js';
-import type { Knowledge } from '@sebas-chan/shared-types';
+import type { SystemEvent, Knowledge } from '@sebas-chan/shared-types';
 import { createCustomMockContext, createMockWorkflowEmitter } from '../test-utils.js';
 
 describe('ExtractKnowledge Workflow (A-3)', () => {
@@ -257,7 +253,8 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     const result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect((result.output as any).isDuplicate).toBe(true);
+    // 重複の確認はStateやemittedイベントで確認する
+    expect(result.context.state).toContain('重複');
 
     // 既存Knowledgeの評価が更新されることを確認
     expect(mockContext.storage.updateKnowledge).not.toHaveBeenCalled();
@@ -296,7 +293,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     const result = await extractKnowledgeWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect((result.output as any).knowledgeId).toBe(null);
+    // 短いコンテンツの場合、知識が作成されないことを確認
 
     // Knowledgeは作成されない
     expect(mockContext.storage.createKnowledge).not.toHaveBeenCalled();
@@ -425,19 +422,17 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
 
     expect(result.success).toBe(true);
 
-    // 知識が作成された場合のみ確認
-    if ((result.output as any).knowledgeId) {
-      expect(mockContext.storage.createKnowledge).toHaveBeenCalledWith(
-        expect.objectContaining({
-          sources: expect.arrayContaining([
-            expect.objectContaining({
-              type: 'issue',
-              issueId: 'issue-123',
-            }),
-          ]),
-        })
-      );
-    }
+    // 知識が作成されたことを確認
+    expect(mockContext.storage.createKnowledge).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sources: expect.arrayContaining([
+          expect.objectContaining({
+            type: 'issue',
+            issueId: 'issue-123',
+          }),
+        ]),
+      })
+    );
   });
 
   it('should update state with extraction information', async () => {

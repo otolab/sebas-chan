@@ -7,7 +7,6 @@ import {
   createMockIssue,
   createMockPondEntry,
 } from '../test-utils.js';
-import { TestDriver } from '@moduler-prompt/driver';
 
 describe('ProcessUserRequest Workflow (A-1)', () => {
   let mockContext: ReturnType<typeof createCustomMockContext>;
@@ -95,7 +94,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect((result.output as any).requestType).toBe('issue');
+    // contextへの操作から判断（Issue作成が呼ばれていることを確認）
+    expect(mockContext.storage.createIssue).toHaveBeenCalled();
   });
 
   it('should emit events for issue creation', async () => {
@@ -103,8 +103,12 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
 
     expect(result.success).toBe(true);
 
-    // 発行されたイベントを確認（eventsEmittedフィールドを確認）
-    expect((result.output as any).eventsEmitted).toContain('ISSUE_CREATED');
+    // 発行されたイベントを確認（emitterのスパイから確認）
+    expect(mockEmitter.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'ISSUE_CREATED',
+      })
+    );
   });
 
   it('should handle missing request content', async () => {
@@ -129,7 +133,8 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect((result.output as any).response).toContain('リクエスト内容が空です');
+    // responseはDriverの応答に含まれるので、Stateに反映されることで確認
+    expect(result.context.state).toContain('内容なしリクエスト処理');
   });
 
   it('should classify schedule request', async () => {
@@ -167,8 +172,12 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
     const result = await processUserRequestWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect((result.output as any).requestType).toBe('schedule');
-    expect((result.output as any).eventsEmitted).toContain('SCHEDULE_TRIGGERED');
+    // イベント発行をemitterのスパイから確認
+    expect(mockEmitter.emit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'SCHEDULE_TRIGGERED',
+      })
+    );
   });
 
   it('should handle errors gracefully', async () => {

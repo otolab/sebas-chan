@@ -4,19 +4,25 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { collectSystemStatsWorkflow } from './index.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface, WorkflowRecorder } from '../context.js';
 import type { SystemEvent, Issue, Flow, PondEntry } from '@sebas-chan/shared-types';
+import { RecordType } from '../recorder.js';
 
 // モックコンテキストの作成
 
 // >>> 共通のmockがあるはずです。毎回全部作らないほうがよいですね。
+
+interface MockRecord {
+  type: RecordType;
+  data: unknown;
+}
 
 function createMockContext(
   issues: Issue[] = [],
   flows: Flow[] = [],
   pondEntries: PondEntry[] = []
 ): WorkflowContextInterface {
-  const records: any[] = [];
+  const records: MockRecord[] = [];
 
   return {
     state: '初期状態',
@@ -54,23 +60,27 @@ function createMockContext(
       throw new Error('Not needed for D-2');
     },
     recorder: {
-      record: (type: any, data: any) => {
+      record: (type: RecordType, data: unknown) => {
         records.push({ type, data });
       },
       getRecords: () => records,
-    } as any,
+    } as WorkflowRecorder,
   };
 }
 
 // モックイベントエミッターの作成
-function createMockEmitter(): WorkflowEventEmitterInterface & { getEmittedEvents: () => any[] } {
-  const emittedEvents: any[] = [];
+interface MockEmitter extends WorkflowEventEmitterInterface {
+  getEmittedEvents: () => SystemEvent[];
+}
+
+function createMockEmitter(): MockEmitter {
+  const emittedEvents: SystemEvent[] = [];
   return {
-    emit: (event: any) => {
+    emit: (event: SystemEvent) => {
       emittedEvents.push(event);
     },
     getEmittedEvents: () => emittedEvents,
-  } as any;
+  };
 }
 
 describe('CollectSystemStats Workflow', () => {

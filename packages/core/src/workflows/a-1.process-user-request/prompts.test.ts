@@ -7,12 +7,12 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { compile } from '@moduler-prompt/core';
 import { z } from 'zod';
-import type { Issue, Knowledge, PondEntry } from '@sebas-chan/shared-types';
 import { processUserRequestPromptModule } from './prompts.js';
 import { setupAIServiceForTest } from '../test-ai-helper.js';
 import { createMockIssue, createMockKnowledge, createMockPondEntry } from '../test-utils.js';
 import { REQUEST_TYPE, ACTION_TYPE } from '../shared/constants.js';
 import type { MaterialElement } from '../shared/material-utils.js';
+import type { AIService } from '@moduler-prompt/driver';
 
 /**
  * 出力スキーマのZodバリデータ
@@ -199,7 +199,7 @@ describe('ProcessUserRequest Prompts', () => {
   });
 
   describe.skipIf(() => process.env.SKIP_AI_TESTS === 'true')('AI実行テスト', () => {
-    let aiService: any;
+    let aiService: AIService | null;
 
     beforeAll(async () => {
       aiService = await setupAIServiceForTest();

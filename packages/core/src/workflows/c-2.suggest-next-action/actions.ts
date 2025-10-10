@@ -24,6 +24,35 @@ export interface IssueAnalysis {
 }
 
 /**
+ * 類似の解決済みIssueの型定義
+ */
+export interface SimilarResolvedIssue {
+  id: string;
+  title: string;
+  description?: string;
+  resolution?: string;
+  similarity: number;
+}
+
+/**
+ * ユーザーコンテキストの型定義
+ */
+export interface UserContext {
+  userId?: string;
+  recentActivity?: string[];
+  preferences?: Record<string, unknown>;
+}
+
+/**
+ * リクエスト詳細の型定義
+ */
+export interface RequestDetail {
+  level?: 'summary' | 'standard' | 'detailed';
+  constraints?: Record<string, unknown>;
+  focusArea?: string;
+}
+
+/**
  * アクション提案結果の型定義
  */
 export interface ActionSuggestionResult {
@@ -89,10 +118,10 @@ export async function suggestIssueActions(
   driver: AIDriver,
   issueAnalysis: IssueAnalysis,
   relevantKnowledge: Knowledge[],
-  similarResolvedIssues: any[],
+  similarResolvedIssues: SimilarResolvedIssue[],
   flowPerspective: Flow | null,
-  userContext: any,
-  requestDetail: any,
+  userContext: UserContext,
+  requestDetail: RequestDetail,
   currentState: string
 ): Promise<ActionSuggestionResult> {
   const context = {
@@ -149,8 +178,8 @@ export async function applyActionSuggestions(
     const issue = await storage.getIssue(issueId);
     const splitIssue = await storage.createIssue({
       title: `Issue "${issue?.title || issueId}" の分割を検討`,
-      description: `## 提案内容\nIssue (${issueId}) を複数のサブIssueに分割することを提案します。\n\n## 理由\n${actionResult.splitSuggestion.reason}\n\n## 提案されるサブIssue\n${actionResult.splitSuggestion.suggestedSubIssues.map((sub: any) => `- ${sub.title}: ${sub.description}`).join('\n')}\n\n## アクション\nこの提案をレビューして、適切な場合は手動でサブIssueを作成してください。`,
-      status: 'open' as any,
+      description: `## 提案内容\nIssue (${issueId}) を複数のサブIssueに分割することを提案します。\n\n## 理由\n${actionResult.splitSuggestion.reason}\n\n## 提案されるサブIssue\n${actionResult.splitSuggestion.suggestedSubIssues.map((sub) => `- ${sub.title}: ${sub.description}`).join('\n')}\n\n## アクション\nこの提案をレビューして、適切な場合は手動でサブIssueを作成してください。`,
+      status: 'open',
       priority: PRIORITY.MEDIUM,
       labels: ['suggestion', 'issue-split'],
       updates: [

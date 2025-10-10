@@ -5,7 +5,6 @@
 import type {
   Knowledge,
   KnowledgeSource,
-  Issue,
   KnowledgeExtractableEvent,
   IssueStatusChangedEvent,
   RecurringPatternDetectedEvent,

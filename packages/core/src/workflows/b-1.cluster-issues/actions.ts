@@ -60,34 +60,18 @@ export async function clusterIssues(
 }
 
 /**
- * クラスター検出イベントを発行
+ * クラスター検出イベントを発行（廃止予定）
+ * @deprecated B-1内でFlow作成まで行うため、このイベント発行は不要
  */
 export async function emitClusterDetectedEvents(
   clusteringResult: ClusteringResult,
   emitter: WorkflowEventEmitterInterface,
   recorder: WorkflowRecorder
 ): Promise<void> {
-  for (const cluster of clusteringResult.clusters) {
-    // 3件以上のIssueを含むクラスタのみイベント発行
-    if (cluster.issueIds.length >= 3) {
-      emitter.emit({
-        type: 'ISSUES_CLUSTER_DETECTED',
-        payload: {
-          clusterId: cluster.id,
-          perspective: cluster.perspective,
-          issueIds: cluster.issueIds,
-          similarity: 0.8, // TODO: 実際の類似度計算を実装
-          suggestedPriority: cluster.suggestedPriority,
-          autoCreate: cluster.perspective.type === 'project', // プロジェクト型は自動作成
-        },
-      });
-
-      recorder.record(RecordType.INFO, {
-        event: 'ISSUES_CLUSTER_DETECTED',
-        clusterId: cluster.id,
-        issueCount: cluster.issueIds.length,
-        perspectiveType: cluster.perspective.type,
-      });
-    }
-  }
+  // B-1内でFlow作成まで行うため、イベント発行は不要になりました
+  // 将来的にこの関数は削除予定
+  recorder.record(RecordType.INFO, {
+    message: 'Cluster detection completed, Flow creation handled internally',
+    clustersFound: clusteringResult.clusters.length,
+  });
 }

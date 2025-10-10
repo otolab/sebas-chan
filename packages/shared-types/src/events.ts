@@ -34,7 +34,6 @@ export type EventType =
   | 'KNOWLEDGE_EXTRACTABLE'
   | 'HIGH_PRIORITY_ISSUE_DETECTED'
   | 'HIGH_PRIORITY_FLOW_DETECTED'
-  | 'ISSUES_CLUSTER_DETECTED'
   | 'PERSPECTIVE_TRIGGERED'
   | 'UNCLUSTERED_ISSUES_EXCEEDED'
   | 'POND_CAPACITY_WARNING'
@@ -215,25 +214,6 @@ export interface HighPriorityFlowDetectedEvent {
 }
 
 /**
- * ISSUES_CLUSTER_DETECTED: 類似するIssue群のクラスターが検出された
- */
-export interface IssuesClusterDetectedEvent {
-  type: 'ISSUES_CLUSTER_DETECTED';
-  payload: {
-    clusterId: string;
-    perspective: {
-      type: 'project' | 'temporal' | 'thematic' | 'dependency';
-      title: string;
-      description: string;
-    };
-    issueIds: string[];
-    similarity: number; // 0-1
-    suggestedPriority?: number;
-    autoCreate?: boolean; // Flow自動作成フラグ
-  };
-}
-
-/**
  * PERSPECTIVE_TRIGGERED: 重要な観点が発見された
  */
 export interface PerspectiveTriggeredEvent {
@@ -387,7 +367,6 @@ export type SystemEvent =
   | KnowledgeCreatedEvent
   | HighPriorityIssueDetectedEvent
   | HighPriorityFlowDetectedEvent
-  | IssuesClusterDetectedEvent
   | PerspectiveTriggeredEvent
   | ScheduleTriggeredEvent
   | SystemMaintenanceDueEvent
@@ -441,7 +420,6 @@ export type WorkflowType =
   | 'ANALYZE_ISSUE_IMPACT' // A-2
   | 'EXTRACT_KNOWLEDGE' // A-3
   | 'DEFINE_SYSTEM_RULE'
-  | 'CREATE_FLOW' // B-0
   | 'CLUSTER_ISSUES' // B-1
   | 'UPDATE_FLOW_RELATIONS' // B-2
   | 'UPDATE_FLOW_PRIORITIES' // B-3
@@ -471,8 +449,7 @@ export const EVENT_TO_WORKFLOWS: Record<EventType, WorkflowType[]> = {
   KNOWLEDGE_CREATED: [], // 終端イベント
   HIGH_PRIORITY_ISSUE_DETECTED: ['SUGGEST_NEXT_ACTION'],
   HIGH_PRIORITY_FLOW_DETECTED: ['SUGGEST_NEXT_ACTION'],
-  ISSUES_CLUSTER_DETECTED: ['CREATE_FLOW'],
-  PERSPECTIVE_TRIGGERED: ['CREATE_FLOW'],
+  PERSPECTIVE_TRIGGERED: ['CLUSTER_ISSUES'],
   SCHEDULE_TRIGGERED: ['HANDLE_SCHEDULED_TASK'],
   SYSTEM_MAINTENANCE_DUE: ['COLLECT_SYSTEM_STATS'],
   IDLE_TIME_DETECTED: ['COLLECT_SYSTEM_STATS'],

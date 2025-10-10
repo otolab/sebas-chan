@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { compile, merge } from '@moduler-prompt/core';
+import { compile } from '@moduler-prompt/core';
 import { extractKnowledgePromptModule } from './prompts.js';
 import { extractKnowledge } from './actions.js';
 import { setupAIServiceForTest } from '../test-ai-helper.js';
-import type { Issue, Knowledge } from '@sebas-chan/shared-types';
+import type { Knowledge } from '@sebas-chan/shared-types';
 import type { KnowledgeExtractionContext } from './prompts.js';
+import type { AIService, AIDriver } from '@moduler-prompt/driver';
 
 describe('extractKnowledge prompts', () => {
   describe('プロンプトモジュールの構造', () => {
@@ -85,13 +86,18 @@ describe('extractKnowledge prompts', () => {
   });
 
   describe.skipIf(() => process.env.SKIP_AI_TESTS === 'true')('AI実行テスト', () => {
-    let aiService: any;
+    let aiService: AIService | null;
+    let driver: AIDriver;
 
     beforeAll(async () => {
       aiService = await setupAIServiceForTest();
       if (!aiService) {
         throw new Error('AI Service is required for these tests');
       }
+      // ドライバーを作成
+      driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
     });
 
     afterAll(() => {
@@ -106,7 +112,7 @@ GraphQLスキーマ設計完了。Apollo Serverを採用。
 移行完了。クエリ効率が40%向上。`;
 
       const result = await extractKnowledge(
-        aiService,
+        driver,
         'issue',
         0.9,
         content,
@@ -128,14 +134,7 @@ GraphQLスキーマ設計完了。Apollo Serverを採用。
 インタラクティブチュートリアル実装。プログレスバー追加。
 A/Bテスト完了。離脱率30%削減を確認。`;
 
-      const result = await extractKnowledge(
-        aiService,
-        'issue',
-        0.85,
-        content,
-        [],
-        'プロダクト開発'
-      );
+      const result = await extractKnowledge(driver, 'issue', 0.85, content, [], 'プロダクト開発');
 
       expect(result).toBeDefined();
       expect(result.extractedKnowledge).toBeDefined();
@@ -150,14 +149,7 @@ A/Bテスト完了。離脱率30%削減を確認。`;
 ログファイルのローテーション実施。
 キャッシュクリア完了。`;
 
-      const result = await extractKnowledge(
-        aiService,
-        'issue',
-        0.3,
-        content,
-        [],
-        '日常的な運用作業'
-      );
+      const result = await extractKnowledge(driver, 'issue', 0.3, content, [], '日常的な運用作業');
 
       expect(result).toBeDefined();
       expect(result.extractedKnowledge).toBeDefined();

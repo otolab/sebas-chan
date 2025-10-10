@@ -6,7 +6,6 @@
  */
 
 import type { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
-import type { ExtendedIssue, ExtendedFlow, ExtendedKnowledge } from '../extended-types.js';
 
 /** MaterialElement型（ModulerPrompt仕様） */
 export interface MaterialElement {
@@ -19,8 +18,7 @@ export interface MaterialElement {
 /**
  * IssueをMaterialElementに変換
  */
-export function issueToMaterial(issue: Issue | ExtendedIssue): MaterialElement {
-  const extIssue = issue as ExtendedIssue;
+export function issueToMaterial(issue: Issue): MaterialElement {
   const content = [
     `ID: ${issue.id}`,
     `説明: ${issue.description}`,
@@ -29,10 +27,6 @@ export function issueToMaterial(issue: Issue | ExtendedIssue): MaterialElement {
     `作成日: ${issue.createdAt}`,
     issue.updatedAt ? `更新日: ${issue.updatedAt}` : '',
     issue.labels?.length > 0 ? `ラベル: ${issue.labels.join(', ')}` : '',
-    extIssue.source ? `ソース: ${extIssue.source}` : '',
-    extIssue.flowIds && extIssue.flowIds.length > 0
-      ? `所属Flow: ${extIssue.flowIds.join(', ')}`
-      : '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -48,21 +42,14 @@ export function issueToMaterial(issue: Issue | ExtendedIssue): MaterialElement {
 /**
  * FlowをMaterialElementに変換
  */
-export function flowToMaterial(flow: Flow | ExtendedFlow): MaterialElement {
-  const extFlow = flow as ExtendedFlow;
+export function flowToMaterial(flow: Flow): MaterialElement {
   const content = [
     `ID: ${flow.id}`,
-    extFlow.perspective ? `観点タイプ: ${extFlow.perspective.type}` : '',
-    extFlow.perspective ? `観点説明: ${extFlow.perspective.description}` : '',
-    extFlow.relationships ? `関係性: ${extFlow.relationships}` : '',
-    extFlow.completionCriteria ? `完了条件: ${extFlow.completionCriteria}` : '',
+    `説明: ${flow.description}`,
+    `ステータス: ${flow.status}`,
     `優先度スコア: ${flow.priorityScore || 0}`,
-    extFlow.urgencyLevel ? `緊急度: ${extFlow.urgencyLevel}` : '',
     `Issue数: ${flow.issueIds.length}`,
     flow.issueIds.length > 0 ? `Issue一覧: ${flow.issueIds.join(', ')}` : '',
-    extFlow.health ? `健全性: ${extFlow.health}` : '',
-    extFlow.deadline ? `締切: ${extFlow.deadline}` : '',
-    extFlow.recommendedTimeSlot ? `推奨時間帯: ${extFlow.recommendedTimeSlot}` : '',
   ]
     .filter(Boolean)
     .join('\n');
@@ -78,14 +65,11 @@ export function flowToMaterial(flow: Flow | ExtendedFlow): MaterialElement {
 /**
  * KnowledgeをMaterialElementに変換
  */
-export function knowledgeToMaterial(knowledge: Knowledge | ExtendedKnowledge): MaterialElement {
-  const extKnowledge = knowledge as ExtendedKnowledge;
+export function knowledgeToMaterial(knowledge: Knowledge): MaterialElement {
   const content = [
     `ID: ${knowledge.id}`,
     `タイプ: ${knowledge.type}`,
     `内容: ${knowledge.content}`,
-    extKnowledge.summary ? `要約: ${extKnowledge.summary}` : '',
-    extKnowledge.confidence !== undefined ? `信頼度: ${extKnowledge.confidence}` : '',
     knowledge.sources?.length > 0
       ? `ソース: ${knowledge.sources
           .map((s) =>
@@ -103,21 +87,15 @@ export function knowledgeToMaterial(knowledge: Knowledge | ExtendedKnowledge): M
           )
           .join(', ')}`
       : '',
-    extKnowledge.tags && extKnowledge.tags.length > 0
-      ? `タグ: ${extKnowledge.tags.join(', ')}`
-      : '',
-    extKnowledge.metadata ? `メタデータ: ${JSON.stringify(extKnowledge.metadata)}` : '',
     `作成日: ${knowledge.createdAt}`,
   ]
     .filter(Boolean)
     .join('\n');
 
-  const title = extKnowledge.title || `Knowledge: ${knowledge.type}`;
-
   return {
     type: 'material' as const,
     id: `knowledge-${knowledge.id}`,
-    title,
+    title: `Knowledge: ${knowledge.type}`,
     content,
   };
 }
@@ -183,7 +161,7 @@ export function issueToMaterialWithFields(
  * 関連性を含むFlowAnalysis型をMaterialElementに変換
  */
 export interface FlowAnalysis {
-  flow: Flow | ExtendedFlow;
+  flow: Flow;
   issues: Issue[];
   completionRate?: number;
   staleness?: number;
@@ -191,13 +169,11 @@ export interface FlowAnalysis {
 }
 
 export function flowAnalysisToMaterial(analysis: FlowAnalysis): MaterialElement {
-  const extFlow = analysis.flow as ExtendedFlow;
   const content = [
     `Flow ID: ${analysis.flow.id}`,
     `タイトル: ${analysis.flow.title}`,
-    extFlow.perspective ? `観点タイプ: ${extFlow.perspective.type}` : '',
-    extFlow.perspective ? `観点説明: ${extFlow.perspective.description}` : '',
-    extFlow.relationships ? `関係性記述: ${extFlow.relationships}` : '',
+    `説明: ${analysis.flow.description}`,
+    `ステータス: ${analysis.flow.status}`,
     analysis.completionRate !== undefined ? `完了率: ${analysis.completionRate}%` : '',
     analysis.staleness !== undefined ? `停滞期間: ${analysis.staleness}日` : '',
     analysis.perspectiveRelevance !== undefined

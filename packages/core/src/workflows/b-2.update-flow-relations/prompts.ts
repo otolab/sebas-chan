@@ -11,10 +11,12 @@ import { issuesToMaterials } from '../shared/material-utils.js';
 /**
  * Flow関係性分析のコンテキスト
  */
+import type { Knowledge, Flow } from '@sebas-chan/shared-types';
+
 interface FlowRelationContext extends StateContext {
   flowAnalysis: FlowAnalysis[];
   recentChanges: string[];
-  knowledgeBase: any[];
+  knowledgeBase: Knowledge[];
 }
 
 /**
@@ -29,7 +31,7 @@ function flowAnalysisToMaterial(analysis: FlowAnalysis) {
       `ID: ${analysis.flow.id}`,
       `タイトル: ${analysis.flow.title}`,
       `説明: ${analysis.flow.description}`,
-      `健全性: ${(analysis.flow as any).health || 'unknown'}`,
+      `健全性: ${'health' in analysis.flow ? (analysis.flow as Flow & { health?: string }).health : 'unknown'}`,
       `優先度スコア: ${analysis.flow.priorityScore}`,
       `Issue数: ${analysis.issues.length}`,
       `完了率: ${analysis.completionRate}%`,

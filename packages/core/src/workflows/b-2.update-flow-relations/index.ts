@@ -10,7 +10,7 @@
  * - Flow間の関係性の再評価
  */
 
-import type { SystemEvent } from '@sebas-chan/shared-types';
+import type { SystemEvent, Issue, Flow } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -132,7 +132,7 @@ async function executeUpdateFlowRelations(
 /**
  * 完了率を計算
  */
-function calculateCompletionRate(issues: any[]): number {
+function calculateCompletionRate(issues: (Issue | null)[]): number {
   if (issues.length === 0) return 0;
   const closedCount = issues.filter((i) => i?.status === 'closed').length;
   return Math.round((closedCount / issues.length) * 100);
@@ -141,7 +141,7 @@ function calculateCompletionRate(issues: any[]): number {
 /**
  * 停滞度を計算（日数）
  */
-function calculateStaleness(flow: any): number {
+function calculateStaleness(flow: Flow): number {
   const lastUpdated = new Date(flow.updatedAt);
   const now = new Date();
   return Math.floor((now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24));

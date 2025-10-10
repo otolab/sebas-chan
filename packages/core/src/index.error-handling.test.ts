@@ -159,8 +159,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         triggers: {
           eventTypes: ['LARGE_PAYLOAD_WORKFLOW'],
         },
-        executor: async (_event) => {
-          const payload = _event.payload as { metadata?: { largeArray?: unknown[] } };
+        executor: async (event) => {
+          const payload = event.payload as { metadata?: { largeArray?: unknown[] } };
           return {
             success: true,
             context: createMockWorkflowContext(),
@@ -220,8 +220,8 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         triggers: {
           eventTypes: ['ERROR_PRONE_WORKFLOW'],
         },
-        executor: async (_event) => {
-          const payload = _event.payload as { metadata?: { shouldError?: boolean } };
+        executor: async (event) => {
+          const payload = event.payload as { metadata?: { shouldError?: boolean } };
           if (payload.metadata?.shouldError) {
             errorCount++;
             throw new Error(`Error ${errorCount}`);
@@ -279,7 +279,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         triggers: {
           eventTypes: ['EMPTY_TYPE_WORKFLOW'],
         },
-        executor: async (_event) => {
+        executor: async (event) => {
           return {
             success: !event.type || (event.type as string) === '',
             context: createMockWorkflowContext(),
@@ -323,7 +323,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         triggers: {
           eventTypes: ['LONG_TYPE_WORKFLOW'],
         },
-        executor: async (_event) => {
+        executor: async (event) => {
           return {
             success: true,
             context: createMockWorkflowContext(),
@@ -367,7 +367,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         triggers: {
           eventTypes: ['UNDEFINED_PAYLOAD_WORKFLOW'],
         },
-        executor: async (_event) => {
+        executor: async (event) => {
           return {
             success: true,
             context: createMockWorkflowContext(),
@@ -378,7 +378,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
 
       const event = {
         type: 'DATA_ARRIVED',
-        payload: undefined as any,
+        payload: undefined as unknown,
       } as SystemEvent;
 
       const mockContext = createMockWorkflowContext();
@@ -450,7 +450,7 @@ describe('CoreAgent - Error Handling and Recovery', () => {
         triggers: {
           eventTypes: ['CONCURRENT_WORKFLOW'],
         },
-        executor: async (_event) => {
+        executor: async (event) => {
           // ランダムな処理時間
           await new Promise((resolve) => setTimeout(resolve, Math.random() * 20));
 
@@ -459,11 +459,17 @@ describe('CoreAgent - Error Handling and Recovery', () => {
             throw new Error('Random error during processing');
           }
 
-          const payload = _event.payload as { index?: number };
+          const payload = event.payload as {
+            source: string;
+            content: string;
+            pondEntryId: string;
+            timestamp: string;
+            metadata?: { index?: number };
+          };
           return {
             success: true,
             context: createMockWorkflowContext(),
-            output: { processed: payload.index },
+            output: { processed: payload.metadata?.index },
           };
         },
       };

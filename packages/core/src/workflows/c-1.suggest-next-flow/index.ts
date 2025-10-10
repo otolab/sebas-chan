@@ -17,7 +17,6 @@ import type {
   WorkflowStorageInterface,
 } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
-import type { ExtendedFlow } from '../extended-types.js';
 import { RecordType } from '../recorder.js';
 import { suggestNextFlow, recordSuggestion } from './actions.js';
 
@@ -172,7 +171,7 @@ async function executeSuggestNextFlow(
 /**
  * 作業時間内かチェック
  */
-function isWorkingHours(date: Date, timezone?: string): boolean {
+function isWorkingHours(date: Date, _timezone?: string): boolean {
   // 簡易実装（実際はタイムゾーン考慮が必要）
   const hour = date.getHours();
   return hour >= 9 && hour < 18;
@@ -193,22 +192,19 @@ async function getRecentCompletedFlows(
 }
 
 /**
- * 今後の締切を取得
+ * アクティブなFlowを取得
+ * （deadlineとpriorityフィールドは存在しないため、単にアクティブなFlowを返す）
  */
 async function getUpcomingDeadlines(
   storage: WorkflowStorageInterface,
-  days: number
-): Promise<ExtendedFlow[]> {
-  const flows = (await storage.searchFlows('status:active')) as ExtendedFlow[];
-  const future = new Date();
-  future.setDate(future.getDate() + days);
+  _days: number
+): Promise<Flow[]> {
+  const flows = await storage.searchFlows('status:active');
 
-  return flows
-    .filter((f) => f.deadline && new Date(f.deadline) <= future)
-    .sort((a, b) => {
-      if (!a.deadline || !b.deadline) return 0;
-      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-    });
+  // 更新日時の新しい順にソート
+  return flows.sort((a, b) => {
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
 }
 
 /**
@@ -220,7 +216,7 @@ export const suggestNextFlowWorkflow: WorkflowDefinition = {
   triggers: {
     eventTypes: ['FLOW_STATUS_CHANGED', 'SCHEDULE_TRIGGERED', 'USER_REQUEST_RECEIVED'],
     priority: 25,
-    condition: (event) => {
+    condition: (_event) => {
       // 提案の頻度制限（実際はcontextから最後の提案時刻を取得すべき）
       // ここでは簡略化のため常にtrueを返す
       return true;

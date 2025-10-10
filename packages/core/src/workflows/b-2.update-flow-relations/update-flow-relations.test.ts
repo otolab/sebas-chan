@@ -15,7 +15,6 @@ import {
   createMockWorkflowEmitter,
   createMockIssue,
 } from '../test-utils.js';
-import { TestDriver } from '@moduler-prompt/driver';
 
 describe('UpdateFlowRelations Workflow (B-2)', () => {
   let mockContext: ReturnType<typeof createCustomMockContext>;
@@ -300,7 +299,7 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
 
       expect(result.success).toBe(true);
       // 空のissues配列で処理が継続されることを確認
-      expect((result.output as any)?.updatedFlows).toBeDefined();
+      expect((result.output as { updatedFlows?: string[] })?.updatedFlows).toBeDefined();
     });
 
     it('複数のFlowを処理する', async () => {
@@ -357,9 +356,10 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
       );
 
       expect(result.success).toBe(true);
-      expect((result.output as any)?.updatedFlows).toHaveLength(2);
-      expect((result.output as any)?.updatedFlows).toContain('flow-1');
-      expect((result.output as any)?.updatedFlows).toContain('flow-2');
+      const output = result.output as { updatedFlows?: string[] };
+      expect(output?.updatedFlows).toHaveLength(2);
+      expect(output?.updatedFlows).toContain('flow-1');
+      expect(output?.updatedFlows).toContain('flow-2');
     });
   });
 

@@ -180,9 +180,8 @@ describe('IngestInput Workflow (Functional)', () => {
     const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect((result.output as any).updatedIssueIds).toContain('issue-456');
 
-    // 既存Issueが更新されたことを確認
+    // 既存Issueが更新されたことを確認（contextへの操作をチェック）
     expect(mockContext.storage.updateIssue).toHaveBeenCalledWith(
       'issue-456',
       expect.objectContaining({
@@ -254,9 +253,8 @@ describe('IngestInput Workflow (Functional)', () => {
     const result = await ingestInputWorkflow.executor(mockEvent, mockContext, mockEmitter);
 
     expect(result.success).toBe(true);
-    expect((result.output as any).severity).toBe('critical');
 
-    // HIGH_PRIORITY_ISSUE_DETECTEDイベントが発行されることを確認
+    // HIGH_PRIORITY_ISSUE_DETECTEDイベントが発行されることを確認（severityはイベントで確認）
     expect(mockEmitter.emit).toHaveBeenCalledWith({
       type: 'HIGH_PRIORITY_ISSUE_DETECTED',
       payload: expect.objectContaining({

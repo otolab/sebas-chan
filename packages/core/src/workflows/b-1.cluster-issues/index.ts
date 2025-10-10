@@ -1,23 +1,26 @@
 /**
  * B-1: CLUSTER_ISSUES ワークフロー
  *
- * 関連するIssue群を自動的にグルーピングし、Flow生成の候補を発見する。
- * 「観点」を自動抽出し、Flowによる位置づけを提案する。
+ * PERSPECTIVE_TRIGGEREDイベントを受けて、観点に基づいてIssue群をクラスタリングし、
+ * 関連するIssueをまとめたFlowを自動作成する。
  *
  * このワークフローの役割：
- * - 未整理のIssueを分析してグループ化
- * - 各グループに対する「観点」の発見
- * - Flow作成の必要性判断と提案
+ * - A-0等から発行されるPERSPECTIVE_TRIGGEREDイベントを処理
+ * - 全Issueを対象にクラスタリング分析（Flowに属するものも含む）
+ * - クラスタリング結果に基づいてFlowを自動作成
+ * - 一つのIssueが複数のFlowに属することを許容（複数の観点から管理）
  */
 
-import type { SystemEvent, Issue } from '@sebas-chan/shared-types';
+import type {
+  SystemEvent,
+  Issue,
+  Flow,
+  PerspectiveTriggeredEvent
+} from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
 import { clusterIssues, emitClusterDetectedEvents } from './actions.js';
-
-// Issue型を拡張してflowIdsを含める
-type IssueWithFlowIds = Issue & { flowIds?: string[] };
 
 /**
  * B-1: CLUSTER_ISSUES ワークフロー実行関数
@@ -37,34 +40,48 @@ async function executeClusterIssues(
       payload: event.payload,
     });
 
-    // 1. Issue収集
-    const issues = await storage.searchIssues('status:open');
+    // PERSPECTIVE_TRIGGEREDイベントの処理
+    const perspectiveEvent = event as PerspectiveTriggeredEvent;
 
-    // Flowに属していないIssueのみ抽出
-    // NOTE: issueにflowIdsプロパティがあると仮定（実際の実装では関係性を別途管理するか検討）
-    const unclusteredIssues = (issues as IssueWithFlowIds[]).filter(
-      (issue) => !issue.flowIds || issue.flowIds.length === 0
-    );
-
-    // 処理可否判定
-    if (unclusteredIssues.length < 3) {
+    // 既存Flowの更新の場合はスキップ
+    if (perspectiveEvent.payload.flowId) {
       recorder.record(RecordType.INFO, {
-        message: 'Not enough unclustered issues',
-        count: unclusteredIssues.length,
+        message: 'Existing flow update, skipping clustering',
+        flowId: perspectiveEvent.payload.flowId,
       });
       return {
         success: true,
         context,
         output: {
           skipped: true,
-          reason: 'Not enough unclustered issues',
-          issueCount: unclusteredIssues.length,
+          reason: 'Existing flow update',
         },
       };
     }
 
-    // 2. 既存Flowの取得
+    // 観点に基づいてクラスタリング実行
+    // 1. 全てのオープンなIssueを収集
+    const issues = await storage.searchIssues('status:open');
+
+    // 2. 既存Flowの取得（重複チェック用）
     const existingFlows = await storage.searchFlows('status:active');
+
+    // 処理可否判定
+    if (issues.length < 3) {
+      recorder.record(RecordType.INFO, {
+        message: 'Not enough issues for clustering',
+        count: issues.length,
+      });
+      return {
+        success: true,
+        context,
+        output: {
+          skipped: true,
+          reason: 'Not enough issues for clustering',
+          issueCount: issues.length,
+        },
+      };
+    }
 
     // 3. AIドライバーの作成
     const driver = await createDriver({
@@ -72,10 +89,17 @@ async function executeClusterIssues(
       preferredCapabilities: ['japanese', 'fast'],
     });
 
-    // 4. クラスタリング分析
+    // 4. 観点に基づくクラスタリング分析
+    // perspectiveEventのperspectiveを考慮してクラスタリング
+    recorder.record(RecordType.INFO, {
+      message: 'Starting clustering with perspective',
+      perspective: perspectiveEvent.payload.perspective,
+      triggerReason: perspectiveEvent.payload.triggerReason,
+    });
+
     const clusteringResult = await clusterIssues(
       driver,
-      unclusteredIssues,
+      issues,
       existingFlows,
       context.state
     );
@@ -85,8 +109,46 @@ async function executeClusterIssues(
       clustersFound: clusteringResult.clusters.length,
     });
 
-    // 5. クラスター検出イベント発行
-    await emitClusterDetectedEvents(clusteringResult, emitter, recorder);
+    // 5. クラスターからFlow作成
+    const createdFlows: Flow[] = [];
+    for (const cluster of clusteringResult.clusters) {
+      // 3件以上のIssueを含むクラスタのみFlow作成
+      if (cluster.issueIds.length >= 3) {
+        const newFlow: Flow = {
+          id: `flow-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          title: cluster.perspective.title,
+          description: cluster.perspective.description,
+          status: 'active',
+          priorityScore: cluster.suggestedPriority / 100, // 0-100を0-1に変換
+          issueIds: cluster.issueIds,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        await storage.createFlow(newFlow);
+        createdFlows.push(newFlow);
+
+        // FLOW_CREATEDイベントを発火
+        emitter.emit({
+          type: 'FLOW_CREATED',
+          payload: {
+            flowId: newFlow.id,
+            flow: newFlow,
+            createdBy: 'workflow' as const,
+            sourceWorkflow: 'ClusterIssues',
+            perspective: cluster.perspective.description,
+          },
+        });
+
+        recorder.record(RecordType.INFO, {
+          event: 'FLOW_CREATED',
+          flowId: newFlow.id,
+          title: newFlow.title,
+          issueCount: newFlow.issueIds.length,
+          perspectiveType: cluster.perspective.type,
+        });
+      }
+    }
 
     // 6. 結果を返す
     return {
@@ -98,9 +160,11 @@ async function executeClusterIssues(
       output: {
         clusters: clusteringResult.clusters,
         insights: clusteringResult.insights,
+        flowsCreated: createdFlows.length,
         metrics: {
-          totalIssuesAnalyzed: unclusteredIssues.length,
+          totalIssuesAnalyzed: issues.length,
           clustersFound: clusteringResult.clusters.length,
+          flowsCreated: createdFlows.length,
           executionTime: Date.now(),
         },
       },
@@ -123,9 +187,11 @@ async function executeClusterIssues(
  */
 export const clusterIssuesWorkflow: WorkflowDefinition = {
   name: 'ClusterIssues',
-  description: '関連するIssue群を自動的にグルーピングし、Flow生成の候補を発見する',
+  description: '観点に基づいてIssue群をクラスタリングし、Flowを作成する',
   triggers: {
-    eventTypes: ['USER_REQUEST_RECEIVED'],
+    eventTypes: [
+      'PERSPECTIVE_TRIGGERED',  // A-0等から観点ベースのクラスタリング要求
+    ],
     priority: 10,
   },
   executor: executeClusterIssues,

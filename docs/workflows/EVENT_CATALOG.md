@@ -102,6 +102,36 @@ sequenceDiagram
 4. **動的イベント発行**: 内容に応じて適切なイベントを発行
 5. **連鎖実行**: 発行されたイベントが次のワークフローをトリガー
 
+### 観点ベースのクラスタリングフロー（A-0→B-1連携）
+
+```mermaid
+sequenceDiagram
+    User->>API: 観点ベースのリクエスト
+    Note over User,API: "週末の予定を整理して"
+    API->>EventBus: USER_REQUEST_RECEIVED
+    EventBus->>A-0: ProcessUserRequest起動
+    A-0->>A-0: 観点の抽出
+    A-0->>EventBus: PERSPECTIVE_TRIGGERED
+    Note over EventBus: perspective: "週末の予定"
+    EventBus->>B-1: ClusterIssues起動
+    B-1->>Storage: 全Issueを取得
+    B-1->>AI: クラスタリング実行
+    B-1->>Storage: Flow作成
+    B-1->>EventBus: FLOW_CREATED
+```
+
+1. **観点ベースのリクエスト**: ユーザーが「週末の予定」「プロジェクトA」等の観点でリクエスト
+2. **A-0で観点抽出**: ProcessUserRequestが自然言語から観点を理解
+3. **PERSPECTIVE_TRIGGERED発行**: 観点情報を含むイベントを発行
+4. **B-1でクラスタリング**: ClusterIssuesが観点に基づいてIssue群を分析
+5. **Flow作成**: クラスタリング結果に基づいて新しいFlowを作成
+6. **FLOW_CREATED発行**: 新しいFlowの作成を通知（将来の拡張用）
+
+**重要な設計思想**:
+- **Flow→Issueの一方向関係**: FlowがIssueを選択し、意味付けする
+- **観点による意味の付与**: Flowは単なるグループではなく、Issueに新たな意味を与える視点
+- **動的な関係性**: 同じIssueが複数のFlowに属することが可能（異なる観点から見られる）
+
 ## 4. イベント定義詳細
 
 ### USER_REQUEST_RECEIVED
@@ -245,6 +275,31 @@ interface IssueStatusChangedEvent {
 ---
 
 
+### PERSPECTIVE_TRIGGERED
+
+**カテゴリ**: 分析イベント
+**説明**: ユーザーから観点ベースのリクエストが発生した
+
+```typescript
+interface PerspectiveTriggeredEvent {
+  type: 'PERSPECTIVE_TRIGGERED';
+  payload: {
+    perspective: string; // 観点の説明（例: "週末の予定", "来週の締切"）
+    requestedBy: string; // ユーザーID
+    context?: string; // 追加のコンテキスト情報
+    timestamp: string;
+  };
+}
+```
+
+**トリガーするワークフロー**:
+
+- B-1: ClusterIssues (優先度: 10)
+
+**発生元**: A-0: ProcessUserRequest
+
+---
+
 ### PATTERN_FOUND
 
 **カテゴリ**: 分析イベント
@@ -270,7 +325,6 @@ interface PatternFoundEvent {
 **トリガーするワークフロー**:
 
 - A-3: ExtractKnowledge (優先度: 20)
-- B-1: ClusterIssues (優先度: 10)
 
 **発生元**: B-1: ClusterIssues, B-4: SalvageFromPond
 
@@ -327,6 +381,34 @@ interface KnowledgeCreatedEvent {
 - なし（終端イベント）
 
 **発生元**: A-3: ExtractKnowledge
+
+---
+
+### FLOW_CREATED
+
+**カテゴリ**: データイベント
+**説明**: 新しいFlowが作成された
+
+```typescript
+interface FlowCreatedEvent {
+  type: 'FLOW_CREATED';
+  payload: {
+    flowId: string;
+    flow: Flow;
+    createdBy: 'user' | 'system' | 'workflow';
+    sourceWorkflow?: string;
+    perspective?: string; // Flowの観点（クラスタリングの基準）
+  };
+}
+```
+
+**トリガーするワークフロー**:
+
+- （将来実装予定: 優先度調整、計画見直し等）
+
+**発生元**: B-1: ClusterIssues
+
+**備考**: 現在は終端イベントだが、将来的に優先度調整や計画見直しのワークフローが購読する可能性がある
 
 ---
 
@@ -435,11 +517,11 @@ type ScheduleAction =
 | ワークフロー             | 発行するイベント                                                   |
 | ------------------------ | ------------------------------------------------------------------ |
 | システム（データ受信時） | `DATA_ARRIVED` (Pond保存済み)                                      |
-| A-0: ProcessUserRequest  | (動的: ユーザーリクエストに応じて各種イベント)                     |
+| A-0: ProcessUserRequest  | `PERSPECTIVE_TRIGGERED`, (動的: ユーザーリクエストに応じて各種イベント) |
 | A-1: IngestInput         | `PATTERN_FOUND`, `ISSUE_CREATED`                                   |
 | A-2: AnalyzeIssueImpact  | `KNOWLEDGE_EXTRACTABLE`, `HIGH_PRIORITY_ISSUE_DETECTED`, `ISSUE_UPDATED` |
 | A-3: ExtractKnowledge    | `KNOWLEDGE_CREATED`                                                |
-| B-1: ClusterIssues       | `PATTERN_FOUND`, `ISSUE_CREATED` (Flow提案)                        |
+| B-1: ClusterIssues       | `FLOW_CREATED`, `PATTERN_FOUND` (クラスタリング結果)               |
 | B-4: SalvageFromPond     | `PATTERN_FOUND`, `KNOWLEDGE_EXTRACTABLE`                           |
 
 ## 5. イベント購読マトリクス
@@ -453,7 +535,8 @@ type ScheduleAction =
 | `KNOWLEDGE_EXTRACTABLE`  | A-3                  | 常に                 |
 | `HIGH_PRIORITY_ISSUE_DETECTED` | C-2           | 常に                 |
 | `HIGH_PRIORITY_FLOW_DETECTED`  | C-2           | 常に                 |
-| `PATTERN_FOUND`          | A-3, B-1             | パターンタイプによる |
+| `PERSPECTIVE_TRIGGERED`  | B-1                  | 常に                 |
+| `PATTERN_FOUND`          | A-3                  | パターンタイプによる |
 
 ## 6. イベント実装ガイドライン
 

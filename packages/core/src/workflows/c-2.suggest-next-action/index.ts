@@ -10,11 +10,18 @@
  * - 類似ケースからの学習と適用
  */
 
-import type { SystemEvent } from '@sebas-chan/shared-types';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
+import type { SystemEvent, Issue } from '@sebas-chan/shared-types';
+import type {
+  WorkflowContextInterface,
+  WorkflowEventEmitterInterface,
+  WorkflowStorageInterface,
+} from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
+import type { SimilarResolvedIssue, UserContext, RequestDetail } from './actions.js';
 import { RecordType } from '../recorder.js';
 import { suggestIssueActions, applyActionSuggestions } from './actions.js';
+
+// ExtendedIssue型は削除（Flow→Issueの一方向関係のため）
 
 /**
  * C-2: SUGGEST_NEXT_ACTION_FOR_ISSUE ワークフロー実行関数
@@ -82,12 +89,8 @@ async function executeSuggestNextAction(
     // 類似の解決済みIssue検索
     const similarResolvedIssues = await findSimilarResolvedIssues(storage, issue);
 
-    // Issueが属するFlow取得
-    const issueWithFlowIds = issue as any;
-    const parentFlow =
-      issueWithFlowIds.flowIds && issueWithFlowIds.flowIds.length > 0
-        ? await storage.getFlow(issueWithFlowIds.flowIds[0])
-        : null;
+    // Issueが属するFlow取得（Flow→Issueの一方向関係を考慮）
+    const parentFlow = await findFlowContainingIssue(storage, issue.id);
 
     // 3. AIドライバーの作成
     const driver = await createDriver({
@@ -96,14 +99,33 @@ async function executeSuggestNextAction(
     });
 
     // 4. アクション提案の生成
+    const userContext: UserContext = {
+      userId: undefined,
+      recentActivity: payload.userContext?.previousAttempts,
+      preferences: payload.userContext?.blockers
+        ? { blockers: payload.userContext.blockers }
+        : undefined,
+    };
+
+    const requestDetail: RequestDetail = {
+      level:
+        payload.requestDetail?.level === 'quick'
+          ? 'summary'
+          : payload.requestDetail?.level === 'comprehensive'
+            ? 'detailed'
+            : 'detailed',
+      focusArea: payload.requestDetail?.focusArea,
+      constraints: payload.requestDetail?.constraints,
+    };
+
     const actionResult = await suggestIssueActions(
       driver,
       issueAnalysis,
       relevantKnowledge,
       similarResolvedIssues,
       parentFlow,
-      payload.userContext || {},
-      payload.requestDetail || { level: 'detailed' },
+      userContext,
+      requestDetail,
       context.state
     );
 
@@ -163,7 +185,7 @@ async function executeSuggestNextAction(
 /**
  * Issue停滞期間を計算（日数）
  */
-function calculateStalledDuration(issue: any): number {
+function calculateStalledDuration(issue: Issue): number {
   const lastUpdated = new Date(issue.updatedAt);
   const now = new Date();
   return Math.floor((now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24));
@@ -172,7 +194,7 @@ function calculateStalledDuration(issue: any): number {
 /**
  * Issue複雑度を推定
  */
-function estimateIssueComplexity(issue: any): 'low' | 'medium' | 'high' {
+function estimateIssueComplexity(issue: Issue): 'low' | 'medium' | 'high' {
   // 簡易実装：説明の長さとラベル数から推定
   const descLength = issue.description?.length || 0;
   const labelCount = issue.labels?.length || 0;
@@ -183,17 +205,44 @@ function estimateIssueComplexity(issue: any): 'low' | 'medium' | 'high' {
 }
 
 /**
+ * IssueIDを含むFlowを検索
+ */
+async function findFlowContainingIssue(
+  storage: WorkflowStorageInterface,
+  issueId: string
+): Promise<import('@sebas-chan/shared-types').Flow | null> {
+  // すべてのFlowを取得（実際はより効率的な検索メソッドが必要）
+  const allFlows = await storage.searchFlows('');
+
+  // IssueIDを含むFlowを探す
+  for (const flow of allFlows) {
+    if (flow.issueIds?.includes(issueId)) {
+      return flow;
+    }
+  }
+
+  return null;
+}
+
+/**
  * 類似の解決済みIssueを検索
  */
-async function findSimilarResolvedIssues(storage: any, issue: any): Promise<any[]> {
+async function findSimilarResolvedIssues(
+  storage: WorkflowStorageInterface,
+  _issue: Issue
+): Promise<SimilarResolvedIssue[]> {
   const resolvedIssues = await storage.searchIssues('status:closed');
 
   // 簡易的な類似度計算（実際はベクトル検索を使うべき）
+  // resolution フィールドは Issue 型に存在しないため、一時的にanyでキャスト
   return resolvedIssues
-    .filter((i: any) => i.resolution)
+    .filter((i) => (i as any).resolution)
     .slice(0, 5)
-    .map((i: any) => ({
-      ...i,
+    .map((i) => ({
+      id: i.id,
+      title: i.title,
+      description: i.description,
+      resolution: (i as any).resolution,
       similarity: 0.8, // 仮の類似度
     }));
 }

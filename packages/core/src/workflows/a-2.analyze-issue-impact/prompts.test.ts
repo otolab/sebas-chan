@@ -1,12 +1,11 @@
 import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
-import { compile, merge } from '@moduler-prompt/core';
+import { compile } from '@moduler-prompt/core';
 import { analyzeImpactPromptModule } from './prompts.js';
 import { analyzeIssue } from './actions.js';
 import { setupAIServiceForTest } from '../test-ai-helper.js';
 import { createMockIssue } from '../test-utils.js';
-import type { Issue } from '@sebas-chan/shared-types';
 import type { ImpactAnalysisContext } from './prompts.js';
-import { z } from 'zod';
+import type { AIService, AIDriver } from '@moduler-prompt/driver';
 
 describe('analyzeIssueImpact prompts', () => {
   describe('プロンプトモジュールの構造', () => {
@@ -98,13 +97,18 @@ describe('analyzeIssueImpact prompts', () => {
   });
 
   describe.skipIf(() => process.env.SKIP_AI_TESTS === 'true')('AI実行テスト', () => {
-    let aiService: any;
+    let aiService: AIService | null;
+    let driver: AIDriver;
 
     beforeAll(async () => {
       aiService = await setupAIServiceForTest();
       if (!aiService) {
         throw new Error('AI Service is required for these tests');
       }
+      // ドライバーを作成
+      driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
     });
 
     afterAll(() => {
@@ -128,7 +132,7 @@ describe('analyzeIssueImpact prompts', () => {
         ],
       });
 
-      const result = await analyzeIssue(aiService, issue, [], 'プロジェクトで複数のIssueが進行中');
+      const result = await analyzeIssue(driver, issue, [], 'プロジェクトで複数のIssueが進行中');
 
       expect(result).toBeDefined();
       expect(result.impactScore).toBeDefined();
@@ -155,7 +159,7 @@ describe('analyzeIssueImpact prompts', () => {
         updatedAt: new Date(),
       });
 
-      const result = await analyzeIssue(aiService, issue, [], 'プロジェクト進行中');
+      const result = await analyzeIssue(driver, issue, [], 'プロジェクト進行中');
 
       expect(result).toBeDefined();
       expect(result.shouldClose).toBe(true);
@@ -198,7 +202,7 @@ describe('analyzeIssueImpact prompts', () => {
       ];
 
       const result = await analyzeIssue(
-        aiService,
+        driver,
         issue,
         relatedIssues,
         'システム全体の改修プロジェクト'

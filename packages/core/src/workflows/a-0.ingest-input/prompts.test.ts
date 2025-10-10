@@ -11,6 +11,7 @@ import { ingestInputPromptModule } from './prompts.js';
 import { setupAIServiceForTest } from '../test-ai-helper.js';
 import { createMockIssue } from '../test-utils.js';
 import type { MaterialElement } from '../shared/material-utils.js';
+import type { AIService } from '@moduler-prompt/driver';
 
 /**
  * 出力スキーマのZodバリデータ
@@ -146,7 +147,7 @@ describe('IngestInput Prompts', () => {
   });
 
   describe.skipIf(() => process.env.SKIP_AI_TESTS === 'true')('AI実行テスト', () => {
-    let aiService: any;
+    let aiService: AIService | null;
 
     beforeAll(async () => {
       aiService = await setupAIServiceForTest();

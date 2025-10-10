@@ -9,7 +9,6 @@ import { processUserRequestWorkflow } from './a-1.process-user-request/index.js'
 import { analyzeIssueImpactWorkflow } from './a-2.analyze-issue-impact/index.js';
 import { extractKnowledgeWorkflow } from './a-3.extract-knowledge/index.js';
 // Phase 4ワークフロー
-import { createFlowWorkflow } from './b-0.create-flow/index.js';
 import { clusterIssuesWorkflow } from './b-1.cluster-issues/index.js';
 import { updateFlowRelationsWorkflow } from './b-2.update-flow-relations/index.js';
 import { suggestNextFlowWorkflow } from './c-1.suggest-next-flow/index.js';
@@ -26,7 +25,6 @@ export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
   analyzeIssueImpactWorkflow,
   extractKnowledgeWorkflow,
   // B系: 横断的ワークフロー（Phase 4）
-  createFlowWorkflow,
   clusterIssuesWorkflow,
   updateFlowRelationsWorkflow,
   // C系: 提案ワークフロー（Phase 4）

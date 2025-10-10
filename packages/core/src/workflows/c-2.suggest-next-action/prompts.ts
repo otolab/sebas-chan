@@ -3,7 +3,7 @@
  */
 
 import type { PromptModule } from '@moduler-prompt/core';
-import type { IssueAnalysis } from './actions.js';
+import type { IssueAnalysis, SimilarResolvedIssue, UserContext } from './actions.js';
 import type { Knowledge, Flow } from '@sebas-chan/shared-types';
 import { merge } from '@moduler-prompt/core';
 import { updateStatePromptModule, type StateContext } from '../shared/prompts/state.js';
@@ -15,14 +15,11 @@ import { knowledgesToMaterials } from '../shared/material-utils.js';
 interface IssueActionContext extends StateContext {
   issueAnalysis: IssueAnalysis;
   relevantKnowledge: Knowledge[];
-
-  // >>> anyがまだ使われていますね。
-
-  similarResolvedIssues: any[];
+  similarResolvedIssues: SimilarResolvedIssue[];
   flowPerspective: Flow | null;
-  userContext: any;
-  constraints: any;
-  detailLevel: 'quick' | 'detailed' | 'comprehensive';
+  userContext: UserContext;
+  constraints: Record<string, unknown>;
+  detailLevel: 'summary' | 'standard' | 'detailed';
 }
 
 /**
@@ -72,12 +69,13 @@ export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
       (ctx: IssueActionContext) => `詳細レベル: ${ctx.detailLevel}`,
       '',
       (ctx: IssueActionContext) =>
-        ctx.userContext?.previousAttempts?.length > 0
-          ? `過去の試行: ${ctx.userContext.previousAttempts.join(', ')}`
+        ctx.userContext?.recentActivity && ctx.userContext.recentActivity.length > 0
+          ? `過去の試行: ${ctx.userContext.recentActivity.join(', ')}`
           : '',
       (ctx: IssueActionContext) =>
-        ctx.userContext?.blockers?.length > 0
-          ? `ブロッカー: ${ctx.userContext.blockers.join(', ')}`
+        ctx.userContext?.preferences?.blockers &&
+        Array.isArray(ctx.userContext.preferences.blockers)
+          ? `ブロッカー: ${(ctx.userContext.preferences.blockers as string[]).join(', ')}`
           : '',
       (ctx: IssueActionContext) =>
         ctx.constraints?.timeLimit ? `時間制約: ${ctx.constraints.timeLimit}分` : '',
@@ -119,7 +117,7 @@ export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
           content: [
             `類似度: ${issue.similarity}`,
             `解決方法: ${issue.resolution || '情報なし'}`,
-            issue.keyLearning ? `学習ポイント: ${issue.keyLearning}` : '',
+            issue.description ? `説明: ${issue.description}` : '',
           ]
             .filter(Boolean)
             .join('\n'),

@@ -168,7 +168,6 @@ export async function createNewIssue(
     return null;
   }
 
-  const issueId = `issue-${Date.now()}`;
   const newIssue = {
     title: analysis.newIssueTitle || extractIssueTitle(content),
     description: content,

@@ -102,8 +102,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
         triggers: {
           eventTypes: ['DATA_ARRIVED'],
         },
-        executor: async (_event) => {
-          const payload = _event.payload as { metadata?: { id: string } };
+        executor: async (event) => {
+          const payload = event.payload as {
+            source: string;
+            content: string;
+            pondEntryId: string;
+            timestamp: string;
+            metadata?: { id: string };
+          };
           if (payload.metadata?.id) {
             processedOrder.push(payload.metadata.id);
           }
@@ -461,7 +467,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
           eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event, context, emitter) => {
-          const payload = event.payload as any;
+          const payload = event.payload as {
+            source: string;
+            content: string;
+            pondEntryId: string;
+            timestamp: string;
+            metadata?: { count?: number };
+          };
           const count = payload.metadata?.count || 3;
 
           for (let i = 0; i < count; i++) {
@@ -694,8 +706,14 @@ describe('CoreAgent - Comprehensive Tests', () => {
         triggers: {
           eventTypes: ['DATA_ARRIVED'],
         },
-        executor: async (_event) => {
-          const payload = _event.payload as any;
+        executor: async (event) => {
+          const payload = event.payload as {
+            source: string;
+            content: string;
+            pondEntryId: string;
+            timestamp: string;
+            metadata?: { delay?: number };
+          };
           const delay = payload.metadata?.delay;
           if (delay) {
             await new Promise((resolve) => setTimeout(resolve, delay));

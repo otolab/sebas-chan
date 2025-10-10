@@ -2,9 +2,10 @@
  * C-2: SUGGEST_NEXT_ACTION_FOR_ISSUE ワークフローのテスト
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { suggestNextActionWorkflow } from './index.js';
-import type { Issue, Knowledge, Flow, SystemEvent } from '@sebas-chan/shared-types';
+import type { SystemEvent } from '@sebas-chan/shared-types';
+import type { ActionSuggestionResult } from './actions.js';
 import {
   createCustomMockContext,
   createMockWorkflowEmitter,
@@ -13,6 +14,37 @@ import {
   createMockWorkflowRecorder,
 } from '../test-utils.js';
 import { RecordType } from '../recorder.js';
+
+// 出力の型定義
+interface SuggestNextActionOutput {
+  primaryAction: {
+    title: string;
+    type: string;
+    steps: ActionSuggestionResult['actions'][0]['steps'];
+    estimatedTime: number;
+    confidence: number;
+    prerequisites: string[];
+  } | null;
+  alternativeActions: Array<{
+    title: string;
+    type: string;
+    reason: string;
+  }>;
+  insights: {
+    rootCause?: ActionSuggestionResult['rootCauseAnalysis'];
+    splitSuggestion?:
+      | ActionSuggestionResult['splitSuggestion']
+      | {
+          recommended?: boolean;
+          subtasks?: string[];
+        };
+    escalation?:
+      | ActionSuggestionResult['escalationSuggestion']
+      | {
+          recommended?: boolean;
+        };
+  };
+}
 
 describe('C-2: SuggestNextActionForIssue', () => {
   beforeEach(() => {
@@ -97,7 +129,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       expect(result.output).toBeDefined();
 
       // 主要アクションの確認
-      const output = result.output as any;
+      const output = result.output as SuggestNextActionOutput;
       expect(output.primaryAction).toBeDefined();
       expect(output.primaryAction.title).toBe('Profile the application');
       expect(output.primaryAction.type).toBe('investigation');
@@ -185,7 +217,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
+      const output = result.output as SuggestNextActionOutput;
       expect(output.insights.splitSuggestion).toBeDefined();
       expect(output.insights.splitSuggestion.recommended).toBe(true);
       expect(output.insights.splitSuggestion.subtasks).toHaveLength(3);
@@ -243,7 +275,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
+      const output = result.output as SuggestNextActionOutput;
       expect(output.primaryAction.title).toContain('alternative approach');
       expect(output.insights.escalation).toBeDefined();
       expect(output.insights.escalation.recommended).toBe(true);
@@ -310,7 +342,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
+      const output = result.output as SuggestNextActionOutput;
       expect(output.primaryAction.confidence).toBeGreaterThan(0.9);
       expect(output.primaryAction.title).toContain('similar solution');
     });
@@ -402,7 +434,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
+      const output = result.output as SuggestNextActionOutput;
       expect(output.primaryAction).toBeDefined();
       expect(output.primaryAction.confidence).toBeLessThan(0.7);
     });
@@ -455,7 +487,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
+      const output = result.output as SuggestNextActionOutput;
       expect(output.primaryAction.estimatedTime).toBeLessThanOrEqual(10);
     });
   });
