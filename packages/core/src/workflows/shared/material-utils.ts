@@ -126,7 +126,7 @@ export function knowledgesToMaterials(knowledges: Knowledge[]): MaterialElement[
  * @param additionalFields 追加で含めたいフィールドの定義
  */
 export function issueToMaterialWithFields(
-  issue: Issue & Record<string, any>,
+  issue: Issue & Record<string, unknown>,
   additionalFields?: { [key: string]: string }
 ): MaterialElement {
   const baseContent = [

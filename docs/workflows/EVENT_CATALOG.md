@@ -412,6 +412,65 @@ interface FlowCreatedEvent {
 
 ---
 
+### FLOW_SELECTED_FOR_ACTION
+
+**カテゴリ**: 分析イベント
+**説明**: C-1によってFlowが選定され、そのFlow内のIssueに対するアクションが必要
+
+```typescript
+interface FlowSelectedForActionEvent {
+  type: 'FLOW_SELECTED_FOR_ACTION';
+  payload: {
+    flowId: string;
+    trigger: 'c1_suggestion' | 'user_request' | 'schedule';
+    priority: number; // 0-1のスコア
+    context: {
+      reason: string;
+      estimatedDuration?: number;
+      userState?: string;
+    };
+  };
+}
+```
+
+**トリガーするワークフロー**:
+
+- C-2: SuggestNextActionForIssue (優先度: 25)
+
+**発生元**: C-1: SuggestNextFlow
+
+**備考**: C系ワークフローの連携において、Flow選定からIssue特定・アクション提案へつなぐ重要なイベント
+
+---
+
+### ISSUE_STALLED
+
+**カテゴリ**: 分析イベント
+**説明**: Issueが長期間更新されず停滞していることを検出
+
+```typescript
+interface IssueStalledEvent {
+  type: 'ISSUE_STALLED';
+  payload: {
+    issueId: string;
+    stalledDays: number;
+    lastUpdate: string;
+    flowId?: string; // 所属するFlow（あれば）
+    suggestedAction?: string;
+  };
+}
+```
+
+**トリガーするワークフロー**:
+
+- C-1: SuggestNextFlow (優先度: 20) - Flowレビューのきっかけとして
+
+**発生元**: D-2: DetectStalledItems
+
+**備考**: 直接的なIssue対応ではなく、所属するFlowの見直しや、孤児Issueの場合は適切なFlowへの組み込みのきっかけとして扱う
+
+---
+
 ### HIGH_PRIORITY_ISSUE_DETECTED
 
 **カテゴリ**: 分析イベント
@@ -523,6 +582,9 @@ type ScheduleAction =
 | A-3: ExtractKnowledge    | `KNOWLEDGE_CREATED`                                                |
 | B-1: ClusterIssues       | `FLOW_CREATED`, `PATTERN_FOUND` (クラスタリング結果)               |
 | B-4: SalvageFromPond     | `PATTERN_FOUND`, `KNOWLEDGE_EXTRACTABLE`                           |
+| C-1: SuggestNextFlow     | `FLOW_SELECTED_FOR_ACTION`, `PERSPECTIVE_TRIGGERED`                |
+| C-2: SuggestNextActionForIssue | `ISSUE_SPLIT_SUGGESTED`, `ESCALATION_REQUIRED`              |
+| D-2: DetectStalledItems  | `ISSUE_STALLED`                                                    |
 
 ## 5. イベント購読マトリクス
 
@@ -530,13 +592,15 @@ type ScheduleAction =
 | ------------------------ | -------------------- | -------------------- |
 | `USER_REQUEST_RECEIVED`  | A-0                  | 常に                 |
 | `DATA_ARRIVED`           | A-1                  | 常に                 |
-| `ISSUE_CREATED`          | A-2, B-2             | 常に                 |
+| `ISSUE_CREATED`          | A-2, B-2, C-2        | C-2は高優先度のみ    |
 | `ISSUE_UPDATED`          | A-2                  | 重要な更新のみ       |
 | `KNOWLEDGE_EXTRACTABLE`  | A-3                  | 常に                 |
 | `HIGH_PRIORITY_ISSUE_DETECTED` | C-2           | 常に                 |
 | `HIGH_PRIORITY_FLOW_DETECTED`  | C-2           | 常に                 |
 | `PERSPECTIVE_TRIGGERED`  | B-1                  | 常に                 |
 | `PATTERN_FOUND`          | A-3                  | パターンタイプによる |
+| `FLOW_SELECTED_FOR_ACTION` | C-2               | 常に                 |
+| `ISSUE_STALLED`          | C-1                  | Flowレビューとして   |
 
 ## 6. イベント実装ガイドライン
 

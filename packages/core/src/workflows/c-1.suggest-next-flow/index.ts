@@ -85,7 +85,7 @@ async function executeSuggestNextFlow(
       return {
         success: true,
         context,
-        output: { message: 'No active flows to suggest' },
+        // outputフィールドは使用しない
       };
     }
 
@@ -124,6 +124,27 @@ async function executeSuggestNextFlow(
     if (suggestionResult.suggestions.length > 0) {
       const primarySuggestion = suggestionResult.suggestions[0];
 
+      // C-2への連携イベント発行（C-1 → C-2のフロー）
+      emitter.emit({
+        type: 'FLOW_SELECTED_FOR_ACTION',
+        payload: {
+          flowId: primarySuggestion.flowId,
+          trigger: 'c1_suggestion',
+          priority: primarySuggestion.score,
+          context: {
+            reason: primarySuggestion.reason,
+            estimatedDuration: primarySuggestion.estimatedDuration,
+            userState: payload.userState?.energy,
+          },
+        },
+      });
+
+      recorder.record(RecordType.INFO, {
+        message: 'Emitted FLOW_SELECTED_FOR_ACTION event for C-2',
+        flowId: primarySuggestion.flowId,
+        score: primarySuggestion.score,
+      });
+
       // 高スコアの場合、観点トリガーイベント
       if (primarySuggestion.score > 0.8) {
         const flow = await storage.getFlow(primarySuggestion.flowId);
@@ -142,17 +163,13 @@ async function executeSuggestNextFlow(
     }
 
     // 6. 結果を返す
+    // 必要な情報はすべてイベントペイロードに含めて発行済み
+    // stateは実行中の一時状態のみ保持
     return {
       success: true,
       context: {
         ...context,
-        state: suggestionResult.updatedState,
-      },
-      output: {
-        primarySuggestion: suggestionResult.suggestions[0],
-        alternatives: suggestionResult.suggestions.slice(1, 4),
-        insights: suggestionResult.contextInsights,
-        fallback: suggestionResult.fallbackSuggestion,
+        state: suggestionResult.updatedState, // AIドライバーが必要に応じて更新したstate
       },
     };
   } catch (error) {
@@ -214,10 +231,19 @@ export const suggestNextFlowWorkflow: WorkflowDefinition = {
   name: 'SuggestNextFlow',
   description: '次に取り組むべき最適なFlowを提案',
   triggers: {
-    eventTypes: ['FLOW_STATUS_CHANGED', 'SCHEDULE_TRIGGERED', 'USER_REQUEST_RECEIVED'],
+    eventTypes: [
+      'FLOW_STATUS_CHANGED',
+      'SCHEDULE_TRIGGERED',
+      'USER_REQUEST_RECEIVED',
+      'ISSUE_STALLED', // Flowレビューのきっかけとして
+    ],
     priority: 25,
-    condition: (_event) => {
-      // 提案の頻度制限（実際はcontextから最後の提案時刻を取得すべき）
+    condition: (event) => {
+      // ISSUE_STALLEDの場合はFlowレビューの観点で処理
+      if (event.type === 'ISSUE_STALLED') {
+        return true; // 停滞IssueからFlowの見直しへ
+      }
+      // 他のイベントは頻度制限を考慮（実際はcontextから最後の提案時刻を取得すべき）
       // ここでは簡略化のため常にtrueを返す
       return true;
     },

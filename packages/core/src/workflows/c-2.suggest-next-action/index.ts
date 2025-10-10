@@ -11,13 +11,9 @@
  */
 
 import type { SystemEvent, Issue } from '@sebas-chan/shared-types';
-import type {
-  WorkflowContextInterface,
-  WorkflowEventEmitterInterface,
-  WorkflowStorageInterface,
-} from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
-import type { SimilarResolvedIssue, UserContext, RequestDetail } from './actions.js';
+import type { UserContext, RequestDetail } from './actions.js';
 import { RecordType } from '../recorder.js';
 import { suggestIssueActions, applyActionSuggestions } from './actions.js';
 
@@ -43,8 +39,15 @@ async function executeSuggestNextAction(
 
     // イベントからペイロードを取得
     const payload = event.payload as {
-      issueId: string;
-      trigger?: 'stalled' | 'requested' | 'new_issue' | 'user_stuck';
+      flowId?: string; // C-1から連携された場合のFlowID
+      issueId?: string; // 直接Issue指定の場合
+      trigger?: 'flow_selected' | 'high_priority' | 'new_issue';
+      priority?: number;
+      context?: {
+        reason?: string;
+        estimatedDuration?: number;
+        userState?: string;
+      };
       requestDetail?: {
         level?: 'quick' | 'detailed' | 'comprehensive';
         focusArea?: string;
@@ -59,21 +62,91 @@ async function executeSuggestNextAction(
         blockers?: string[];
       };
       stalledDays?: number;
+      issue?: Issue; // ISSUE_CREATEDイベントの場合
     };
 
-    // 1. Issue取得と分析
-    const issue = await storage.getIssue(payload.issueId);
-    if (!issue) {
-      recorder.record(RecordType.ERROR, {
-        message: 'Issue not found',
-        issueId: payload.issueId,
+    // 1. Issue特定と分析
+    let targetIssue: Issue | null = null;
+    let parentFlow: import('@sebas-chan/shared-types').Flow | null = null;
+
+    // C-1から連携された場合（FlowIDからIssue特定）
+    if (payload.flowId) {
+      parentFlow = await storage.getFlow(payload.flowId);
+      if (!parentFlow) {
+        recorder.record(RecordType.ERROR, {
+          message: 'Flow not found',
+          flowId: payload.flowId,
+        });
+        return {
+          success: false,
+          context,
+          error: new Error(`Flow not found: ${payload.flowId}`),
+        };
+      }
+
+      // Flow内の最優先Issueを特定
+      const flowIssues = await Promise.all(
+        (parentFlow.issueIds || []).map((id) => storage.getIssue(id))
+      );
+      const activeIssues = flowIssues.filter(
+        (issue) => issue && issue.status !== 'closed'
+      ) as Issue[];
+
+      // 優先度とステータスに基づいてソート
+      activeIssues.sort((a, b) => {
+        const priorityA = a.priority ?? 0;
+        const priorityB = b.priority ?? 0;
+        if (priorityB !== priorityA) return priorityB - priorityA;
+        const stalledA = calculateStalledDuration(a);
+        const stalledB = calculateStalledDuration(b);
+        return stalledB - stalledA;
       });
+
+      targetIssue = activeIssues[0] || null;
+
+      if (!targetIssue) {
+        recorder.record(RecordType.INFO, {
+          message: 'No active issues in flow',
+          flowId: payload.flowId,
+        });
+        return {
+          success: true,
+          context,
+          // outputフィールドは使用しない
+        };
+      }
+    }
+    // 直接Issue指定の場合
+    else if (payload.issueId) {
+      targetIssue = await storage.getIssue(payload.issueId);
+      if (!targetIssue) {
+        recorder.record(RecordType.ERROR, {
+          message: 'Issue not found',
+          issueId: payload.issueId,
+        });
+        return {
+          success: false,
+          context,
+          error: new Error(`Issue not found: ${payload.issueId}`),
+        };
+      }
+      // 直接Issue指定の場合、Flowは不明（IssueはFlowを知らない）
+      parentFlow = null;
+    }
+    // ISSUE_CREATEDイベントの場合
+    else if (payload.issue) {
+      targetIssue = payload.issue;
+      // ISSUE_CREATEDの場合もFlowは不明（IssueはFlowを知らない）
+      parentFlow = null;
+    } else {
       return {
         success: false,
         context,
-        error: new Error(`Issue not found: ${payload.issueId}`),
+        error: new Error('Either flowId, issueId, or issue must be provided'),
       };
     }
+
+    const issue = targetIssue;
 
     // Issue分析データの構築
     const issueAnalysis = {
@@ -86,11 +159,8 @@ async function executeSuggestNextAction(
     // 関連Knowledge検索
     const relevantKnowledge = await storage.searchKnowledge(`${issue.title} ${issue.description}`);
 
-    // 類似の解決済みIssue検索
-    const similarResolvedIssues = await findSimilarResolvedIssues(storage, issue);
-
-    // Issueが属するFlow取得（Flow→Issueの一方向関係を考慮）
-    const parentFlow = await findFlowContainingIssue(storage, issue.id);
+    // parentFlowはC-1から連携された場合のみ設定される
+    // IssueはFlowを知らない（レイヤー分離の原則）
 
     // 3. AIドライバーの作成
     const driver = await createDriver({
@@ -122,7 +192,6 @@ async function executeSuggestNextAction(
       driver,
       issueAnalysis,
       relevantKnowledge,
-      similarResolvedIssues,
       parentFlow,
       userContext,
       requestDetail,
@@ -138,35 +207,56 @@ async function executeSuggestNextAction(
     // 5. 提案の適用とイベント発行
     await applyActionSuggestions(issue.id, actionResult, emitter, recorder, storage);
 
-    // 6. 結果を返す
+    // 6. 進捗をIssue updatesに自然言語で記録
     const primaryAction = actionResult.actions[0];
+    if (primaryAction) {
+      const updatedIssue = await storage.getIssue(issue.id);
+      if (updatedIssue) {
+        const updates = [...(updatedIssue.updates || [])];
+
+        // C-1から連携された場合、優先度の文脈を記録
+        if (parentFlow && payload.context?.reason) {
+          updates.push({
+            timestamp: new Date(),
+            author: 'ai',
+            content: `優先度を調整しました。理由: ${payload.context.reason}`,
+          });
+        }
+
+        // C-2の責任：次のアクションを提案したことを記録
+        updates.push({
+          timestamp: new Date(),
+          author: 'ai',
+          content:
+            `次のアクションを提案しました: ${primaryAction.title}` +
+            (primaryAction.estimatedTotalTime
+              ? ` (推定${primaryAction.estimatedTotalTime}分)`
+              : '') +
+            `. ${primaryAction.description || ''}`,
+        });
+
+        await storage.updateIssue(issue.id, { updates });
+
+        recorder.record(RecordType.INFO, {
+          message: 'Progress recorded to Issue updates',
+          issueId: issue.id,
+          primaryActionTitle: primaryAction.title,
+          hasFlowContext: !!parentFlow,
+        });
+      }
+
+      // 構造化されたアクション提案は、必要に応じてイベントで次のワークフローへ
+      // （現時点では仕様を柔軟に考え、後で精査）
+    }
+
+    // 7. 結果を返す
+    // 必要な情報はすべてIssue.updatesに記録済み
+    // stateは実行中の一時状態のみ保持
     return {
       success: true,
       context: {
         ...context,
-        state: actionResult.updatedState,
-      },
-      output: {
-        primaryAction: primaryAction
-          ? {
-              title: primaryAction.title,
-              type: primaryAction.type,
-              steps: primaryAction.steps,
-              estimatedTime: primaryAction.estimatedTotalTime,
-              confidence: primaryAction.confidence,
-              prerequisites: primaryAction.prerequisites,
-            }
-          : null,
-        alternativeActions: actionResult.actions.slice(1, 3).map((a) => ({
-          title: a.title,
-          type: a.type,
-          reason: a.description,
-        })),
-        insights: {
-          rootCause: actionResult.rootCauseAnalysis,
-          splitSuggestion: actionResult.splitSuggestion,
-          escalation: actionResult.escalationSuggestion,
-        },
+        state: actionResult.updatedState, // AIドライバーが必要に応じて更新したstate
       },
     };
   } catch (error) {
@@ -205,49 +295,6 @@ function estimateIssueComplexity(issue: Issue): 'low' | 'medium' | 'high' {
 }
 
 /**
- * IssueIDを含むFlowを検索
- */
-async function findFlowContainingIssue(
-  storage: WorkflowStorageInterface,
-  issueId: string
-): Promise<import('@sebas-chan/shared-types').Flow | null> {
-  // すべてのFlowを取得（実際はより効率的な検索メソッドが必要）
-  const allFlows = await storage.searchFlows('');
-
-  // IssueIDを含むFlowを探す
-  for (const flow of allFlows) {
-    if (flow.issueIds?.includes(issueId)) {
-      return flow;
-    }
-  }
-
-  return null;
-}
-
-/**
- * 類似の解決済みIssueを検索
- */
-async function findSimilarResolvedIssues(
-  storage: WorkflowStorageInterface,
-  _issue: Issue
-): Promise<SimilarResolvedIssue[]> {
-  const resolvedIssues = await storage.searchIssues('status:closed');
-
-  // 簡易的な類似度計算（実際はベクトル検索を使うべき）
-  // resolution フィールドは Issue 型に存在しないため、一時的にanyでキャスト
-  return resolvedIssues
-    .filter((i) => (i as any).resolution)
-    .slice(0, 5)
-    .map((i) => ({
-      id: i.id,
-      title: i.title,
-      description: i.description,
-      resolution: (i as any).resolution,
-      similarity: 0.8, // 仮の類似度
-    }));
-}
-
-/**
  * C-2: SUGGEST_NEXT_ACTION_FOR_ISSUE ワークフロー定義
  */
 export const suggestNextActionWorkflow: WorkflowDefinition = {
@@ -255,15 +302,19 @@ export const suggestNextActionWorkflow: WorkflowDefinition = {
   description: 'Issueに対する具体的なアクションステップを提案',
   triggers: {
     eventTypes: [
-      'ISSUE_STALLED',
-      'HIGH_PRIORITY_ISSUE_DETECTED',
-      'USER_REQUEST_RECEIVED',
-      'ISSUE_CREATED', // ISSUE_OPENEDの代わり
+      'FLOW_SELECTED_FOR_ACTION', // C-1からの連携イベント
+      'HIGH_PRIORITY_ISSUE_DETECTED', // 高優先度Issue検出時
+      'ISSUE_CREATED', // 新規Issue作成時（高優先度のみ）
     ],
     priority: 25,
     condition: (event) => {
-      // 高優先度Issueの場合のみ
-      if (event.type === 'HIGH_PRIORITY_ISSUE_DETECTED' || event.type === 'USER_REQUEST_RECEIVED') {
+      // FLOW_SELECTED_FOR_ACTIONの場合は無条件で実行
+      if (event.type === 'FLOW_SELECTED_FOR_ACTION') {
+        return true;
+      }
+
+      // 高優先度Issue検出時は常に実行
+      if (event.type === 'HIGH_PRIORITY_ISSUE_DETECTED') {
         return true;
       }
 
@@ -271,11 +322,6 @@ export const suggestNextActionWorkflow: WorkflowDefinition = {
       if (event.type === 'ISSUE_CREATED') {
         const payload = event.payload as { issue?: { priority?: number } };
         return (payload.issue?.priority ?? 0) > 70;
-      }
-
-      // ISSUE_STALLEDは常に対応
-      if (event.type === 'ISSUE_STALLED') {
-        return true;
       }
 
       return false;

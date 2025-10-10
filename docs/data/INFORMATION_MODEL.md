@@ -105,6 +105,30 @@ interface IssueRelation {
 }
 ```
 
+**Issue.updatesの設計原則**:
+
+- **人間可読な進捗記録**: 自然言語でIssueの進捗を記録
+- **完結性**: Issue.descriptionとupdatesで課題の全体像が把握可能
+- **構造化データ禁止**: JSONオブジェクト等の構造化データは含めない
+
+```typescript
+// ✅ 良い例：自然言語での進捗記録
+{
+  timestamp: new Date(),
+  content: '次のアクションを提案しました: データベース接続の確認 (推定15分)',
+  author: 'ai'
+}
+
+// ❌ 悪い例：構造化データ
+{
+  timestamp: new Date(),
+  content: { action: { title: '...', steps: [...] } }, // 構造化データは不適切
+  author: 'ai'
+}
+```
+
+FlowがIssueに文脈を提供する際も、自然言語でupdatesに記録します。
+
 **ワークフロー**:
 
 - `PROCESS_USER_REQUEST`: リクエストを分類してIssue作成

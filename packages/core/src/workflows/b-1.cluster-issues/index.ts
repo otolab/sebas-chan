@@ -11,16 +11,11 @@
  * - 一つのIssueが複数のFlowに属することを許容（複数の観点から管理）
  */
 
-import type {
-  SystemEvent,
-  Issue,
-  Flow,
-  PerspectiveTriggeredEvent
-} from '@sebas-chan/shared-types';
+import type { SystemEvent, Flow, PerspectiveTriggeredEvent } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
-import { clusterIssues, emitClusterDetectedEvents } from './actions.js';
+import { clusterIssues } from './actions.js';
 
 /**
  * B-1: CLUSTER_ISSUES ワークフロー実行関数
@@ -97,12 +92,7 @@ async function executeClusterIssues(
       triggerReason: perspectiveEvent.payload.triggerReason,
     });
 
-    const clusteringResult = await clusterIssues(
-      driver,
-      issues,
-      existingFlows,
-      context.state
-    );
+    const clusteringResult = await clusterIssues(driver, issues, existingFlows, context.state);
 
     recorder.record(RecordType.AI_CALL, {
       purpose: 'cluster_issues',
@@ -190,7 +180,7 @@ export const clusterIssuesWorkflow: WorkflowDefinition = {
   description: '観点に基づいてIssue群をクラスタリングし、Flowを作成する',
   triggers: {
     eventTypes: [
-      'PERSPECTIVE_TRIGGERED',  // A-0等から観点ベースのクラスタリング要求
+      'PERSPECTIVE_TRIGGERED', // A-0等から観点ベースのクラスタリング要求
     ],
     priority: 10,
   },

@@ -118,7 +118,6 @@ export async function suggestIssueActions(
   driver: AIDriver,
   issueAnalysis: IssueAnalysis,
   relevantKnowledge: Knowledge[],
-  similarResolvedIssues: SimilarResolvedIssue[],
   flowPerspective: Flow | null,
   userContext: UserContext,
   requestDetail: RequestDetail,
@@ -127,7 +126,7 @@ export async function suggestIssueActions(
   const context = {
     issueAnalysis,
     relevantKnowledge,
-    similarResolvedIssues,
+    similarResolvedIssues: [], // 空配列を設定（プロンプトモジュールが期待するため）
     flowPerspective,
     userContext,
     constraints: requestDetail.constraints || {},

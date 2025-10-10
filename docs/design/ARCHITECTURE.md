@@ -12,6 +12,29 @@ sebas-chanは、ユーザーの認知的負荷を軽減するための自律型A
 - **疎結合**: コンポーネント間の依存を最小化
 - **段階的拡張**: 最小構成から機能を追加
 - **型安全**: TypeScriptによる静的型付け
+- **レイヤー分離**: 明確なレイヤー構造による依存関係の管理
+
+### レイヤー分離の原則
+
+#### Flow-Issue関係
+- **IssueはFlowより下位レイヤー**: IssueはFlowの存在を知らない
+- **FlowはIssueの上位レイヤー**: FlowがIssueを観察・操作する
+- **逆方向の参照禁止**: IssueからFlowへの参照（FlowID等）は持たない
+
+```typescript
+// ✅ 良い例：FlowがIssueを管理
+interface Flow {
+  id: string;
+  issueIds: string[]; // Flowが一方的にIssueを知る
+}
+
+interface Issue {
+  id: string;
+  // FlowIDは含まない（レイヤー分離）
+}
+```
+
+FlowがIssueに文脈情報を記録する際は、自然言語でIssue.updatesに記録します。
 
 ### 制約事項
 
@@ -128,6 +151,23 @@ Issue（追跡事項）← 完了 → Knowledge（知識）
 | Pond      | 一時保管   | 全データ保存、検索可能 |
 | Issues    | 追跡管理   | 状態管理、優先度付き   |
 | Knowledge | 知識ベース | ベクトル検索、評価付き |
+
+### データの一貫性と完全性
+
+#### Issueの完全性
+- Issue間のrelation（parent-child、related-to等）で関係性表現
+- descriptionとupdatesで進捗の全体像を提供
+- Flow情報への逆引きは不要（レイヤー分離）
+
+#### 情報の適切な配置
+
+| 情報の種類 | 配置場所 | 例 |
+|----------|---------|-----|
+| 進捗記録 | Issue.updates | 「データベース接続を確認しました」 |
+| 構造化データ | イベントペイロード | アクション詳細、ステップ情報 |
+| 一時的な状態 | ワークフローstate | AI処理の文脈 |
+| 永続的な関係 | エンティティのフィールド | Flow.issueIds |
+| デバッグ情報 | ログ（RecordType） | エラー詳細、処理時間 |
 
 ## 通信アーキテクチャ
 

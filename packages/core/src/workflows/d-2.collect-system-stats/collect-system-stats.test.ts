@@ -4,7 +4,11 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { collectSystemStatsWorkflow } from './index.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface, WorkflowRecorder } from '../context.js';
+import type {
+  WorkflowContextInterface,
+  WorkflowEventEmitterInterface,
+  WorkflowRecorder,
+} from '../context.js';
 import type { SystemEvent, Issue, Flow, PondEntry } from '@sebas-chan/shared-types';
 import { RecordType } from '../recorder.js';
 

@@ -38,6 +38,9 @@ export type EventType =
   | 'UNCLUSTERED_ISSUES_EXCEEDED'
   | 'POND_CAPACITY_WARNING'
 
+  // ワークフロー連携イベント
+  | 'FLOW_SELECTED_FOR_ACTION'
+
   // システムイベント
   | 'SCHEDULE_TRIGGERED'
   | 'SYSTEM_MAINTENANCE_DUE'
@@ -286,6 +289,23 @@ export interface FlowStatusChangedEvent {
 }
 
 /**
+ * FLOW_SELECTED_FOR_ACTION: C-1がFlowを選定し、C-2へ連携するイベント
+ */
+export interface FlowSelectedForActionEvent {
+  type: 'FLOW_SELECTED_FOR_ACTION';
+  payload: {
+    flowId: string;
+    trigger: 'c1_suggestion' | 'flow_selected' | 'high_priority' | 'new_issue';
+    priority: number;
+    context?: {
+      reason?: string;
+      estimatedDuration?: number;
+      userState?: string;
+    };
+  };
+}
+
+/**
  * SCHEDULE_TRIGGERED: context.schedulerに登録されたスケジュールが実行時刻に達した
  */
 export interface ScheduleTriggeredEvent {
@@ -368,6 +388,7 @@ export type SystemEvent =
   | HighPriorityIssueDetectedEvent
   | HighPriorityFlowDetectedEvent
   | PerspectiveTriggeredEvent
+  | FlowSelectedForActionEvent
   | ScheduleTriggeredEvent
   | SystemMaintenanceDueEvent
   | IdleTimeDetectedEvent
@@ -444,6 +465,7 @@ export const EVENT_TO_WORKFLOWS: Record<EventType, WorkflowType[]> = {
   FLOW_CREATED: [], // 終端イベント（現時点）
   FLOW_UPDATED: ['UPDATE_FLOW_PRIORITIES'],
   FLOW_STATUS_CHANGED: [], // 終端イベント（現時点）
+  FLOW_SELECTED_FOR_ACTION: ['SUGGEST_NEXT_ACTION'], // C-1 → C-2連携
   RECURRING_PATTERN_DETECTED: ['EXTRACT_KNOWLEDGE'],
   KNOWLEDGE_EXTRACTABLE: ['EXTRACT_KNOWLEDGE'],
   KNOWLEDGE_CREATED: [], // 終端イベント

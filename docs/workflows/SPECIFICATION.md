@@ -476,7 +476,88 @@ const NOT_RECOMMENDED = [
 ];
 ```
 
-## 8. 実行フロー
+## 8. C系統ワークフローの連携設計
+
+### 8.1 C-1 → C-2連携フロー
+
+C系統ワークフローは、ユーザーへの統合的な提案を実現するため、連携して動作します。
+
+#### 設計意図
+
+```
+C-1: 次に作業すべきFlowを決定
+  ↓ (FLOW_SELECTED_FOR_ACTION イベント発行)
+C-2: そのFlow内の最優先Issueを特定し、解決方法を提案
+```
+
+#### 実装例
+
+```typescript
+// C-1: Flow選定後のイベント発行
+emitter.emit({
+  type: 'FLOW_SELECTED_FOR_ACTION',
+  payload: {
+    flowId: primarySuggestion.flowId,
+    trigger: 'c1_suggestion',
+    priority: primarySuggestion.score,
+    context: {
+      reason: primarySuggestion.reason,
+      estimatedDuration: primarySuggestion.estimatedDuration,
+      userState: payload.userState?.energy,
+    },
+  },
+});
+
+// C-2: イベントを受け取ってFlow内のIssueを処理
+const c2Workflow: WorkflowDefinition = {
+  name: 'SuggestNextAction',
+  triggers: {
+    eventTypes: ['FLOW_SELECTED_FOR_ACTION', 'ISSUE_STALLED'],
+    priority: 30,
+  },
+  executor: async (event, context, emitter) => {
+    const payload = event.payload;
+
+    if (payload.flowId) {
+      // C-1から連携された場合：Flow内の最優先Issueを特定
+      const flow = await context.storage.getFlow(payload.flowId);
+      const priorityIssue = findPriorityIssue(flow);
+
+      // Flow文脈を自然言語でIssue.updatesに記録
+      if (payload.context?.reason) {
+        await context.storage.updateIssue(priorityIssue.id, {
+          updates: [
+            ...priorityIssue.updates,
+            {
+              timestamp: new Date(),
+              author: 'ai',
+              content: `優先度を調整しました。理由: ${payload.context.reason}`,
+            },
+          ],
+        });
+      }
+    }
+    // アクション提案処理...
+  },
+};
+```
+
+### 8.2 停滞Issue（ISSUE_STALLED）の扱い
+
+ISSUE_STALLEDイベントは、個別Issue対応ではなく、Flowの見直しのきっかけとして活用されます：
+
+- 停滞IssueがあるFlowの優先度や構成を見直す
+- 孤児Issue（Flowに属さない）の場合は、適切なFlowに組み込む機会とする
+
+### 8.3 情報の受け渡し方針
+
+C系統ワークフローは、以下の方針で情報を管理します：
+
+1. **イベントペイロード経由**: 次のワークフローに必要な情報はイベントペイロードに含める
+2. **永続化**: Issue.updatesに自然言語で進捗を記録
+3. **state管理**: AIドライバーのstate更新のみ（永続化情報は含めない）
+
+## 9. 実行フロー
 
 ```mermaid
 sequenceDiagram
