@@ -16,8 +16,9 @@
     "dev": "tsc --watch",
     "test": "NODE_OPTIONS='--no-warnings' vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/**/*.ts",
-    "lint:fix": "eslint src/**/*.ts --fix",
+    "lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings 0",
+    "lint:fix": "eslint . --fix",
     "clean": "rm -rf dist",
     "typecheck": "tsc --noEmit"
   },

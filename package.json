@@ -19,6 +19,7 @@
     "test:ci": "SKIP_AI_TESTS=true NODE_OPTIONS='--no-warnings' npm run test:unit && NODE_OPTIONS='--no-warnings' npm run test:integration",
     "typecheck": "npm run typecheck -w @sebas-chan/shared-types && npm run typecheck -w @sebas-chan/reporter-sdk && npm run typecheck -w @sebas-chan/db && npm run typecheck -w @sebas-chan/core && npm run typecheck -w @sebas-chan/reporters && npm run typecheck -w @sebas-chan/server && npm run typecheck -w @sebas-chan/mcp-server && npm run typecheck -w @sebas-chan/web-ui",
     "lint": "npm run lint -w @sebas-chan/shared-types && npm run lint -w @sebas-chan/reporter-sdk && npm run lint -w @sebas-chan/db && npm run lint -w @sebas-chan/core && npm run lint -w @sebas-chan/reporters && npm run lint -w @sebas-chan/server && npm run lint -w @sebas-chan/mcp-server && npm run lint -w @sebas-chan/web-ui",
+    "lint:strict": "npm run lint:strict -w @sebas-chan/shared-types && npm run lint:strict -w @sebas-chan/reporter-sdk && npm run lint:strict -w @sebas-chan/db && npm run lint:strict -w @sebas-chan/core && npm run lint:strict -w @sebas-chan/reporters && npm run lint:strict -w @sebas-chan/server && npm run lint:strict -w @sebas-chan/mcp-server && npm run lint:strict -w @sebas-chan/web-ui",
     "lint:fix": "npm run lint:fix -w @sebas-chan/shared-types && npm run lint:fix -w @sebas-chan/reporter-sdk && npm run lint:fix -w @sebas-chan/db && npm run lint:fix -w @sebas-chan/core && npm run lint:fix -w @sebas-chan/reporters && npm run lint:fix -w @sebas-chan/server && npm run lint:fix -w @sebas-chan/mcp-server && npm run lint:fix -w @sebas-chan/web-ui",
     "clean": "tsc --build --clean && npm run clean -w @sebas-chan/shared-types && npm run clean -w @sebas-chan/reporter-sdk && npm run clean -w @sebas-chan/db && npm run clean -w @sebas-chan/core && npm run clean -w @sebas-chan/reporters && npm run clean -w @sebas-chan/server && npm run clean -w @sebas-chan/mcp-server && npm run clean -w @sebas-chan/web-ui",
     "clean:all": "npm run clean && rm -rf node_modules",
@@ -29,6 +30,7 @@
     "ui:dev": "npm run dev -w @sebas-chan/web-ui"
   },
   "devDependencies": {
+    "@eslint/js": "^9.37.0",
     "@types/node": "^20.14.9",
     "@typescript-eslint/eslint-plugin": "^6.19.0",
     "@typescript-eslint/parser": "^6.19.0",
@@ -37,8 +39,8 @@
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
     "prettier": "^3.3.2",
-    "typescript": "^5.3.3",
     "tsx": "^4.7.0",
+    "typescript": "^5.3.3",
     "vitest": "^3.2.4"
   },
   "engines": {

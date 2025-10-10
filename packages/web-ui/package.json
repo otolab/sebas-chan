@@ -9,6 +9,7 @@
 		"preview": "vite preview",
 		"test": "NODE_OPTIONS='--no-warnings' svelte-kit sync && NODE_OPTIONS='--no-warnings' vitest run",
 		"lint": "eslint .",
+    "lint:strict": "eslint . --max-warnings 0",
 		"typecheck": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"prepare": "svelte-kit sync || echo ''",
 		"postinstall": "chmod +x node_modules/.bin/* 2>/dev/null || true"
