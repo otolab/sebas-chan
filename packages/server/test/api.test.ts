@@ -4,7 +4,7 @@
  * 実際のDBやCoreEngineを使わずに、APIエンドポイントのロジックをテスト
  */
 
-import { describe, it, expect, beforeEach, vi, Mock } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import express from 'express';
 import { createApiRouter } from '../src/api/index';
@@ -46,7 +46,7 @@ vi.mock('../src/core/engine', () => ({
 
 describe('API Unit Tests', () => {
   let app: express.Application;
-  let mockEngine: any;
+  let mockEngine: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     // モックをリセット
@@ -70,7 +70,7 @@ describe('API Unit Tests', () => {
     });
 
     // エラーハンドリングミドルウェア（JSONパースエラーを含む）
-    app.use((err: any, req: any, res: any, next: any) => {
+    app.use((err: Error & { status?: number; body?: unknown }, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
       if (err instanceof SyntaxError && 'body' in err) {
         return res.status(400).json({ error: 'Invalid JSON' });
       }
@@ -255,7 +255,7 @@ describe('API Unit Tests', () => {
         },
       });
 
-      const response = await request(app)
+      await request(app)
         .get('/api/pond')
         .query({
           q: 'test',
