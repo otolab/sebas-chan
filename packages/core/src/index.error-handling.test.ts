@@ -7,13 +7,8 @@ import { WorkflowDefinition } from './workflows/workflow-types.js';
 
 describe('CoreAgent - Error Handling and Recovery', () => {
   let agent: CoreAgent;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let consoleErrorSpy: any;
 
   beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 

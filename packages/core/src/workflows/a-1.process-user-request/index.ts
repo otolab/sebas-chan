@@ -91,12 +91,7 @@ async function executeProcessUserRequest(
       temperature: 0.3,
     });
 
-    const analysis = await analyzeUserRequest(
-      driver,
-      payload.content,
-      relatedData,
-      context.state
-    );
+    const analysis = await analyzeUserRequest(driver, payload.content, relatedData, context.state);
 
     recorder.record(RecordType.INFO, {
       step: 'analysisComplete',
@@ -139,7 +134,7 @@ async function executeProcessUserRequest(
 
       recorder.record(RecordType.INFO, {
         step: 'defaultEventsEmitted',
-        events: defaultEvents.map(e => e.type),
+        events: defaultEvents.map((e) => e.type),
       });
     }
 

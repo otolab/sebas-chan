@@ -4,7 +4,11 @@
 
 import type { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
-import type { WorkflowEventEmitterInterface, WorkflowStorageInterface, WorkflowRecorder } from '../context.js';
+import type {
+  WorkflowEventEmitterInterface,
+  WorkflowStorageInterface,
+  WorkflowRecorder,
+} from '../context.js';
 import { RecordType } from '../recorder.js';
 import { compile } from '@moduler-prompt/core';
 import { issueActionPromptModule } from './prompts.js';
@@ -127,12 +131,8 @@ export async function applyActionSuggestions(
     const priorityWeight = { must_do: 3, should_do: 2, nice_to_have: 1 };
     const typeWeight = { immediate: 3, investigative: 2, planned: 1, delegatable: 0 };
 
-    const scoreA = priorityWeight[a.priority] * 10 +
-                    typeWeight[a.type] * 5 +
-                    a.confidence * 3;
-    const scoreB = priorityWeight[b.priority] * 10 +
-                    typeWeight[b.type] * 5 +
-                    b.confidence * 3;
+    const scoreA = priorityWeight[a.priority] * 10 + typeWeight[a.type] * 5 + a.confidence * 3;
+    const scoreB = priorityWeight[b.priority] * 10 + typeWeight[b.type] * 5 + b.confidence * 3;
 
     return scoreB - scoreA;
   });
@@ -153,11 +153,13 @@ export async function applyActionSuggestions(
       status: 'open' as any,
       priority: PRIORITY.MEDIUM,
       labels: ['suggestion', 'issue-split'],
-      updates: [{
-        timestamp: new Date(),
-        content: `SuggestNextActionワークフローによって作成されました。元Issue: ${issueId}`,
-        author: 'ai' as const,
-      }],
+      updates: [
+        {
+          timestamp: new Date(),
+          content: `SuggestNextActionワークフローによって作成されました。元Issue: ${issueId}`,
+          author: 'ai' as const,
+        },
+      ],
       relations: [{ type: 'relates_to', targetIssueId: issueId }],
       sourceInputIds: [],
     });

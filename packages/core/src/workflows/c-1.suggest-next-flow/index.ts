@@ -11,7 +11,11 @@
  */
 
 import type { SystemEvent, Flow } from '@sebas-chan/shared-types';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface, WorkflowStorageInterface } from '../context.js';
+import type {
+  WorkflowContextInterface,
+  WorkflowEventEmitterInterface,
+  WorkflowStorageInterface,
+} from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import type { ExtendedFlow } from '../extended-types.js';
 import { RecordType } from '../recorder.js';
@@ -177,7 +181,10 @@ function isWorkingHours(date: Date, timezone?: string): boolean {
 /**
  * 最近完了したFlowを取得
  */
-async function getRecentCompletedFlows(storage: WorkflowStorageInterface, days: number): Promise<Flow[]> {
+async function getRecentCompletedFlows(
+  storage: WorkflowStorageInterface,
+  days: number
+): Promise<Flow[]> {
   const flows = await storage.searchFlows('status:completed');
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
@@ -188,8 +195,11 @@ async function getRecentCompletedFlows(storage: WorkflowStorageInterface, days: 
 /**
  * 今後の締切を取得
  */
-async function getUpcomingDeadlines(storage: WorkflowStorageInterface, days: number): Promise<ExtendedFlow[]> {
-  const flows = await storage.searchFlows('status:active') as ExtendedFlow[];
+async function getUpcomingDeadlines(
+  storage: WorkflowStorageInterface,
+  days: number
+): Promise<ExtendedFlow[]> {
+  const flows = (await storage.searchFlows('status:active')) as ExtendedFlow[];
   const future = new Date();
   future.setDate(future.getDate() + days);
 
@@ -208,11 +218,7 @@ export const suggestNextFlowWorkflow: WorkflowDefinition = {
   name: 'SuggestNextFlow',
   description: '次に取り組むべき最適なFlowを提案',
   triggers: {
-    eventTypes: [
-      'FLOW_STATUS_CHANGED',
-      'SCHEDULE_TRIGGERED',
-      'USER_REQUEST_RECEIVED',
-    ],
+    eventTypes: ['FLOW_STATUS_CHANGED', 'SCHEDULE_TRIGGERED', 'USER_REQUEST_RECEIVED'],
     priority: 25,
     condition: (event) => {
       // 提案の頻度制限（実際はcontextから最後の提案時刻を取得すべき）

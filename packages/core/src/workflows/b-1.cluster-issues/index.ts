@@ -43,7 +43,7 @@ async function executeClusterIssues(
     // Flowに属していないIssueのみ抽出
     // NOTE: issueにflowIdsプロパティがあると仮定（実際の実装では関係性を別途管理するか検討）
     const unclusteredIssues = (issues as IssueWithFlowIds[]).filter(
-      issue => !issue.flowIds || issue.flowIds.length === 0
+      (issue) => !issue.flowIds || issue.flowIds.length === 0
     );
 
     // 処理可否判定
@@ -125,9 +125,7 @@ export const clusterIssuesWorkflow: WorkflowDefinition = {
   name: 'ClusterIssues',
   description: '関連するIssue群を自動的にグルーピングし、Flow生成の候補を発見する',
   triggers: {
-    eventTypes: [
-      'USER_REQUEST_RECEIVED',
-    ],
+    eventTypes: ['USER_REQUEST_RECEIVED'],
     priority: 10,
   },
   executor: executeClusterIssues,

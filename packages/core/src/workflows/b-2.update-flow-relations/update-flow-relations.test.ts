@@ -13,7 +13,7 @@ import type { SystemEvent, Flow, Issue } from '@sebas-chan/shared-types';
 import {
   createCustomMockContext,
   createMockWorkflowEmitter,
-  createMockIssue
+  createMockIssue,
 } from '../test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';
 
@@ -51,29 +51,29 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
   beforeEach(() => {
     // デフォルトのモックコンテキスト設定
     mockContext = createCustomMockContext({
-      driverResponses: [JSON.stringify({
-        flowUpdates: [{
-          flowId: 'flow-1',
-          health: 'healthy',
-          perspectiveValidity: {
-            stillValid: true,
-            reason: 'Flow is still relevant',
-          },
-          relationships: 'Issue 1 blocks Issue 2',
-          suggestedChanges: [],
-        }],
-        updatedState: 'State updated with flow analysis',
-      })],
+      driverResponses: [
+        JSON.stringify({
+          flowUpdates: [
+            {
+              flowId: 'flow-1',
+              health: 'healthy',
+              perspectiveValidity: {
+                stillValid: true,
+                reason: 'Flow is still relevant',
+              },
+              relationships: 'Issue 1 blocks Issue 2',
+              suggestedChanges: [],
+            },
+          ],
+          updatedState: 'State updated with flow analysis',
+        }),
+      ],
       storageOverrides: {
-        getFlow: vi.fn().mockImplementation((id) =>
-          id === 'flow-1' ? mockFlow : null
-        ),
+        getFlow: vi.fn().mockImplementation((id) => (id === 'flow-1' ? mockFlow : null)),
         searchFlows: vi.fn().mockResolvedValue([mockFlow]),
-        getIssue: vi.fn().mockImplementation((id) =>
-          mockIssues.find(i => i.id === id) || null
-        ),
+        getIssue: vi.fn().mockImplementation((id) => mockIssues.find((i) => i.id === id) || null),
         updateFlow: vi.fn().mockResolvedValue(mockFlow),
-      }
+      },
     });
 
     mockEmitter = createMockWorkflowEmitter();
@@ -104,11 +104,13 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
       expect(result.success).toBe(true);
       expect(result.output).toMatchObject({
         updatedFlows: ['flow-1'],
-        changes: [{
-          flowId: 'flow-1',
-          health: 'healthy',
-          perspectiveValid: true,
-        }],
+        changes: [
+          {
+            flowId: 'flow-1',
+            health: 'healthy',
+            perspectiveValid: true,
+          },
+        ],
       });
 
       // stateが更新されたことを確認
@@ -165,30 +167,32 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
   describe('Flow健全性による処理分岐', () => {
     it('obsoleteなFlowをアーカイブする', async () => {
       mockContext = createCustomMockContext({
-        driverResponses: [JSON.stringify({
-          flowUpdates: [{
-            flowId: 'flow-1',
-            health: 'obsolete',
-            perspectiveValidity: {
-              stillValid: false,
-              reason: 'Flow is no longer needed',
-            },
-            relationships: '',
-            suggestedChanges: [],
-          }],
-          updatedState: 'Flow marked as obsolete',
-        })],
+        driverResponses: [
+          JSON.stringify({
+            flowUpdates: [
+              {
+                flowId: 'flow-1',
+                health: 'obsolete',
+                perspectiveValidity: {
+                  stillValid: false,
+                  reason: 'Flow is no longer needed',
+                },
+                relationships: '',
+                suggestedChanges: [],
+              },
+            ],
+            updatedState: 'Flow marked as obsolete',
+          }),
+        ],
         storageOverrides: {
           getFlow: vi.fn().mockResolvedValue(mockFlow),
           searchFlows: vi.fn().mockResolvedValue([mockFlow]),
-          getIssue: vi.fn().mockImplementation((id) =>
-            mockIssues.find(i => i.id === id) || null
-          ),
+          getIssue: vi.fn().mockImplementation((id) => mockIssues.find((i) => i.id === id) || null),
           updateFlow: vi.fn().mockResolvedValue({
             ...mockFlow,
             status: 'archived',
           }),
-        }
+        },
       });
       mockEmitter = createMockWorkflowEmitter();
 
@@ -201,10 +205,7 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
       expect(result.success).toBe(true);
 
       // Flowがアーカイブされたことを確認
-      expect(mockContext.storage.updateFlow).toHaveBeenCalledWith(
-        'flow-1',
-        { status: 'archived' }
-      );
+      expect(mockContext.storage.updateFlow).toHaveBeenCalledWith('flow-1', { status: 'archived' });
 
       // イベントが発行されたことを確認
       expect(mockEmitter.emit).toHaveBeenCalledWith({
@@ -218,28 +219,30 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
 
     it('観点が無効な場合、descriptionを更新する', async () => {
       mockContext = createCustomMockContext({
-        driverResponses: [JSON.stringify({
-          flowUpdates: [{
-            flowId: 'flow-1',
-            health: 'needs_attention',
-            perspectiveValidity: {
-              stillValid: false,
-              reason: 'Perspective needs update',
-              suggestedUpdate: '新しい観点: プロジェクトフェーズが変更',
-            },
-            relationships: 'Updated relationships',
-            suggestedChanges: [],
-          }],
-          updatedState: 'Perspective updated',
-        })],
+        driverResponses: [
+          JSON.stringify({
+            flowUpdates: [
+              {
+                flowId: 'flow-1',
+                health: 'needs_attention',
+                perspectiveValidity: {
+                  stillValid: false,
+                  reason: 'Perspective needs update',
+                  suggestedUpdate: '新しい観点: プロジェクトフェーズが変更',
+                },
+                relationships: 'Updated relationships',
+                suggestedChanges: [],
+              },
+            ],
+            updatedState: 'Perspective updated',
+          }),
+        ],
         storageOverrides: {
           getFlow: vi.fn().mockResolvedValue(mockFlow),
           searchFlows: vi.fn().mockResolvedValue([mockFlow]),
-          getIssue: vi.fn().mockImplementation((id) =>
-            mockIssues.find(i => i.id === id) || null
-          ),
+          getIssue: vi.fn().mockImplementation((id) => mockIssues.find((i) => i.id === id) || null),
           updateFlow: vi.fn(),
-        }
+        },
       });
       mockEmitter = createMockWorkflowEmitter();
 
@@ -313,25 +316,27 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
       };
 
       mockContext = createCustomMockContext({
-        driverResponses: [JSON.stringify({
-          flowUpdates: [
-            {
-              flowId: 'flow-1',
-              health: 'healthy',
-              perspectiveValidity: { stillValid: true, reason: 'OK' },
-              relationships: '',
-              suggestedChanges: [],
-            },
-            {
-              flowId: 'flow-2',
-              health: 'stale',
-              perspectiveValidity: { stillValid: true, reason: 'Stale but valid' },
-              relationships: '',
-              suggestedChanges: [],
-            },
-          ],
-          updatedState: 'Multiple flows updated',
-        })],
+        driverResponses: [
+          JSON.stringify({
+            flowUpdates: [
+              {
+                flowId: 'flow-1',
+                health: 'healthy',
+                perspectiveValidity: { stillValid: true, reason: 'OK' },
+                relationships: '',
+                suggestedChanges: [],
+              },
+              {
+                flowId: 'flow-2',
+                health: 'stale',
+                perspectiveValidity: { stillValid: true, reason: 'Stale but valid' },
+                relationships: '',
+                suggestedChanges: [],
+              },
+            ],
+            updatedState: 'Multiple flows updated',
+          }),
+        ],
         storageOverrides: {
           searchFlows: vi.fn().mockResolvedValue([mockFlow, flow2]),
           getFlow: vi.fn().mockImplementation((id) => {
@@ -341,7 +346,7 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
           }),
           getIssue: vi.fn().mockResolvedValue(null),
           updateFlow: vi.fn(),
-        }
+        },
       });
       mockEmitter = createMockWorkflowEmitter();
 
@@ -361,7 +366,9 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
   describe('エラーハンドリング', () => {
     it('AIドライバーがエラーを返した場合', async () => {
       const error = new Error('AI analysis failed');
-      mockContext.createDriver = async () => { throw error; };
+      mockContext.createDriver = async () => {
+        throw error;
+      };
 
       const result = await updateFlowRelationsWorkflow.executor(
         mockEvent,

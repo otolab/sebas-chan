@@ -130,12 +130,7 @@ async function executeIngestInput(
     const createdIssueIds = createdIssueId ? [createdIssueId] : [];
 
     // 7. 高優先度イベントの発行（深刻度が高い場合）
-    emitHighPriorityEvent(
-      emitter,
-      recorder,
-      analysis,
-      createdIssueId || updatedIssueIds[0]
-    );
+    emitHighPriorityEvent(emitter, recorder, analysis, createdIssueId || updatedIssueIds[0]);
 
     // 処理完了を記録
     recorder.record(RecordType.OUTPUT, {

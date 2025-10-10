@@ -33,8 +33,8 @@ describe('IngestInput Workflow Integration', () => {
         ...issue,
         id: issue.id || `issue-${Date.now()}`,
         createdAt: new Date(),
-        updatedAt: new Date()
-      }))
+        updatedAt: new Date(),
+      })),
     });
 
     if (!context) {
@@ -49,9 +49,9 @@ describe('IngestInput Workflow Integration', () => {
         context!.recorder.record(RecordType.INFO, {
           message: 'Event emitted',
           eventType: event.type,
-          payload: event.payload
+          payload: event.payload,
         });
-      }
+      },
     };
   });
 
@@ -73,11 +73,12 @@ describe('IngestInput Workflow Integration', () => {
         type: 'DATA_ARRIVED',
         payload: {
           source: 'slack',
-          content: '本番環境でログイン処理が失敗しています。DBへの接続がタイムアウトになり、500エラーが返されます。',
+          content:
+            '本番環境でログイン処理が失敗しています。DBへの接続がタイムアウトになり、500エラーが返されます。',
           format: 'text',
           pondEntryId: 'pond-test-001',
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const result = await ingestInputWorkflow.executor(event, context!, emitter);
@@ -96,7 +97,7 @@ describe('IngestInput Workflow Integration', () => {
 
       // ERROR_DETECTEDイベントが発行される（高深刻度の場合）
       if (severity === 'high' || severity === 'critical') {
-        const errorEvents = emittedEvents.filter(e => e.type === 'ERROR_DETECTED');
+        const errorEvents = emittedEvents.filter((e) => e.type === 'ERROR_DETECTED');
         expect(errorEvents).toHaveLength(1);
         if (errorEvents.length > 0) {
           expect(errorEvents[0].payload).toHaveProperty('severity', severity);
@@ -105,7 +106,7 @@ describe('IngestInput Workflow Integration', () => {
       }
 
       // ISSUE_CREATEDイベントが発行される
-      const issueEvents = emittedEvents.filter(e => e.type === 'ISSUE_CREATED');
+      const issueEvents = emittedEvents.filter((e) => e.type === 'ISSUE_CREATED');
       expect(issueEvents).toHaveLength(1);
 
       // Recorderに処理が記録される
@@ -127,7 +128,7 @@ describe('IngestInput Workflow Integration', () => {
       const testCases = [
         { content: 'システムエラーが発生しました', expectedLabels: ['error'] },
         { content: 'ログイン処理が失敗します', expectedLabels: ['error'] },
-        { content: 'パフォーマンスに問題があります', expectedLabels: ['performance'] }
+        { content: 'パフォーマンスに問題があります', expectedLabels: ['performance'] },
       ];
 
       for (const testCase of testCases) {
@@ -138,8 +139,8 @@ describe('IngestInput Workflow Integration', () => {
             content: testCase.content,
             format: 'text',
             pondEntryId: `pond-${Date.now()}`,
-            timestamp: new Date().toISOString()
-          }
+            timestamp: new Date().toISOString(),
+          },
         };
 
         const result = await ingestInputWorkflow.executor(event, context!, emitter);
@@ -147,8 +148,8 @@ describe('IngestInput Workflow Integration', () => {
         expect(result.success).toBe(true);
 
         // Issue作成またはエラー検出
-        const hasIssue = result.output?.createdIssueIds.length > 0 ||
-                         result.output?.updatedIssueIds.length > 0;
+        const hasIssue =
+          result.output?.createdIssueIds.length > 0 || result.output?.updatedIssueIds.length > 0;
         expect(hasIssue).toBe(true);
       }
     });
@@ -170,7 +171,7 @@ describe('IngestInput Workflow Integration', () => {
         priority: 50,
         updates: [],
         relations: [],
-        sourceInputIds: []
+        sourceInputIds: [],
       };
 
       // 既存Issueが検索で見つかるようにモック
@@ -184,8 +185,8 @@ describe('IngestInput Workflow Integration', () => {
           content: 'ログイン画面で同じエラーが再発。特定のユーザーアカウントでのみ発生する模様。',
           format: 'text',
           pondEntryId: 'pond-test-002',
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const result = await ingestInputWorkflow.executor(event, context!, emitter);
@@ -204,7 +205,7 @@ describe('IngestInput Workflow Integration', () => {
         expect(result.output?.updatedIssueIds).toContain('issue-existing-001');
 
         // ISSUE_UPDATEDイベント確認
-        const updateEvents = emittedEvents.filter(e => e.type === 'ISSUE_UPDATED');
+        const updateEvents = emittedEvents.filter((e) => e.type === 'ISSUE_UPDATED');
         expect(updateEvents.length).toBeGreaterThan(0);
       }
 
@@ -228,8 +229,8 @@ describe('IngestInput Workflow Integration', () => {
           content: '来週の定例会議は月曜日の午後3時に変更になりました。',
           format: 'text',
           pondEntryId: 'pond-test-003',
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const result = await ingestInputWorkflow.executor(event, context!, emitter);
@@ -241,11 +242,11 @@ describe('IngestInput Workflow Integration', () => {
       expect(['low', 'medium']).toContain(severity);
 
       // ERROR_DETECTEDイベントは発行されない
-      const errorEvents = emittedEvents.filter(e => e.type === 'ERROR_DETECTED');
+      const errorEvents = emittedEvents.filter((e) => e.type === 'ERROR_DETECTED');
       expect(errorEvents).toHaveLength(0);
 
       // HIGH_PRIORITY_DETECTEDイベントも発行されない
-      const priorityEvents = emittedEvents.filter(e => e.type === 'HIGH_PRIORITY_DETECTED');
+      const priorityEvents = emittedEvents.filter((e) => e.type === 'HIGH_PRIORITY_DETECTED');
       expect(priorityEvents).toHaveLength(0);
 
       // Pondには保存される（pondEntryIdが返される）
@@ -267,8 +268,8 @@ describe('IngestInput Workflow Integration', () => {
           content: 'テストデータの処理',
           format: 'json',
           pondEntryId: 'pond-test-004',
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       const result = await ingestInputWorkflow.executor(event, context!, emitter);
@@ -284,7 +285,7 @@ describe('IngestInput Workflow Integration', () => {
 
       // Recorderログの構造確認
       const logs = context!.recorder.getBuffer();
-      logs.forEach(log => {
+      logs.forEach((log) => {
         expect(log).toHaveProperty('timestamp');
         expect(log).toHaveProperty('workflowName', 'IngestInput');
         expect(log).toHaveProperty('type');
@@ -304,8 +305,8 @@ describe('IngestInput Workflow Integration', () => {
           content: 'ステップ記録テスト',
           format: 'text',
           pondEntryId: 'pond-test-005',
-          timestamp: new Date().toISOString()
-        }
+          timestamp: new Date().toISOString(),
+        },
       };
 
       await ingestInputWorkflow.executor(event, context!, emitter);
@@ -323,7 +324,7 @@ describe('IngestInput Workflow Integration', () => {
       }
 
       // 主要なログタイプが含まれる
-      const logTypes = logs.map(l => l.type);
+      const logTypes = logs.map((l) => l.type);
       expect(logTypes).toContain(RecordType.INFO);
     });
   });
@@ -341,7 +342,7 @@ describe('IngestInput Workflow Integration', () => {
           // pondEntryIdが欠落
           source: 'invalid',
           content: '',
-        } as any
+        } as any,
       };
 
       const result = await ingestInputWorkflow.executor(event, context!, emitter);

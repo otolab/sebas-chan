@@ -7,7 +7,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { compile } from '@moduler-prompt/core';
 import { z } from 'zod';
-import type { Issue } from '@sebas-chan/shared-types';
 import { ingestInputPromptModule } from './prompts.js';
 import { setupAIServiceForTest } from '../test-ai-helper.js';
 import { createMockIssue } from '../test-utils.js';
@@ -23,7 +22,7 @@ const outputSchemaValidator = z.object({
   severity: z.enum(['critical', 'high', 'medium', 'low']),
   updateContent: z.string().optional(),
   labels: z.array(z.string()),
-  updatedState: z.string().optional()
+  updatedState: z.string().optional(),
 });
 
 describe('IngestInput Prompts', () => {
@@ -34,7 +33,7 @@ describe('IngestInput Prompts', () => {
         format: 'text/plain',
         content: 'システムでエラーが発生しています',
         relatedIssues: [],
-        currentState: '初期状態'
+        currentState: '初期状態',
       };
 
       const compiled = compile(ingestInputPromptModule, context);
@@ -53,7 +52,7 @@ describe('IngestInput Prompts', () => {
         description: 'テストバグの詳細',
         status: 'open',
         priority: 80,
-        labels: ['bug', 'critical']
+        labels: ['bug', 'critical'],
       });
 
       const context = {
@@ -61,11 +60,13 @@ describe('IngestInput Prompts', () => {
         format: 'json',
         content: '{"error": "timeout"}',
         relatedIssues: [issue],
-        currentState: '処理中'
+        currentState: '処理中',
       };
 
       const compiled = compile(ingestInputPromptModule, context);
-      const materials = compiled.data.filter((item) => item.type === 'material') as MaterialElement[];
+      const materials = compiled.data.filter(
+        (item) => item.type === 'material'
+      ) as MaterialElement[];
 
       // Issue情報がマテリアルとして展開されることを確認
       const issueMaterial = materials.find((m) => m.id === 'issue-issue-001');
@@ -81,13 +82,13 @@ describe('IngestInput Prompts', () => {
         createMockIssue({
           id: 'issue-001',
           title: 'Issue 1',
-          status: 'open'
+          status: 'open',
         }),
         createMockIssue({
           id: 'issue-002',
           title: 'Issue 2',
-          status: 'closed'
-        })
+          status: 'closed',
+        }),
       ];
 
       const context = {
@@ -95,11 +96,13 @@ describe('IngestInput Prompts', () => {
         format: undefined,
         content: 'テスト内容',
         relatedIssues: issues,
-        currentState: '初期状態'
+        currentState: '初期状態',
       };
 
       const compiled = compile(ingestInputPromptModule, context);
-      const materials = compiled.data.filter((item) => item.type === 'material') as MaterialElement[];
+      const materials = compiled.data.filter(
+        (item) => item.type === 'material'
+      ) as MaterialElement[];
 
       // 両方のIssueがマテリアルに含まれることを確認
       expect(materials.some((m) => m.id === 'issue-issue-001')).toBe(true);
@@ -112,7 +115,7 @@ describe('IngestInput Prompts', () => {
         format: undefined,
         content: '不明な形式のデータ',
         relatedIssues: [],
-        currentState: '初期状態'
+        currentState: '初期状態',
       };
 
       const compiled = compile(ingestInputPromptModule, context);
@@ -128,7 +131,7 @@ describe('IngestInput Prompts', () => {
         format: 'text',
         content: 'test',
         relatedIssues: [],
-        currentState: '初期状態'
+        currentState: '初期状態',
       };
 
       const compiled = compile(ingestInputPromptModule, context);
@@ -158,10 +161,12 @@ describe('IngestInput Prompts', () => {
         format: 'text/plain',
         content: 'CRITICAL: Database connection failed. All services are down.',
         relatedIssues: [],
-        currentState: '正常稼働中'
+        currentState: '正常稼働中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(ingestInputPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -180,7 +185,7 @@ describe('IngestInput Prompts', () => {
         title: 'データベース接続エラー',
         description: 'DBへの接続がタイムアウトする問題',
         status: 'open',
-        labels: ['database', 'bug']
+        labels: ['database', 'bug'],
       });
 
       const context = {
@@ -188,10 +193,12 @@ describe('IngestInput Prompts', () => {
         format: 'json',
         content: '{"error": "Database timeout occurred", "service": "api"}',
         relatedIssues: [existingIssue],
-        currentState: '監視中'
+        currentState: '監視中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(ingestInputPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -208,10 +215,12 @@ describe('IngestInput Prompts', () => {
         format: 'text',
         content: '明日の会議の準備をお願いします',
         relatedIssues: [],
-        currentState: '待機中'
+        currentState: '待機中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(ingestInputPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -228,20 +237,20 @@ describe('IngestInput Prompts', () => {
           id: 'issue-001',
           title: 'ログイン問題',
           description: 'ユーザーがログインできない',
-          status: 'open'
+          status: 'open',
         }),
         createMockIssue({
           id: 'issue-002',
           title: 'パフォーマンス改善',
           description: 'システムの応答速度が遅い',
-          status: 'open'
+          status: 'open',
         }),
         createMockIssue({
           id: 'issue-003',
           title: '認証エラー',
           description: '認証トークンの有効期限切れ',
-          status: 'closed'
-        })
+          status: 'closed',
+        }),
       ];
 
       const context = {
@@ -249,10 +258,12 @@ describe('IngestInput Prompts', () => {
         format: 'text',
         content: 'ユーザーから「ログインしようとすると認証エラーが出る」という報告',
         relatedIssues: issues,
-        currentState: '対応中'
+        currentState: '対応中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(ingestInputPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -263,7 +274,7 @@ describe('IngestInput Prompts', () => {
       // ログインまたは認証関連のIssueが選ばれることを期待
       const selectedIssues = output.relatedIssueIds;
       const relevantIssues = ['issue-001', 'issue-003'];
-      expect(selectedIssues.some(id => relevantIssues.includes(id))).toBe(true);
+      expect(selectedIssues.some((id) => relevantIssues.includes(id))).toBe(true);
     });
   });
 });

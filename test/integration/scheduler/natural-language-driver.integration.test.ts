@@ -22,7 +22,7 @@ const scheduleParserModule: PromptModule<ScheduleContext> = {
   createContext: () => ({
     currentTime: new Date(),
     timezone: 'Asia/Tokyo',
-    request: ''
+    request: '',
   }),
 
   instructions: [
@@ -34,34 +34,34 @@ const scheduleParserModule: PromptModule<ScheduleContext> = {
     'Timezone: Japan Standard Time (JST, UTC+9)',
     'Parse the schedule request and return structured JSON.',
     'Return the next execution time in JST ISO8601 format (e.g., 2025-10-05T15:00:00).',
-    'Do not perform timezone conversion, return JST time directly.'
+    'Do not perform timezone conversion, return JST time directly.',
   ],
 
-  inputs: [
-    (ctx) => `Parse this schedule request: "${ctx.request}"`
-  ],
+  inputs: [(ctx) => `Parse this schedule request: "${ctx.request}"`],
 
-  schema: [{
-    type: 'json',
-    content: {
-      type: 'object',
-      properties: {
-        next: {
-          type: 'string',
-          description: 'Next execution time in ISO8601 format'
+  schema: [
+    {
+      type: 'json',
+      content: {
+        type: 'object',
+        properties: {
+          next: {
+            type: 'string',
+            description: 'Next execution time in ISO8601 format',
+          },
+          pattern: {
+            type: ['string', 'null'],
+            description: 'Recurrence pattern if any',
+          },
+          interpretation: {
+            type: 'string',
+            description: 'Human-readable interpretation',
+          },
         },
-        pattern: {
-          type: ['string', 'null'],
-          description: 'Recurrence pattern if any'
-        },
-        interpretation: {
-          type: 'string',
-          description: 'Human-readable interpretation'
-        }
+        required: ['next', 'interpretation'],
       },
-      required: ['next', 'interpretation']
-    }
-  }]
+    },
+  ],
 };
 
 // 日本語入力用のPromptModule
@@ -69,7 +69,7 @@ const japaneseScheduleParserModule: PromptModule<ScheduleContext> = {
   createContext: () => ({
     currentTime: new Date(),
     timezone: 'Asia/Tokyo',
-    request: ''
+    request: '',
   }),
 
   instructions: [
@@ -82,34 +82,34 @@ const japaneseScheduleParserModule: PromptModule<ScheduleContext> = {
     '日本語の時間表現（「明日」「午後」など）は日本時間として解釈してください。',
     'スケジュール要求を解析して構造化JSONを返してください。',
     '次回実行時刻を日本時間のISO8601形式（例: 2025-10-05T15:00:00）で返してください。',
-    'タイムゾーン変換は行わず、日本時間のまま返してください。'
+    'タイムゾーン変換は行わず、日本時間のまま返してください。',
   ],
 
-  inputs: [
-    (ctx) => `スケジュール要求: "${ctx.request}"`
-  ],
+  inputs: [(ctx) => `スケジュール要求: "${ctx.request}"`],
 
-  schema: [{
-    type: 'json',
-    content: {
-      type: 'object',
-      properties: {
-        next: {
-          type: 'string',
-          description: '次回実行時刻（ISO8601形式）'
+  schema: [
+    {
+      type: 'json',
+      content: {
+        type: 'object',
+        properties: {
+          next: {
+            type: 'string',
+            description: '次回実行時刻（ISO8601形式）',
+          },
+          pattern: {
+            type: ['string', 'null'],
+            description: '繰り返しパターン',
+          },
+          interpretation: {
+            type: 'string',
+            description: '解釈結果',
+          },
         },
-        pattern: {
-          type: ['string', 'null'],
-          description: '繰り返しパターン'
-        },
-        interpretation: {
-          type: 'string',
-          description: '解釈結果'
-        }
+        required: ['next', 'interpretation'],
       },
-      required: ['next', 'interpretation']
-    }
-  }]
+    },
+  ],
 };
 
 // macOSでのみ実行（MLXドライバーが利用可能）
@@ -130,17 +130,17 @@ describe.skipIf(!isMacOS)('Natural Language Schedule Interpretation (Integration
   describe('構造化出力の動作確認', () => {
     it('should interpret relative time expressions', async () => {
       console.log('Creating driver from capabilities...');
-      const driver = await aiService.createDriverFromCapabilities(
-        ['structured'],
-        { preferLocal: true, lenient: true }
-      );
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        preferLocal: true,
+        lenient: true,
+      });
       console.log('Driver created:', driver);
 
       const now = new Date();
       const context: ScheduleContext = {
         currentTime: now,
         timezone: 'Asia/Tokyo',
-        request: '3 days later at 9am'
+        request: '3 days later at 9am',
       };
 
       const compiledPrompt = compile(scheduleParserModule, context);
@@ -167,16 +167,16 @@ describe.skipIf(!isMacOS)('Natural Language Schedule Interpretation (Integration
     }, 30000); // 30秒のタイムアウト
 
     it('should handle Japanese input with MLX', async () => {
-      const driver = await aiService.createDriverFromCapabilities(
-        ['structured'],
-        { preferLocal: true, lenient: true }
-      );
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        preferLocal: true,
+        lenient: true,
+      });
 
       const now = new Date();
       const context: ScheduleContext = {
         currentTime: now,
         timezone: 'Asia/Tokyo',
-        request: '明日の午後3時'
+        request: '明日の午後3時',
       };
 
       const compiledPrompt = compile(japaneseScheduleParserModule, context);
@@ -187,7 +187,7 @@ describe.skipIf(!isMacOS)('Natural Language Schedule Interpretation (Integration
       expect(parsed).toHaveProperty('interpretation');
 
       console.log('Japanese input result:', parsed);
-      console.log('Current time (JST):', now.toLocaleString('ja-JP', {timeZone: 'Asia/Tokyo'}));
+      console.log('Current time (JST):', now.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' }));
       console.log('AI returned time (JST format):', parsed.next);
 
       // 明日の午後3時になっているか確認
@@ -199,8 +199,14 @@ describe.skipIf(!isMacOS)('Natural Language Schedule Interpretation (Integration
       tomorrow.setDate(tomorrow.getDate() + 1);
       tomorrow.setHours(15, 0, 0, 0);
 
-      console.log('Expected time (JST):', tomorrow.toLocaleString('ja-JP', {timeZone: 'Asia/Tokyo'}));
-      console.log('Parsed time (JST):', nextTimeJST.toLocaleString('ja-JP', {timeZone: 'Asia/Tokyo'}));
+      console.log(
+        'Expected time (JST):',
+        tomorrow.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+      );
+      console.log(
+        'Parsed time (JST):',
+        nextTimeJST.toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
+      );
 
       // 時間の差が1時間以内であることを確認
       const diff = Math.abs(nextTimeJST.getTime() - tomorrow.getTime());
@@ -211,16 +217,16 @@ describe.skipIf(!isMacOS)('Natural Language Schedule Interpretation (Integration
     }, 30000);
 
     it('should handle immediate execution with MLX', async () => {
-      const driver = await aiService.createDriverFromCapabilities(
-        ['structured'],
-        { preferLocal: true, lenient: true }
-      );
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        preferLocal: true,
+        lenient: true,
+      });
 
       const now = new Date();
       const context: ScheduleContext = {
         currentTime: now,
         timezone: 'Asia/Tokyo',
-        request: 'now'
+        request: 'now',
       };
 
       const compiledPrompt = compile(scheduleParserModule, context);
@@ -243,17 +249,17 @@ describe.skipIf(!isMacOS)('Natural Language Schedule Interpretation (Integration
 
   describe('パフォーマンステスト', () => {
     it('should complete within reasonable time with MLX', async () => {
-      const driver = await aiService.createDriverFromCapabilities(
-        ['structured'],
-        { preferLocal: true, lenient: true }
-      );
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        preferLocal: true,
+        lenient: true,
+      });
 
       const startTime = Date.now();
 
       const context: ScheduleContext = {
         currentTime: new Date(),
         timezone: 'Asia/Tokyo',
-        request: 'tomorrow at 10am'
+        request: 'tomorrow at 10am',
       };
 
       const compiledPrompt = compile(scheduleParserModule, context);

@@ -126,7 +126,14 @@ export const clusteringPromptModule: PromptModule<ClusteringContext> = merge(
                     description: 'このグループの完了条件（オプション）',
                   },
                 },
-                required: ['id', 'perspective', 'issueIds', 'relationships', 'commonPatterns', 'suggestedPriority'],
+                required: [
+                  'id',
+                  'perspective',
+                  'issueIds',
+                  'relationships',
+                  'commonPatterns',
+                  'suggestedPriority',
+                ],
               },
             },
             insights: {

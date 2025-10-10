@@ -39,7 +39,14 @@ export interface FlowSuggestionResult {
     score: number;
     reason: string;
     matchFactors: Array<{
-      factor: 'priority' | 'deadline' | 'energy_match' | 'time_fit' | 'context_continuity' | 'user_preference' | 'dependency';
+      factor:
+        | 'priority'
+        | 'deadline'
+        | 'energy_match'
+        | 'time_fit'
+        | 'context_continuity'
+        | 'user_preference'
+        | 'dependency';
       score: number;
       description: string;
     }>;

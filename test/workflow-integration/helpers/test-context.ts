@@ -18,20 +18,20 @@ export async function createTestAIService(): Promise<AIService | null> {
         provider: 'test' as const,
         capabilities: ['fast', 'structured'] as any,
         priority: 10,
-        enabled: true
+        enabled: true,
       },
       {
         model: 'mlx-community/gemma-3-27b-it-qat-4bit',
         provider: 'mlx' as const,
         capabilities: ['local', 'fast', 'structured'] as any,
         priority: 30,
-        enabled: true
-      }
+        enabled: true,
+      },
     ],
     drivers: {
       test: {},
-      mlx: {}
-    }
+      mlx: {},
+    },
   };
 
   const aiService = new AIService(config);
@@ -45,7 +45,7 @@ export async function createTestAIService(): Promise<AIService | null> {
   }
 
   // 利用可能なモデルの情報を出力
-  console.info(`Available models: ${models.map(m => `${m.provider}:${m.model}`).join(', ')}`);
+  console.info(`Available models: ${models.map((m) => `${m.provider}:${m.model}`).join(', ')}`);
 
   return aiService;
 }
@@ -67,41 +67,47 @@ export async function createTestContext(
 
   // Mock Storage with minimal implementation
   const storage: Storage = {
-    createIssue: mockStorage?.createIssue || vi.fn().mockResolvedValue({
-      id: 'test-issue-1',
-      title: 'Test Issue',
-      description: '',
-      status: 'open',
-      labels: [],
-      updates: [],
-      relations: [],
-      sourceInputIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }),
+    createIssue:
+      mockStorage?.createIssue ||
+      vi.fn().mockResolvedValue({
+        id: 'test-issue-1',
+        title: 'Test Issue',
+        description: '',
+        status: 'open',
+        labels: [],
+        updates: [],
+        relations: [],
+        sourceInputIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
     getIssue: mockStorage?.getIssue || vi.fn().mockResolvedValue(null),
     updateIssue: mockStorage?.updateIssue || vi.fn().mockResolvedValue(undefined),
     searchIssues: mockStorage?.searchIssues || vi.fn().mockResolvedValue([]),
 
-    createKnowledge: mockStorage?.createKnowledge || vi.fn().mockResolvedValue({
-      id: 'test-knowledge-1',
-      content: '',
-      category: 'reference',
-      tags: [],
-      sourceIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date()
-    }),
+    createKnowledge:
+      mockStorage?.createKnowledge ||
+      vi.fn().mockResolvedValue({
+        id: 'test-knowledge-1',
+        content: '',
+        category: 'reference',
+        tags: [],
+        sourceIds: [],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
     searchKnowledge: mockStorage?.searchKnowledge || vi.fn().mockResolvedValue([]),
 
-    addPondEntry: mockStorage?.addPondEntry || vi.fn().mockResolvedValue({
-      id: 'test-pond-1',
-      content: '',
-      source: 'test',
-      metadata: {},
-      timestamp: new Date()
-    }),
-    searchPond: mockStorage?.searchPond || vi.fn().mockResolvedValue([])
+    addPondEntry:
+      mockStorage?.addPondEntry ||
+      vi.fn().mockResolvedValue({
+        id: 'test-pond-1',
+        content: '',
+        source: 'test',
+        metadata: {},
+        timestamp: new Date(),
+      }),
+    searchPond: mockStorage?.searchPond || vi.fn().mockResolvedValue([]),
   };
 
   // DriverFactoryをAIServiceを使って作成
@@ -118,10 +124,10 @@ export async function createTestContext(
     scheduler: {
       schedule: vi.fn().mockResolvedValue({
         scheduleId: 'test-schedule-1',
-        nextRun: new Date()
+        nextRun: new Date(),
       }),
-      cancelByIssue: vi.fn().mockResolvedValue(undefined)
-    }
+      cancelByIssue: vi.fn().mockResolvedValue(undefined),
+    },
   };
 
   return context;

@@ -15,7 +15,7 @@ export const REQUEST_TYPE = {
   OTHER: 'other',
 } as const;
 
-export type RequestType = typeof REQUEST_TYPE[keyof typeof REQUEST_TYPE];
+export type RequestType = (typeof REQUEST_TYPE)[keyof typeof REQUEST_TYPE];
 
 // AI分析結果のアクション分類（ワークフロー固有）
 export const ACTION_TYPE = {
@@ -25,7 +25,7 @@ export const ACTION_TYPE = {
   ANALYZE: 'analyze',
 } as const;
 
-export type ActionType = typeof ACTION_TYPE[keyof typeof ACTION_TYPE];
+export type ActionType = (typeof ACTION_TYPE)[keyof typeof ACTION_TYPE];
 
 // AI処理の設定値（ワークフロー固有）
 export const AI_CONFIG = {
@@ -47,4 +47,4 @@ export const PRIORITY = {
   TRIVIAL: 10,
 } as const;
 
-export type Priority = typeof PRIORITY[keyof typeof PRIORITY];
+export type Priority = (typeof PRIORITY)[keyof typeof PRIORITY];

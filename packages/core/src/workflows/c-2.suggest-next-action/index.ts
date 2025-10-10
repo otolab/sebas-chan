@@ -77,18 +77,17 @@ async function executeSuggestNextAction(
 
     // 2. 関連情報の収集
     // 関連Knowledge検索
-    const relevantKnowledge = await storage.searchKnowledge(
-      `${issue.title} ${issue.description}`
-    );
+    const relevantKnowledge = await storage.searchKnowledge(`${issue.title} ${issue.description}`);
 
     // 類似の解決済みIssue検索
     const similarResolvedIssues = await findSimilarResolvedIssues(storage, issue);
 
     // Issueが属するFlow取得
     const issueWithFlowIds = issue as any;
-    const parentFlow = issueWithFlowIds.flowIds && issueWithFlowIds.flowIds.length > 0
-      ? await storage.getFlow(issueWithFlowIds.flowIds[0])
-      : null;
+    const parentFlow =
+      issueWithFlowIds.flowIds && issueWithFlowIds.flowIds.length > 0
+        ? await storage.getFlow(issueWithFlowIds.flowIds[0])
+        : null;
 
     // 3. AIドライバーの作成
     const driver = await createDriver({
@@ -115,13 +114,7 @@ async function executeSuggestNextAction(
     });
 
     // 5. 提案の適用とイベント発行
-    await applyActionSuggestions(
-      issue.id,
-      actionResult,
-      emitter,
-      recorder,
-      storage
-    );
+    await applyActionSuggestions(issue.id, actionResult, emitter, recorder, storage);
 
     // 6. 結果を返す
     const primaryAction = actionResult.actions[0];
@@ -132,15 +125,17 @@ async function executeSuggestNextAction(
         state: actionResult.updatedState,
       },
       output: {
-        primaryAction: primaryAction ? {
-          title: primaryAction.title,
-          type: primaryAction.type,
-          steps: primaryAction.steps,
-          estimatedTime: primaryAction.estimatedTotalTime,
-          confidence: primaryAction.confidence,
-          prerequisites: primaryAction.prerequisites,
-        } : null,
-        alternativeActions: actionResult.actions.slice(1, 3).map(a => ({
+        primaryAction: primaryAction
+          ? {
+              title: primaryAction.title,
+              type: primaryAction.type,
+              steps: primaryAction.steps,
+              estimatedTime: primaryAction.estimatedTotalTime,
+              confidence: primaryAction.confidence,
+              prerequisites: primaryAction.prerequisites,
+            }
+          : null,
+        alternativeActions: actionResult.actions.slice(1, 3).map((a) => ({
           title: a.title,
           type: a.type,
           reason: a.description,

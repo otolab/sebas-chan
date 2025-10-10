@@ -155,7 +155,13 @@ export const flowRelationPromptModule: PromptModule<FlowRelationContext> = merge
                       properties: {
                         action: {
                           type: 'string',
-                          enum: ['remove_issue', 'add_issue', 'split_flow', 'merge_flow', 'archive_flow'],
+                          enum: [
+                            'remove_issue',
+                            'add_issue',
+                            'split_flow',
+                            'merge_flow',
+                            'archive_flow',
+                          ],
                           description: '提案するアクション',
                         },
                         target: {
@@ -171,7 +177,13 @@ export const flowRelationPromptModule: PromptModule<FlowRelationContext> = merge
                     },
                   },
                 },
-                required: ['flowId', 'health', 'perspectiveValidity', 'relationships', 'suggestedChanges'],
+                required: [
+                  'flowId',
+                  'health',
+                  'perspectiveValidity',
+                  'relationships',
+                  'suggestedChanges',
+                ],
               },
             },
             // updatedStateはupdateStatePromptModuleから提供される

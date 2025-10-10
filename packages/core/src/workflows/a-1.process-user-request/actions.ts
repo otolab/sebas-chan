@@ -15,14 +15,14 @@ import { REQUEST_TYPE, ACTION_TYPE } from '../shared/constants.js';
  */
 export interface RequestAnalysisResult {
   interpretation: string;
-  requestType: string;  // REQUEST_TYPEの値
+  requestType: string; // REQUEST_TYPEの値
   events?: Array<{
     type: string;
     reason: string;
     payload: Record<string, unknown>;
   }>;
   actions?: Array<{
-    type: string;  // ACTION_TYPEの値
+    type: string; // ACTION_TYPEの値
     target: string;
     details: string;
   }>;
@@ -258,7 +258,11 @@ export async function executeActions(
           ['user-reported']
         );
         executedActions.push(`Issue作成: ${newIssue.id}`);
-      } else if (action.type === ACTION_TYPE.UPDATE && action.target === 'issue' && relatedData.issues.length > 0) {
+      } else if (
+        action.type === ACTION_TYPE.UPDATE &&
+        action.target === 'issue' &&
+        relatedData.issues.length > 0
+      ) {
         // 既存Issue更新
         const targetIssue = relatedData.issues[0];
         const updatedIssue = await updateExistingIssue(
@@ -312,13 +316,7 @@ export async function emitEvents(
     try {
       // DATA_ARRIVEDイベントの場合はPondに保存
       if (eventConfig.type === 'DATA_ARRIVED') {
-        await createPondEntryAndEmitEvent(
-          storage,
-          recorder,
-          emitter,
-          content || '',
-          metadata
-        );
+        await createPondEntryAndEmitEvent(storage, recorder, emitter, content || '', metadata);
       } else {
         // その他のイベントをそのまま発行
         emitter.emit({

@@ -46,7 +46,7 @@ describe('Input to Pond Flow Integration', () => {
         executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
       };
 
-      // @ts-ignore - private propertyにアクセス
+      // @ts-expect-error - private propertyにアクセス
       engine.workflowRegistry.register(testWorkflow);
 
       await engine.start();
@@ -208,7 +208,7 @@ describe('Input to Pond Flow Integration', () => {
         executor: vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} }),
       };
 
-      // @ts-ignore - private propertyにアクセス
+      // @ts-expect-error - private propertyにアクセス
       engine.workflowRegistry.register(testWorkflow);
 
       await engine.start();

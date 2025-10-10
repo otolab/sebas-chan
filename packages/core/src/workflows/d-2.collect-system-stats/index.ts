@@ -16,10 +16,10 @@ import { RecordType } from '../recorder.js';
 
 // 閾値の定義（将来的にはKnowledgeから取得）
 const THRESHOLDS = {
-  STALLED_DAYS: 3,           // 停滞日数
-  UNCLUSTERED_ISSUES: 20,    // 未整理Issue数の閾値
-  POND_CAPACITY_RATIO: 0.8,  // Pond容量の警告閾値（80%）
-  POND_MAX_ENTRIES: 10000,   // Pond最大エントリ数
+  STALLED_DAYS: 3, // 停滞日数
+  UNCLUSTERED_ISSUES: 20, // 未整理Issue数の閾値
+  POND_CAPACITY_RATIO: 0.8, // Pond容量の警告閾値（80%）
+  POND_MAX_ENTRIES: 10000, // Pond最大エントリ数
 };
 
 /**
@@ -47,7 +47,7 @@ async function executeCollectSystemStats(
 
     // 停滞Issue（3日以上更新なし）を検出
     const now = new Date();
-    const stalledIssues = issues.filter(issue => {
+    const stalledIssues = issues.filter((issue) => {
       const daysSinceUpdate = Math.floor(
         (now.getTime() - new Date(issue.updatedAt).getTime()) / (1000 * 60 * 60 * 24)
       );
@@ -55,7 +55,7 @@ async function executeCollectSystemStats(
     });
 
     // 未整理Issue（Flowに属していないIssue）を検出
-    const unclusteredIssues = issues.filter(issue => {
+    const unclusteredIssues = issues.filter((issue) => {
       // flowIdsフィールドがないか空の場合、未整理と判断
       return !(issue as any).flowIds || (issue as any).flowIds.length === 0;
     });
@@ -82,7 +82,7 @@ async function executeCollectSystemStats(
         payload: {
           count: unclusteredIssues.length,
           threshold: THRESHOLDS.UNCLUSTERED_ISSUES,
-          issueIds: unclusteredIssues.map(i => i.id),
+          issueIds: unclusteredIssues.map((i) => i.id),
         },
       } as const;
       emitter.emit(event as SystemEvent);
@@ -184,10 +184,10 @@ export const collectSystemStatsWorkflow: WorkflowDefinition = {
   description: 'システム内のデータを監視し、閾値超過時にイベントを発行',
   triggers: {
     eventTypes: [
-      'SYSTEM_MAINTENANCE_DUE',  // 定期実行（1時間ごと等）
-      'IDLE_TIME_DETECTED',       // アイドル時
+      'SYSTEM_MAINTENANCE_DUE', // 定期実行（1時間ごと等）
+      'IDLE_TIME_DETECTED', // アイドル時
     ],
-    priority: 5,  // 最低優先度（バックグラウンド処理）
+    priority: 5, // 最低優先度（バックグラウンド処理）
   },
   executor: executeCollectSystemStats,
 };

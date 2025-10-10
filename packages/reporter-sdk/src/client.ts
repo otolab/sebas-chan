@@ -12,11 +12,7 @@ export class ReporterClient {
     this.retryDelay = options.retryOptions?.retryDelay ?? 1000;
   }
 
-  private async fetchWithRetry(
-    url: string,
-    options: RequestInit,
-    retries = 0
-  ): Promise<Response> {
+  private async fetchWithRetry(url: string, options: RequestInit, retries = 0): Promise<Response> {
     try {
       const response = await fetch(url, {
         ...options,
@@ -28,7 +24,7 @@ export class ReporterClient {
 
       if (!response.ok && retries < this.maxRetries) {
         if (response.status >= 500) {
-          await new Promise(resolve => setTimeout(resolve, this.retryDelay * (retries + 1)));
+          await new Promise((resolve) => setTimeout(resolve, this.retryDelay * (retries + 1)));
           return this.fetchWithRetry(url, options, retries + 1);
         }
       }
@@ -36,7 +32,7 @@ export class ReporterClient {
       return response;
     } catch (error) {
       if (retries < this.maxRetries) {
-        await new Promise(resolve => setTimeout(resolve, this.retryDelay * (retries + 1)));
+        await new Promise((resolve) => setTimeout(resolve, this.retryDelay * (retries + 1)));
         return this.fetchWithRetry(url, options, retries + 1);
       }
       throw error;
@@ -45,13 +41,10 @@ export class ReporterClient {
 
   async submitInput(input: Omit<Input, 'id' | 'timestamp'>): Promise<SubmitResult> {
     try {
-      const response = await this.fetchWithRetry(
-        `${this.apiUrl}/api/inputs`,
-        {
-          method: 'POST',
-          body: JSON.stringify(input),
-        }
-      );
+      const response = await this.fetchWithRetry(`${this.apiUrl}/api/inputs`, {
+        method: 'POST',
+        body: JSON.stringify(input),
+      });
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -83,25 +76,25 @@ export class ReporterClient {
     const results: SubmitResult[] = [];
     let succeeded = 0;
     let failed = 0;
-    
+
     for (const input of inputs) {
       const result = await this.submitInput(input);
       results.push(result);
-      
+
       if (result.success) {
         succeeded++;
       } else {
         failed++;
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    
+
     return {
       success: failed === 0,
       succeeded,
       failed,
-      results
+      results,
     };
   }
 
@@ -114,7 +107,7 @@ export class ReporterClient {
     }
   }
 
-  async getState(): Promise<any> {
+  async getState(): Promise<unknown> {
     const response = await fetch(`${this.apiUrl}/state`);
     if (!response.ok) {
       throw new Error(`Failed to get state: ${response.statusText}`);

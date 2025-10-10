@@ -31,7 +31,6 @@ interface IssueActionContext extends StateContext {
 export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
   updateStatePromptModule,
   {
-
     // >>> createContextなしだとちょっと分かりづらいかな？初期値は不要ですか？
 
     objective: ['Issueに対する具体的で実行可能なアクションを提案する'],
@@ -81,9 +80,7 @@ export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
           ? `ブロッカー: ${ctx.userContext.blockers.join(', ')}`
           : '',
       (ctx: IssueActionContext) =>
-        ctx.constraints?.timeLimit
-          ? `時間制約: ${ctx.constraints.timeLimit}分`
-          : '',
+        ctx.constraints?.timeLimit ? `時間制約: ${ctx.constraints.timeLimit}分` : '',
     ].filter(Boolean),
 
     materials: [
@@ -196,7 +193,14 @@ export const issueActionPromptModule: PromptModule<IssueActionContext> = merge(
                           items: { type: 'string' },
                         },
                       },
-                      required: ['order', 'action', 'detail', 'estimatedTime', 'tools', 'checkpoints'],
+                      required: [
+                        'order',
+                        'action',
+                        'detail',
+                        'estimatedTime',
+                        'tools',
+                        'checkpoints',
+                      ],
                     },
                   },
                   prerequisites: {

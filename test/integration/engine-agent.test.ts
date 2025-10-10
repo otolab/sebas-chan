@@ -33,8 +33,15 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
     name: 'TestWorkflow',
     description: 'テスト用ワークフロー',
     triggers: {
-      eventTypes: ['TEST_EVENT', 'EVENT_1', 'EVENT_2', 'EVENT_3',
-                   'LOW_EVENT', 'HIGH_EVENT', 'NORMAL_EVENT'],
+      eventTypes: [
+        'TEST_EVENT',
+        'EVENT_1',
+        'EVENT_2',
+        'EVENT_3',
+        'LOW_EVENT',
+        'HIGH_EVENT',
+        'NORMAL_EVENT',
+      ],
     },
     executor: vi.fn().mockImplementation(async (event, context) => {
       // contextの内容を記録（検証用）
@@ -470,9 +477,12 @@ describe('CoreEngine と CoreAgent の統合テスト', () => {
       // WorkflowResolverを設定
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn().mockImplementation((event) => {
-        if (event.type === 'HIGH_EVENT') return { workflows: [highPriorityWorkflow], resolutionTime: 1 };
-        if (event.type === 'NORMAL_EVENT') return { workflows: [normalPriorityWorkflow], resolutionTime: 1 };
-        if (event.type === 'LOW_EVENT') return { workflows: [lowPriorityWorkflow], resolutionTime: 1 };
+        if (event.type === 'HIGH_EVENT')
+          return { workflows: [highPriorityWorkflow], resolutionTime: 1 };
+        if (event.type === 'NORMAL_EVENT')
+          return { workflows: [normalPriorityWorkflow], resolutionTime: 1 };
+        if (event.type === 'LOW_EVENT')
+          return { workflows: [lowPriorityWorkflow], resolutionTime: 1 };
         return { workflows: [], resolutionTime: 1 };
       });
 

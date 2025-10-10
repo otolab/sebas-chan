@@ -5,7 +5,13 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { suggestNextActionWorkflow } from './index.js';
 import type { Issue, Knowledge, Flow, SystemEvent } from '@sebas-chan/shared-types';
-import { createCustomMockContext, createMockWorkflowEmitter, createMockIssue, createMockKnowledge, createMockWorkflowRecorder } from '../test-utils.js';
+import {
+  createCustomMockContext,
+  createMockWorkflowEmitter,
+  createMockIssue,
+  createMockKnowledge,
+  createMockWorkflowRecorder,
+} from '../test-utils.js';
 import { RecordType } from '../recorder.js';
 
 describe('C-2: SuggestNextActionForIssue', () => {
@@ -39,11 +45,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
                 title: 'Profile the application',
                 type: 'investigation',
                 description: 'Use profiling tools to identify bottlenecks',
-                steps: [
-                  'Install profiling tools',
-                  'Run the profiler',
-                  'Analyze results',
-                ],
+                steps: ['Install profiling tools', 'Run the profiler', 'Analyze results'],
                 estimatedTotalTime: 60,
                 confidence: 0.9,
                 prerequisites: ['Access to production environment'],
@@ -548,7 +550,9 @@ describe('C-2: SuggestNextActionForIssue', () => {
 
       const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
-      expect(suggestNextActionWorkflow.triggers.eventTypes).toContain('HIGH_PRIORITY_ISSUE_DETECTED');
+      expect(suggestNextActionWorkflow.triggers.eventTypes).toContain(
+        'HIGH_PRIORITY_ISSUE_DETECTED'
+      );
     });
 
     it('低優先度のISSUE_CREATEDイベントでは起動しない', () => {

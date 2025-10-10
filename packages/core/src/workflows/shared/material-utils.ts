@@ -30,14 +30,18 @@ export function issueToMaterial(issue: Issue | ExtendedIssue): MaterialElement {
     issue.updatedAt ? `更新日: ${issue.updatedAt}` : '',
     issue.labels?.length > 0 ? `ラベル: ${issue.labels.join(', ')}` : '',
     extIssue.source ? `ソース: ${extIssue.source}` : '',
-    extIssue.flowIds && extIssue.flowIds.length > 0 ? `所属Flow: ${extIssue.flowIds.join(', ')}` : ''
-  ].filter(Boolean).join('\n');
+    extIssue.flowIds && extIssue.flowIds.length > 0
+      ? `所属Flow: ${extIssue.flowIds.join(', ')}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return {
     type: 'material' as const,
     id: `issue-${issue.id}`,
     title: `Issue: ${issue.title}`,
-    content
+    content,
   };
 }
 
@@ -58,14 +62,16 @@ export function flowToMaterial(flow: Flow | ExtendedFlow): MaterialElement {
     flow.issueIds.length > 0 ? `Issue一覧: ${flow.issueIds.join(', ')}` : '',
     extFlow.health ? `健全性: ${extFlow.health}` : '',
     extFlow.deadline ? `締切: ${extFlow.deadline}` : '',
-    extFlow.recommendedTimeSlot ? `推奨時間帯: ${extFlow.recommendedTimeSlot}` : ''
-  ].filter(Boolean).join('\n');
+    extFlow.recommendedTimeSlot ? `推奨時間帯: ${extFlow.recommendedTimeSlot}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   return {
     type: 'material' as const,
     id: `flow-${flow.id}`,
     title: `Flow: ${flow.title}`,
-    content
+    content,
   };
 }
 
@@ -80,18 +86,31 @@ export function knowledgeToMaterial(knowledge: Knowledge | ExtendedKnowledge): M
     `内容: ${knowledge.content}`,
     extKnowledge.summary ? `要約: ${extKnowledge.summary}` : '',
     extKnowledge.confidence !== undefined ? `信頼度: ${extKnowledge.confidence}` : '',
-    knowledge.sources?.length > 0 ? `ソース: ${knowledge.sources.map(s =>
-      typeof s === 'object' && 'type' in s ?
-        (s.type === 'issue' ? `issue:${s.issueId}` :
-         s.type === 'pond' ? `pond:${s.pondEntryId}` :
-         s.type === 'knowledge' ? `knowledge:${s.knowledgeId}` :
-         s.type === 'user_direct' ? 'user_direct' : 'unknown')
-      : 'unknown'
-    ).join(', ')}` : '',
-    extKnowledge.tags && extKnowledge.tags.length > 0 ? `タグ: ${extKnowledge.tags.join(', ')}` : '',
+    knowledge.sources?.length > 0
+      ? `ソース: ${knowledge.sources
+          .map((s) =>
+            typeof s === 'object' && 'type' in s
+              ? s.type === 'issue'
+                ? `issue:${s.issueId}`
+                : s.type === 'pond'
+                  ? `pond:${s.pondEntryId}`
+                  : s.type === 'knowledge'
+                    ? `knowledge:${s.knowledgeId}`
+                    : s.type === 'user_direct'
+                      ? 'user_direct'
+                      : 'unknown'
+              : 'unknown'
+          )
+          .join(', ')}`
+      : '',
+    extKnowledge.tags && extKnowledge.tags.length > 0
+      ? `タグ: ${extKnowledge.tags.join(', ')}`
+      : '',
     extKnowledge.metadata ? `メタデータ: ${JSON.stringify(extKnowledge.metadata)}` : '',
-    `作成日: ${knowledge.createdAt}`
-  ].filter(Boolean).join('\n');
+    `作成日: ${knowledge.createdAt}`,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
   const title = extKnowledge.title || `Knowledge: ${knowledge.type}`;
 
@@ -99,7 +118,7 @@ export function knowledgeToMaterial(knowledge: Knowledge | ExtendedKnowledge): M
     type: 'material' as const,
     id: `knowledge-${knowledge.id}`,
     title,
-    content
+    content,
   };
 }
 
@@ -139,16 +158,14 @@ export function issueToMaterialWithFields(
     `ステータス: ${issue.status}`,
     `作成日: ${issue.createdAt}`,
     issue.updatedAt ? `更新日: ${issue.updatedAt}` : '',
-    issue.labels?.length > 0 ? `ラベル: ${issue.labels.join(', ')}` : ''
+    issue.labels?.length > 0 ? `ラベル: ${issue.labels.join(', ')}` : '',
   ];
 
   // 追加フィールドを含める
   if (additionalFields) {
     for (const [key, label] of Object.entries(additionalFields)) {
       if (issue[key] !== undefined && issue[key] !== null) {
-        const value = Array.isArray(issue[key])
-          ? issue[key].join(', ')
-          : String(issue[key]);
+        const value = Array.isArray(issue[key]) ? issue[key].join(', ') : String(issue[key]);
         baseContent.push(`${label}: ${value}`);
       }
     }
@@ -158,7 +175,7 @@ export function issueToMaterialWithFields(
     type: 'material' as const,
     id: `issue-${issue.id}`,
     title: `Issue: ${issue.title}`,
-    content: baseContent.filter(Boolean).join('\n')
+    content: baseContent.filter(Boolean).join('\n'),
   };
 }
 
@@ -183,17 +200,21 @@ export function flowAnalysisToMaterial(analysis: FlowAnalysis): MaterialElement 
     extFlow.relationships ? `関係性記述: ${extFlow.relationships}` : '',
     analysis.completionRate !== undefined ? `完了率: ${analysis.completionRate}%` : '',
     analysis.staleness !== undefined ? `停滞期間: ${analysis.staleness}日` : '',
-    analysis.perspectiveRelevance !== undefined ? `観点妥当性スコア: ${analysis.perspectiveRelevance}` : '',
+    analysis.perspectiveRelevance !== undefined
+      ? `観点妥当性スコア: ${analysis.perspectiveRelevance}`
+      : '',
     `所属Issue数: ${analysis.issues.length}`,
     '',
     '所属Issue一覧:',
-    ...analysis.issues.map(i => `  - ${i.id}: ${i.title} (${i.status})`)
-  ].filter(line => line !== null && line !== undefined).join('\n');
+    ...analysis.issues.map((i) => `  - ${i.id}: ${i.title} (${i.status})`),
+  ]
+    .filter((line) => line !== null && line !== undefined)
+    .join('\n');
 
   return {
     type: 'material' as const,
     id: `flow-analysis-${analysis.flow.id}`,
     title: `Flow分析: ${analysis.flow.title}`,
-    content
+    content,
   };
 }

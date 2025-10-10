@@ -26,25 +26,29 @@ const outputSchemaValidator = z.object({
     REQUEST_TYPE.FEEDBACK,
     REQUEST_TYPE.SCHEDULE,
     REQUEST_TYPE.SEARCH,
-    REQUEST_TYPE.OTHER
+    REQUEST_TYPE.OTHER,
   ]),
-  events: z.array(z.object({
-    type: z.string(),
-    payload: z.object({}).passthrough()
-  })),
-  actions: z.array(z.object({
-    type: z.enum([
-      ACTION_TYPE.SEARCH,
-      ACTION_TYPE.CREATE,
-      ACTION_TYPE.UPDATE,
-      ACTION_TYPE.ANALYZE
-    ]),
-    target: z.string(),
-    details: z.object({}).passthrough().optional()
-  })),
+  events: z.array(
+    z.object({
+      type: z.string(),
+      payload: z.object({}).passthrough(),
+    })
+  ),
+  actions: z.array(
+    z.object({
+      type: z.enum([
+        ACTION_TYPE.SEARCH,
+        ACTION_TYPE.CREATE,
+        ACTION_TYPE.UPDATE,
+        ACTION_TYPE.ANALYZE,
+      ]),
+      target: z.string(),
+      details: z.object({}).passthrough().optional(),
+    })
+  ),
   response: z.string(),
   reasoning: z.string(),
-  updatedState: z.string().optional()
+  updatedState: z.string().optional(),
 });
 
 describe('ProcessUserRequest Prompts', () => {
@@ -55,7 +59,7 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [],
         relatedKnowledge: [],
         relatedPondEntries: [],
-        currentState: '待機中'
+        currentState: '待機中',
       };
 
       const compiled = compile(processUserRequestPromptModule, context);
@@ -71,7 +75,7 @@ describe('ProcessUserRequest Prompts', () => {
         title: '既存タスク',
         status: 'open',
         priority: 80,
-        labels: ['urgent']
+        labels: ['urgent'],
       });
 
       const context = {
@@ -79,11 +83,13 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [issue],
         relatedKnowledge: [],
         relatedPondEntries: [],
-        currentState: '処理中'
+        currentState: '処理中',
       };
 
       const compiled = compile(processUserRequestPromptModule, context);
-      const materials = compiled.data.filter((item) => item.type === 'material') as MaterialElement[];
+      const materials = compiled.data.filter(
+        (item) => item.type === 'material'
+      ) as MaterialElement[];
 
       // Issue情報がマテリアルとして展開されることを確認
       const issueMaterial = materials.find((m) => m.id === 'issue-issue-001');
@@ -97,7 +103,7 @@ describe('ProcessUserRequest Prompts', () => {
       const knowledge = createMockKnowledge({
         id: 'know-001',
         type: 'process_manual',
-        content: 'バックアップ手順書'
+        content: 'バックアップ手順書',
       });
 
       const context = {
@@ -105,11 +111,13 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [],
         relatedKnowledge: [knowledge],
         relatedPondEntries: [],
-        currentState: '初期状態'
+        currentState: '初期状態',
       };
 
       const compiled = compile(processUserRequestPromptModule, context);
-      const materials = compiled.data.filter((item) => item.type === 'material') as MaterialElement[];
+      const materials = compiled.data.filter(
+        (item) => item.type === 'material'
+      ) as MaterialElement[];
 
       // Knowledge情報がマテリアルとして展開されることを確認
       const knowledgeMaterial = materials.find((m) => m.id === 'knowledge-know-001');
@@ -122,7 +130,7 @@ describe('ProcessUserRequest Prompts', () => {
       const pondEntry = createMockPondEntry({
         id: 'pond-001',
         content: '前回の実行ログ',
-        metadata: { source: 'system-log' }
+        metadata: { source: 'system-log' },
       });
 
       const context = {
@@ -130,11 +138,13 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [],
         relatedKnowledge: [],
         relatedPondEntries: [pondEntry],
-        currentState: '確認中'
+        currentState: '確認中',
       };
 
       const compiled = compile(processUserRequestPromptModule, context);
-      const materials = compiled.data.filter((item) => item.type === 'material') as MaterialElement[];
+      const materials = compiled.data.filter(
+        (item) => item.type === 'material'
+      ) as MaterialElement[];
 
       // PondEntry情報がマテリアルとして展開されることを確認
       const pondMaterial = materials.find((m) => m.id === 'pond-pond-001');
@@ -149,11 +159,13 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [],
         relatedKnowledge: [],
         relatedPondEntries: [],
-        currentState: '初期状態'
+        currentState: '初期状態',
       };
 
       const compiled = compile(processUserRequestPromptModule, context);
-      const materials = compiled.data.filter((item) => item.type === 'material') as MaterialElement[];
+      const materials = compiled.data.filter(
+        (item) => item.type === 'material'
+      ) as MaterialElement[];
 
       // 固定マテリアルが含まれることを確認
       const eventTypes = materials.find((m) => m.id === 'event-types');
@@ -175,7 +187,7 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [],
         relatedKnowledge: [],
         relatedPondEntries: [],
-        currentState: '待機中'
+        currentState: '待機中',
       };
 
       const compiled = compile(processUserRequestPromptModule, context);
@@ -202,10 +214,12 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [],
         relatedKnowledge: [],
         relatedPondEntries: [],
-        currentState: '対応待機中'
+        currentState: '対応待機中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(processUserRequestPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -214,8 +228,8 @@ describe('ProcessUserRequest Prompts', () => {
 
       // Issueタイプとして分類されることを確認
       expect(output.requestType).toBe(REQUEST_TYPE.ISSUE);
-      expect(output.events.some(e => e.type === 'ISSUE_CREATED')).toBe(true);
-      expect(output.actions.some(a => a.type === ACTION_TYPE.CREATE)).toBe(true);
+      expect(output.events.some((e) => e.type === 'ISSUE_CREATED')).toBe(true);
+      expect(output.actions.some((a) => a.type === ACTION_TYPE.CREATE)).toBe(true);
     });
 
     it('検索リクエストを正しく処理する', async () => {
@@ -223,7 +237,7 @@ describe('ProcessUserRequest Prompts', () => {
         id: 'issue-001',
         title: 'データベースパフォーマンス問題',
         description: 'クエリが遅い',
-        status: 'open'
+        status: 'open',
       });
 
       const context = {
@@ -231,10 +245,12 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [existingIssue],
         relatedKnowledge: [],
         relatedPondEntries: [],
-        currentState: '検索中'
+        currentState: '検索中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(processUserRequestPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -242,7 +258,7 @@ describe('ProcessUserRequest Prompts', () => {
 
       // 検索タイプとして分類されることを確認
       expect(output.requestType).toBe(REQUEST_TYPE.SEARCH);
-      expect(output.actions.some(a => a.type === ACTION_TYPE.SEARCH)).toBe(true);
+      expect(output.actions.some((a) => a.type === ACTION_TYPE.SEARCH)).toBe(true);
       expect(output.response).toContain('データベース');
     });
 
@@ -250,7 +266,7 @@ describe('ProcessUserRequest Prompts', () => {
       const knowledge = createMockKnowledge({
         id: 'know-001',
         type: 'factoid',
-        content: 'システムのメンテナンス時間は毎週日曜日の深夜2時から4時です'
+        content: 'システムのメンテナンス時間は毎週日曜日の深夜2時から4時です',
       });
 
       const context = {
@@ -258,10 +274,12 @@ describe('ProcessUserRequest Prompts', () => {
         relatedIssues: [],
         relatedKnowledge: [knowledge],
         relatedPondEntries: [],
-        currentState: '質問対応中'
+        currentState: '質問対応中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(processUserRequestPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -281,21 +299,23 @@ describe('ProcessUserRequest Prompts', () => {
             id: 'issue-001',
             title: '緊急バグ修正',
             status: 'open',
-            priority: 80
+            priority: 80,
           }),
           createMockIssue({
             id: 'issue-002',
             title: '重要な機能追加',
             status: 'open',
-            priority: 80
-          })
+            priority: 80,
+          }),
         ],
         relatedKnowledge: [],
         relatedPondEntries: [],
-        currentState: 'レビュー中'
+        currentState: 'レビュー中',
       };
 
-      const driver = await aiService.createDriverFromCapabilities(['structured'], { lenient: true });
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
+      });
       const compiled = compile(processUserRequestPromptModule, context);
       const result = await driver.query(compiled);
 
@@ -304,7 +324,7 @@ describe('ProcessUserRequest Prompts', () => {
       // アクションタイプとして分類されることを確認
       expect(output.requestType).toBe(REQUEST_TYPE.ACTION);
       // 更新アクションが含まれることを確認
-      expect(output.actions.some(a => a.type === ACTION_TYPE.UPDATE)).toBe(true);
+      expect(output.actions.some((a) => a.type === ACTION_TYPE.UPDATE)).toBe(true);
       // 複数のイベントが発行される可能性を確認
       expect(output.events.length).toBeGreaterThan(0);
     });

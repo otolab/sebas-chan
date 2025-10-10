@@ -10,7 +10,12 @@
  * - ユーザーの経験を体系化し、忘れても再利用できる形で保存
  */
 
-import type { SystemEvent, IssueStatusChangedEvent, RecurringPatternDetectedEvent, KnowledgeExtractableEvent } from '@sebas-chan/shared-types';
+import type {
+  SystemEvent,
+  IssueStatusChangedEvent,
+  RecurringPatternDetectedEvent,
+  KnowledgeExtractableEvent,
+} from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -56,7 +61,10 @@ async function executeExtractKnowledge(
 
     const { content, sourceType, sourceId, confidence } = await getContentFromEvent(
       event.type,
-      event.payload as KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | RecurringPatternDetectedEvent['payload'],
+      event.payload as
+        | KnowledgeExtractableEvent['payload']
+        | IssueStatusChangedEvent['payload']
+        | RecurringPatternDetectedEvent['payload'],
       storage
     );
 

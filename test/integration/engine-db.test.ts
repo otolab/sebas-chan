@@ -55,7 +55,6 @@ describe('CoreEngine と DBClient の統合テスト', () => {
   });
 
   describe('Pond操作', () => {
-
     it('TEST-POND-001: createInputからPondへの保存フロー', async () => {
       // Arrange
       await engine.start();

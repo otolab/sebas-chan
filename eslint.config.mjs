@@ -30,6 +30,7 @@ export default [
         FormData: 'readonly',
         Headers: 'readonly',
         Request: 'readonly',
+        RequestInit: 'readonly',
         Response: 'readonly',
 
         // TypeScript/Node types
@@ -116,6 +117,9 @@ export default [
       '**/build/**',
       '**/.svelte-kit/**',
       '**/packages/db/src/python/**',
+      '**/packages/db/.venv/**',
+      '**/.venv/**',
+      '**/venv/**',
       '**/coverage/**',
       '**/.turbo/**',
       '**/*.d.ts',

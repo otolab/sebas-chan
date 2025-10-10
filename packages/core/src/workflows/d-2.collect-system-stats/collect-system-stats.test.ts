@@ -7,7 +7,6 @@ import { collectSystemStatsWorkflow } from './index.js';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { SystemEvent, Issue, Flow, PondEntry } from '@sebas-chan/shared-types';
 
-
 // モックコンテキストの作成
 
 // >>> 共通のmockがあるはずです。毎回全部作らないほうがよいですね。
@@ -25,19 +24,35 @@ function createMockContext(
       searchIssues: async () => issues,
       searchFlows: async () => flows,
       searchPond: async () => pondEntries,
-      getIssue: async (id: string) => issues.find(i => i.id === id) || null,
-      getFlow: async (id: string) => flows.find(f => f.id === id) || null,
-      createIssue: async () => { throw new Error('Not implemented'); },
-      updateIssue: async () => { throw new Error('Not implemented'); },
-      addPondEntry: async () => { throw new Error('Not implemented'); },
+      getIssue: async (id: string) => issues.find((i) => i.id === id) || null,
+      getFlow: async (id: string) => flows.find((f) => f.id === id) || null,
+      createIssue: async () => {
+        throw new Error('Not implemented');
+      },
+      updateIssue: async () => {
+        throw new Error('Not implemented');
+      },
+      addPondEntry: async () => {
+        throw new Error('Not implemented');
+      },
       getKnowledge: async () => null,
       searchKnowledge: async () => [],
-      createKnowledge: async () => { throw new Error('Not implemented'); },
-      updateKnowledge: async () => { throw new Error('Not implemented'); },
-      createFlow: async () => { throw new Error('Not implemented'); },
-      updateFlow: async () => { throw new Error('Not implemented'); },
+      createKnowledge: async () => {
+        throw new Error('Not implemented');
+      },
+      updateKnowledge: async () => {
+        throw new Error('Not implemented');
+      },
+      createFlow: async () => {
+        throw new Error('Not implemented');
+      },
+      updateFlow: async () => {
+        throw new Error('Not implemented');
+      },
     },
-    createDriver: async () => { throw new Error('Not needed for D-2'); },
+    createDriver: async () => {
+      throw new Error('Not needed for D-2');
+    },
     recorder: {
       record: (type: any, data: any) => {
         records.push({ type, data });
@@ -76,20 +91,24 @@ describe('CollectSystemStats Workflow', () => {
 
   it('should emit UNCLUSTERED_ISSUES_EXCEEDED event when threshold exceeded', async () => {
     // 21個の未整理Issueを作成
-    const issues: Issue[] = Array.from({ length: 21 }, (_, i) => ({
-      id: `issue-${i}`,
-      title: `Issue ${i}`,
-      description: 'Test issue',
-      status: 'open',
-      priority: 50,
-      labels: [],
-      updates: [],
-      relations: [],
-      sourceInputIds: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      // flowIdsを設定しない（未整理）
-    } as Issue));
+    const issues: Issue[] = Array.from(
+      { length: 21 },
+      (_, i) =>
+        ({
+          id: `issue-${i}`,
+          title: `Issue ${i}`,
+          description: 'Test issue',
+          status: 'open',
+          priority: 50,
+          labels: [],
+          updates: [],
+          relations: [],
+          sourceInputIds: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          // flowIdsを設定しない（未整理）
+        }) as Issue
+    );
 
     mockContext = createMockContext(issues, [], []);
 
@@ -103,7 +122,7 @@ describe('CollectSystemStats Workflow', () => {
     expect(result.success).toBe(true);
 
     const emittedEvents = mockEmitter.getEmittedEvents();
-    const unclusteredEvent = emittedEvents.find(e => e.type === 'UNCLUSTERED_ISSUES_EXCEEDED');
+    const unclusteredEvent = emittedEvents.find((e) => e.type === 'UNCLUSTERED_ISSUES_EXCEEDED');
 
     expect(unclusteredEvent).toBeDefined();
     expect(unclusteredEvent.payload.count).toBe(21);
@@ -157,7 +176,7 @@ describe('CollectSystemStats Workflow', () => {
     expect(result.success).toBe(true);
 
     const emittedEvents = mockEmitter.getEmittedEvents();
-    const stalledEvents = emittedEvents.filter(e => e.type === 'ISSUE_STALLED');
+    const stalledEvents = emittedEvents.filter((e) => e.type === 'ISSUE_STALLED');
 
     expect(stalledEvents).toHaveLength(1);
     expect(stalledEvents[0].payload.issueId).toBe('stalled-issue-1');
@@ -186,7 +205,7 @@ describe('CollectSystemStats Workflow', () => {
     expect(result.success).toBe(true);
 
     const emittedEvents = mockEmitter.getEmittedEvents();
-    const capacityWarning = emittedEvents.find(e => e.type === 'POND_CAPACITY_WARNING');
+    const capacityWarning = emittedEvents.find((e) => e.type === 'POND_CAPACITY_WARNING');
 
     expect(capacityWarning).toBeDefined();
     expect(capacityWarning.payload.usage).toBe(8001);

@@ -8,7 +8,7 @@ import type {
   Issue,
   KnowledgeExtractableEvent,
   IssueStatusChangedEvent,
-  RecurringPatternDetectedEvent
+  RecurringPatternDetectedEvent,
 } from '@sebas-chan/shared-types';
 import type { WorkflowStorageInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
@@ -70,7 +70,10 @@ export function createKnowledgeSource(sourceType: string, sourceId: string): Kno
  */
 export async function getContentFromEvent(
   eventType: string,
-  payload: KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | RecurringPatternDetectedEvent['payload'],
+  payload:
+    | KnowledgeExtractableEvent['payload']
+    | IssueStatusChangedEvent['payload']
+    | RecurringPatternDetectedEvent['payload'],
   storage: WorkflowStorageInterface
 ): Promise<{
   content: string;
@@ -103,7 +106,7 @@ export async function getContentFromEvent(
     } else if (sourceType === 'pattern') {
       // パターンの場合はPondから関連データを取得
       const pondEntries = await storage.searchPond(sourceId);
-      content = pondEntries.map(e => e.content).join('\n\n');
+      content = pondEntries.map((e) => e.content).join('\n\n');
     } else {
       // その他のソースタイプの場合
       content = knowledgePayload.reason;
@@ -238,15 +241,16 @@ export async function updateExistingKnowledge(
   const knowledgeSource = createKnowledgeSource(sourceType, sourceId);
 
   // confidenceが負の場合はdownvotesを増加、正の場合はupvotesを増加
-  const reputationUpdate = confidence >= 0
-    ? {
-        upvotes: targetKnowledge.reputation.upvotes + Math.round(Math.abs(confidence) * 5),
-        downvotes: targetKnowledge.reputation.downvotes,
-      }
-    : {
-        upvotes: targetKnowledge.reputation.upvotes,
-        downvotes: targetKnowledge.reputation.downvotes + Math.round(Math.abs(confidence) * 5),
-      };
+  const reputationUpdate =
+    confidence >= 0
+      ? {
+          upvotes: targetKnowledge.reputation.upvotes + Math.round(Math.abs(confidence) * 5),
+          downvotes: targetKnowledge.reputation.downvotes,
+        }
+      : {
+          upvotes: targetKnowledge.reputation.upvotes,
+          downvotes: targetKnowledge.reputation.downvotes + Math.round(Math.abs(confidence) * 5),
+        };
 
   await storage.updateKnowledge(targetKnowledge.id, {
     reputation: reputationUpdate,
@@ -272,6 +276,6 @@ export function isDuplicateKnowledge(
   existingKnowledge: Knowledge[]
 ): boolean {
   return existingKnowledge.some(
-    k => k.content.toLowerCase() === extractedKnowledge.toLowerCase()
+    (k) => k.content.toLowerCase() === extractedKnowledge.toLowerCase()
   );
 }

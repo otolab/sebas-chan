@@ -128,12 +128,7 @@ describe('analyzeIssueImpact prompts', () => {
         ],
       });
 
-      const result = await analyzeIssue(
-        aiService,
-        issue,
-        [],
-        'プロジェクトで複数のIssueが進行中'
-      );
+      const result = await analyzeIssue(aiService, issue, [], 'プロジェクトで複数のIssueが進行中');
 
       expect(result).toBeDefined();
       expect(result.impactScore).toBeDefined();
@@ -160,12 +155,7 @@ describe('analyzeIssueImpact prompts', () => {
         updatedAt: new Date(),
       });
 
-      const result = await analyzeIssue(
-        aiService,
-        issue,
-        [],
-        'プロジェクト進行中'
-      );
+      const result = await analyzeIssue(aiService, issue, [], 'プロジェクト進行中');
 
       expect(result).toBeDefined();
       expect(result.shouldClose).toBe(true);

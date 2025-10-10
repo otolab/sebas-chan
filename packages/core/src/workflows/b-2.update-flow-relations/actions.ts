@@ -190,7 +190,7 @@ async function applyFlowChange(
    * SUGGESTEDイベントを発火せず、実行可能な変更は即座に適用する。
    * ユーザー判断が必要な複雑な変更はIssueとして作成する。
    */
-  
+
   const flow = await storage.getFlow(flowId);
   if (!flow) {
     recorder.record(RecordType.ERROR, {
@@ -204,7 +204,7 @@ async function applyFlowChange(
   switch (change.action) {
     case 'remove_issue': {
       // Issueを直接削除
-      const updatedIssueIds = flow.issueIds.filter(id => id !== change.target);
+      const updatedIssueIds = flow.issueIds.filter((id) => id !== change.target);
       await storage.updateFlow(flowId, {
         issueIds: updatedIssueIds,
       });
@@ -268,11 +268,13 @@ async function applyFlowChange(
         status: 'open' as any,
         priority: PRIORITY.MEDIUM,
         labels: ['suggestion', 'flow-management', 'split-flow'],
-        updates: [{
-          timestamp: new Date(),
-          content: `UpdateFlowRelationsワークフローによって作成されました。Flow ID: ${flowId}`,
-          author: 'ai' as const,
-        }],
+        updates: [
+          {
+            timestamp: new Date(),
+            content: `UpdateFlowRelationsワークフローによって作成されました。Flow ID: ${flowId}`,
+            author: 'ai' as const,
+          },
+        ],
         relations: [],
         sourceInputIds: [],
       });
@@ -305,11 +307,13 @@ async function applyFlowChange(
         status: 'open' as any,
         priority: PRIORITY.MEDIUM,
         labels: ['suggestion', 'flow-management', 'merge-flow'],
-        updates: [{
-          timestamp: new Date(),
-          content: `UpdateFlowRelationsワークフローによって作成されました。Flow IDs: ${flowId}, ${change.target}`,
-          author: 'ai' as const,
-        }],
+        updates: [
+          {
+            timestamp: new Date(),
+            content: `UpdateFlowRelationsワークフローによって作成されました。Flow IDs: ${flowId}, ${change.target}`,
+            author: 'ai' as const,
+          },
+        ],
         relations: [],
         sourceInputIds: [],
       });

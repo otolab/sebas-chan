@@ -67,7 +67,7 @@ describe('Input処理フローのE2Eテスト', () => {
           payload: {
             pondEntryId: pondEntry.id,
             originalInput: input,
-            detectedKeywords: ['エラー', 'error'].filter(kw => input.content.includes(kw)),
+            detectedKeywords: ['エラー', 'error'].filter((kw) => input.content.includes(kw)),
           },
         };
         await emitter.emit(analysisEvent);
@@ -310,7 +310,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
       // すべてがPondに保存される
       expect(createdPondEntries).toHaveLength(5);
-      createdPondEntries.forEach(entry => {
+      createdPondEntries.forEach((entry) => {
         expect(entry.id).toMatch(/^pond-/);
       });
     });
@@ -329,8 +329,10 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'DATA_ARRIVED') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
-        if (event.type === 'ANALYZE_ISSUE_IMPACT') return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED')
+          return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
+        if (event.type === 'ANALYZE_ISSUE_IMPACT')
+          return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
 
@@ -362,7 +364,7 @@ describe('Input処理フローのE2Eテスト', () => {
       expect(triggeredAnalysis[0].payload.detectedKeywords).toContain('error');
 
       // ANALYZE_ISSUE_IMPACTイベントがキューに追加される
-      const analysisEvent = allEvents.find(e => e.type === 'ANALYZE_ISSUE_IMPACT');
+      const analysisEvent = allEvents.find((e) => e.type === 'ANALYZE_ISSUE_IMPACT');
       expect(analysisEvent).toBeDefined();
       expect(analysisEvent.payload.originalInput.id).toBe(errorInput.id);
 
@@ -377,7 +379,7 @@ describe('Input処理フローのE2Eテスト', () => {
       // 関連エントリの検索が行われる
       expect(mockDbClient.searchPond).toHaveBeenCalledWith(
         expect.objectContaining({
-          q: expect.stringContaining('エラー')
+          q: expect.stringContaining('エラー'),
         })
       );
     });
@@ -394,8 +396,10 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'DATA_ARRIVED') return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
-        if (event.type === 'ANALYZE_ISSUE_IMPACT') return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED')
+          return { event, workflows: [ingestInputWorkflow], resolutionTime: 1 };
+        if (event.type === 'ANALYZE_ISSUE_IMPACT')
+          return { event, workflows: [analyzeIssueWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
 
@@ -462,7 +466,8 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'DATA_ARRIVED') return { event, workflows: [stateTrackingWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED')
+          return { event, workflows: [stateTrackingWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
 
@@ -487,7 +492,7 @@ describe('Input処理フローのE2Eテスト', () => {
 
       // 状態が累積的に更新される
       const finalState = engine.getState();
-      inputs.forEach(input => {
+      inputs.forEach((input) => {
         expect(finalState).toContain(`[Processed Input: ${input.id}]`);
       });
 
@@ -528,7 +533,8 @@ describe('Input処理フローのE2Eテスト', () => {
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
       resolver.resolve = vi.fn((event) => {
-        if (event.type === 'DATA_ARRIVED') return { event, workflows: [errorWorkflow], resolutionTime: 1 };
+        if (event.type === 'DATA_ARRIVED')
+          return { event, workflows: [errorWorkflow], resolutionTime: 1 };
         return { event, workflows: [], resolutionTime: 1 };
       });
 
@@ -599,7 +605,11 @@ describe('Input処理フローのE2Eテスト', () => {
       registry.register(partialFailureWorkflow);
       // WorkflowResolverをモック
       const resolver = (engine as any).workflowResolver;
-      resolver.resolve = vi.fn((event) => ({ event, workflows: [partialFailureWorkflow], resolutionTime: 1 }));
+      resolver.resolve = vi.fn((event) => ({
+        event,
+        workflows: [partialFailureWorkflow],
+        resolutionTime: 1,
+      }));
 
       await engine.start();
 
@@ -641,13 +651,13 @@ describe('Input処理フローのE2Eテスト', () => {
         const logs = recorder.getBuffer();
 
         // INPUTログは必ず記録される（CoreAgent側で）
-        const hasInput = logs.some(log => log.type === 'input');
+        const hasInput = logs.some((log) => log.type === 'input');
 
         // OUTPUTログがあれば成功
-        const hasOutput = logs.some(log => log.type === 'output');
+        const hasOutput = logs.some((log) => log.type === 'output');
 
         // ERRORログがあれば失敗（CoreAgentのcatchブロックで記録）
-        const hasError = logs.some(log => log.type === 'error');
+        const hasError = logs.some((log) => log.type === 'error');
 
         // index 0, 2は成功（processCount 1, 3）
         // index 1, 3は失敗（processCount 2, 4）

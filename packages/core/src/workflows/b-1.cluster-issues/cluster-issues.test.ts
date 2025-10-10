@@ -18,42 +18,57 @@ function createMockContext(issues: Issue[] = [], flows: Flow[] = []): WorkflowCo
     storage: {
       searchIssues: async () => issues,
       searchFlows: async () => flows,
-      getIssue: async (id: string) => issues.find(i => i.id === id) || null,
-      getFlow: async (id: string) => flows.find(f => f.id === id) || null,
-      createIssue: async () => { throw new Error('Not implemented'); },
-      updateIssue: async () => { throw new Error('Not implemented'); },
+      getIssue: async (id: string) => issues.find((i) => i.id === id) || null,
+      getFlow: async (id: string) => flows.find((f) => f.id === id) || null,
+      createIssue: async () => {
+        throw new Error('Not implemented');
+      },
+      updateIssue: async () => {
+        throw new Error('Not implemented');
+      },
       searchPond: async () => [],
-      addPondEntry: async () => { throw new Error('Not implemented'); },
+      addPondEntry: async () => {
+        throw new Error('Not implemented');
+      },
       getKnowledge: async () => null,
       searchKnowledge: async () => [],
-      createKnowledge: async () => { throw new Error('Not implemented'); },
-      updateKnowledge: async () => { throw new Error('Not implemented'); },
-      createFlow: async () => { throw new Error('Not implemented'); },
-      updateFlow: async () => { throw new Error('Not implemented'); },
+      createKnowledge: async () => {
+        throw new Error('Not implemented');
+      },
+      updateKnowledge: async () => {
+        throw new Error('Not implemented');
+      },
+      createFlow: async () => {
+        throw new Error('Not implemented');
+      },
+      updateFlow: async () => {
+        throw new Error('Not implemented');
+      },
     },
-    createDriver: async () => new TestDriver({
-      responses: [
-        JSON.stringify({
-          clusters: [
-            {
-              id: 'cluster-1',
-              perspective: {
-                type: 'project',
-                title: 'プロジェクトA',
-                description: 'プロジェクトAに関連するIssue群',
+    createDriver: async () =>
+      new TestDriver({
+        responses: [
+          JSON.stringify({
+            clusters: [
+              {
+                id: 'cluster-1',
+                perspective: {
+                  type: 'project',
+                  title: 'プロジェクトA',
+                  description: 'プロジェクトAに関連するIssue群',
+                },
+                issueIds: ['issue-1', 'issue-2', 'issue-3'],
+                relationships: 'これらのIssueは共通の目標に向かっている',
+                commonPatterns: ['deadline', 'technical'],
+                suggestedPriority: 0.8,
               },
-              issueIds: ['issue-1', 'issue-2', 'issue-3'],
-              relationships: 'これらのIssueは共通の目標に向かっている',
-              commonPatterns: ['deadline', 'technical'],
-              suggestedPriority: 0.8,
-            },
-          ],
-          insights: ['プロジェクトベースのグルーピングが効果的'],
-          unclustered: ['issue-4'],
-          updatedState: '分析完了',
-        }),
-      ],
-    }),
+            ],
+            insights: ['プロジェクトベースのグルーピングが効果的'],
+            unclustered: ['issue-4'],
+            updatedState: '分析完了',
+          }),
+        ],
+      }),
     recorder: {
       record: (type: any, data: any) => {
         records.push({ type, data });

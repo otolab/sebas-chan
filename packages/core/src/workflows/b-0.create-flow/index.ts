@@ -10,7 +10,12 @@
  * - FLOW_CREATEDイベントを発火
  */
 
-import type { SystemEvent, Flow, IssuesClusterDetectedEvent, PerspectiveTriggeredEvent } from '@sebas-chan/shared-types';
+import type {
+  SystemEvent,
+  Flow,
+  IssuesClusterDetectedEvent,
+  PerspectiveTriggeredEvent,
+} from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -209,8 +214,8 @@ export const createFlowWorkflow: WorkflowDefinition = {
   description: 'クラスター検出や観点発見からFlowを自動作成',
   triggers: {
     eventTypes: [
-      'ISSUES_CLUSTER_DETECTED',  // クラスター検出
-      'PERSPECTIVE_TRIGGERED',     // 観点発見
+      'ISSUES_CLUSTER_DETECTED', // クラスター検出
+      'PERSPECTIVE_TRIGGERED', // 観点発見
     ],
     priority: 30, // 中優先度
   },

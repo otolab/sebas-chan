@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, beforeEach, afterEach, vi, SpyInstance } from 'vitest';
+import { describe, it, expect, beforeAll, afterEach, vi, SpyInstance } from 'vitest';
 import { ReporterClient } from './client';
 
 describe('ReporterClient', () => {
@@ -21,11 +21,12 @@ describe('ReporterClient', () => {
 
   describe('submitInput', () => {
     it('should submit input successfully', async () => {
-      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
-        new Response(JSON.stringify({ data: { id: 'test-id-123' } }), { 
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        })
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ data: { id: 'test-id-123' } }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
       );
 
       const result = await client.submitInput({
@@ -43,11 +44,12 @@ describe('ReporterClient', () => {
     });
 
     it('should handle API errors', async () => {
-      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
-        new Response('Invalid input format', { 
-          status: 400,
-          statusText: 'Bad Request'
-        })
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(
+        async () =>
+          new Response('Invalid input format', {
+            status: 400,
+            statusText: 'Bad Request',
+          })
       );
 
       const result = await client.submitInput({
@@ -65,14 +67,14 @@ describe('ReporterClient', () => {
       mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => {
         callCount++;
         if (callCount === 1) {
-          return new Response('', { 
+          return new Response('', {
             status: 500,
-            statusText: 'Internal Server Error'
+            statusText: 'Internal Server Error',
           });
         }
-        return new Response(JSON.stringify({ data: { id: 'retry-success-id' } }), { 
+        return new Response(JSON.stringify({ data: { id: 'retry-success-id' } }), {
           status: 200,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Content-Type': 'application/json' },
         });
       });
 
@@ -103,11 +105,12 @@ describe('ReporterClient', () => {
 
   describe('submitBatch', () => {
     it('should submit multiple inputs', async () => {
-      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
-        new Response(JSON.stringify({ data: { id: 'batch-id' } }), { 
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        })
+      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(
+        async () =>
+          new Response(JSON.stringify({ data: { id: 'batch-id' } }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
       );
 
       const inputs = [
@@ -121,24 +124,24 @@ describe('ReporterClient', () => {
       expect(result.succeeded).toBe(2);
       expect(result.failed).toBe(0);
       expect(result.results).toHaveLength(2);
-      expect(result.results.every(r => r.success)).toBe(true);
+      expect(result.results.every((r) => r.success)).toBe(true);
     });
   });
 
   describe('checkHealth', () => {
     it('should return true when API is healthy', async () => {
-      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
-        new Response('', { status: 200 })
-      );
+      mockedFetch = vi
+        .spyOn(global, 'fetch')
+        .mockImplementation(async () => new Response('', { status: 200 }));
 
       const isHealthy = await client.checkHealth();
       expect(isHealthy).toBe(true);
     });
 
     it('should return false when API is unhealthy', async () => {
-      mockedFetch = vi.spyOn(global, 'fetch').mockImplementation(async () => 
-        new Response('', { status: 503 })
-      );
+      mockedFetch = vi
+        .spyOn(global, 'fetch')
+        .mockImplementation(async () => new Response('', { status: 503 }));
 
       const isHealthy = await client.checkHealth();
       expect(isHealthy).toBe(false);

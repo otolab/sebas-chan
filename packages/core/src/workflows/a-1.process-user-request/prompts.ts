@@ -15,7 +15,7 @@ export interface RequestAnalysisContext {
   relatedIssues: Issue[];
   relatedKnowledge: Knowledge[];
   relatedPondEntries: PondEntry[];
-  currentState: string;  // statePromptModuleと統合
+  currentState: string; // statePromptModuleと統合
 }
 
 /**
@@ -26,12 +26,12 @@ const outputSchema = {
   properties: {
     interpretation: {
       type: 'string' as const,
-      description: 'リクエストの解釈'
+      description: 'リクエストの解釈',
     },
     requestType: {
       type: 'string' as const,
       enum: Object.values(REQUEST_TYPE),
-      description: 'リクエストの分類'
+      description: 'リクエストの分類',
     },
     events: {
       type: 'array' as const,
@@ -39,11 +39,11 @@ const outputSchema = {
         type: 'object' as const,
         properties: {
           type: { type: 'string' as const },
-          payload: { type: 'object' as const }
+          payload: { type: 'object' as const },
         },
-        required: ['type', 'payload']
+        required: ['type', 'payload'],
       },
-      description: '発行するイベント'
+      description: '発行するイベント',
     },
     actions: {
       type: 'array' as const,
@@ -52,23 +52,23 @@ const outputSchema = {
         properties: {
           type: { type: 'string' as const, enum: Object.values(ACTION_TYPE) },
           target: { type: 'string' as const },
-          details: { type: 'object' as const }
+          details: { type: 'object' as const },
         },
-        required: ['type', 'target']
+        required: ['type', 'target'],
       },
-      description: '実行するアクション'
+      description: '実行するアクション',
     },
     response: {
       type: 'string' as const,
-      description: 'ユーザーへの応答'
+      description: 'ユーザーへの応答',
     },
     reasoning: {
       type: 'string' as const,
-      description: '判断理由'
+      description: '判断理由',
     },
     // updatedStateはupdateStatePromptModuleから自動的に提供される
   },
-  required: ['interpretation', 'requestType', 'events', 'actions', 'response', 'reasoning']
+  required: ['interpretation', 'requestType', 'events', 'actions', 'response', 'reasoning'],
 } as const;
 
 /**
@@ -93,7 +93,7 @@ const availableEventTypes = [
 const actionTypes = [
   '- create: 新規作成（issue/knowledge/pond）',
   '- update: 更新（issue/knowledge）',
-  '- search: 検索（issue/knowledge/pond）'
+  '- search: 検索（issue/knowledge/pond）',
 ].join('\n');
 
 /**
@@ -105,20 +105,18 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
     relatedIssues: [] as Issue[],
     relatedKnowledge: [] as Knowledge[],
     relatedPondEntries: [] as PondEntry[],
-    currentState: ''
+    currentState: '',
   }),
 
   // objective: instructions大セクションに分類
-  objective: [
-    'ユーザーリクエストを分析し、適切なアクションとイベントを決定する'
-  ],
+  objective: ['ユーザーリクエストを分析し、適切なアクションとイベントを決定する'],
 
   // terms: instructions大セクションに分類
   terms: [
     'Issue: ユーザーに代わってAIが追跡・管理すべき事項',
     'Pond: 一時的なデータ保管場所',
     'Knowledge: 抽出された知識・ノウハウ',
-    'リクエストタイプ: issue（追跡事項）、schedule（スケジュール）、search（検索）、question（質問）、action（アクション）、feedback（フィードバック）、other（その他）'
+    'リクエストタイプ: issue（追跡事項）、schedule（スケジュール）、search（検索）、question（質問）、action（アクション）、feedback（フィードバック）、other（その他）',
   ],
 
   // instructions標準セクション: instructions大セクションに分類
@@ -130,7 +128,7 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
     '4. 実行すべきアクションを決定',
     '5. ユーザーへの応答メッセージを生成',
     '',
-    'JSON形式で応答してください。'
+    'JSON形式で応答してください。',
   ],
 
   // materials: data大セクションに分類（参考情報）
@@ -183,17 +181,15 @@ const baseProcessUserRequestModule: PromptModule<RequestAnalysisContext> = {
   ],
 
   // inputs: data大セクションに分類（動的データ）
-  inputs: [
-    (ctx: RequestAnalysisContext) => `ユーザーリクエスト: ${ctx.content || '（内容なし）'}`,
-  ],
+  inputs: [(ctx: RequestAnalysisContext) => `ユーザーリクエスト: ${ctx.content || '（内容なし）'}`],
 
   // schemaセクション（output大セクションに分類）
   schema: [
     {
       type: 'json',
-      content: outputSchema
-    }
-  ]
+      content: outputSchema,
+    },
+  ],
 };
 
 /**

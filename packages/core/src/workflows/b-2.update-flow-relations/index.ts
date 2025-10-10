@@ -47,7 +47,7 @@ async function executeUpdateFlowRelations(
       ? [await storage.getFlow(payload.flowId)]
       : await storage.searchFlows('status:active');
 
-    const validFlows = flows.filter(f => f !== null);
+    const validFlows = flows.filter((f) => f !== null);
     if (validFlows.length === 0) {
       recorder.record(RecordType.INFO, {
         message: 'No active flows to update',
@@ -62,12 +62,10 @@ async function executeUpdateFlowRelations(
     // 2. 各Flowに関連するIssueを取得
     const flowAnalysis = await Promise.all(
       validFlows.map(async (flow) => {
-        const issues = await Promise.all(
-          flow.issueIds.map(id => storage.getIssue(id))
-        );
+        const issues = await Promise.all(flow.issueIds.map((id) => storage.getIssue(id)));
         return {
           flow,
-          issues: issues.filter(i => i !== null),
+          issues: issues.filter((i) => i !== null),
           completionRate: calculateCompletionRate(issues),
           staleness: calculateStaleness(flow),
         };
@@ -105,8 +103,8 @@ async function executeUpdateFlowRelations(
         state: analysisResult.updatedState,
       },
       output: {
-        updatedFlows: analysisResult.flowUpdates.map(u => u.flowId),
-        changes: analysisResult.flowUpdates.map(u => ({
+        updatedFlows: analysisResult.flowUpdates.map((u) => u.flowId),
+        changes: analysisResult.flowUpdates.map((u) => ({
           flowId: u.flowId,
           health: u.health,
           perspectiveValid: u.perspectiveValidity.stillValid,
@@ -136,7 +134,7 @@ async function executeUpdateFlowRelations(
  */
 function calculateCompletionRate(issues: any[]): number {
   if (issues.length === 0) return 0;
-  const closedCount = issues.filter(i => i?.status === 'closed').length;
+  const closedCount = issues.filter((i) => i?.status === 'closed').length;
   return Math.round((closedCount / issues.length) * 100);
 }
 

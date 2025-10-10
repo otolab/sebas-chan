@@ -8,13 +8,9 @@ describe('CoreAgent', () => {
   let agent: CoreAgent;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let consoleLogSpy: any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let consoleErrorSpy: any;
 
   beforeEach(() => {
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 

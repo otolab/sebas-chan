@@ -56,10 +56,9 @@ export async function setupAIService() {
 
     // ドライバーが実際に作成できるか確認
     console.log('🔨 Testing driver creation...');
-    const testDriver = await globalAIService.createDriverFromCapabilities(
-      ['structured'],
-      { lenient: true }
-    );
+    const testDriver = await globalAIService.createDriverFromCapabilities(['structured'], {
+      lenient: true,
+    });
 
     if (!testDriver) {
       console.log('⚠️ Failed to create driver');

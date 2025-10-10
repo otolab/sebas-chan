@@ -5,7 +5,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { suggestNextFlowWorkflow } from './index.js';
 import type { Flow, SystemEvent } from '@sebas-chan/shared-types';
-import { createCustomMockContext, createMockWorkflowEmitter, createMockWorkflowRecorder } from '../test-utils.js';
+import {
+  createCustomMockContext,
+  createMockWorkflowEmitter,
+  createMockWorkflowRecorder,
+} from '../test-utils.js';
 import { RecordType } from '../recorder.js';
 
 describe('C-1: SuggestNextFlow', () => {

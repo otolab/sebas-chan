@@ -9,9 +9,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
   let agent: CoreAgent;
 
   beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
@@ -29,7 +26,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         triggers: {
           eventTypes: [name.toUpperCase()],
         },
-        executor: async (event) => {
+        executor: async (_event) => {
           executedWorkflows.push(name.toUpperCase());
           return {
             success: true,
@@ -105,8 +102,8 @@ describe('CoreAgent - Comprehensive Tests', () => {
         triggers: {
           eventTypes: ['DATA_ARRIVED'],
         },
-        executor: async (event) => {
-          const payload = event.payload as { metadata?: { id: string } };
+        executor: async (_event) => {
+          const payload = _event.payload as { metadata?: { id: string } };
           if (payload.metadata?.id) {
             processedOrder.push(payload.metadata.id);
           }
@@ -697,8 +694,8 @@ describe('CoreAgent - Comprehensive Tests', () => {
         triggers: {
           eventTypes: ['DATA_ARRIVED'],
         },
-        executor: async (event) => {
-          const payload = event.payload as any;
+        executor: async (_event) => {
+          const payload = _event.payload as any;
           const delay = payload.metadata?.delay;
           if (delay) {
             await new Promise((resolve) => setTimeout(resolve, delay));

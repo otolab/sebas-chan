@@ -5,7 +5,7 @@ import {
   createCustomMockContext,
   createMockWorkflowEmitter,
   createMockIssue,
-  createMockPondEntry
+  createMockPondEntry,
 } from '../test-utils.js';
 import { TestDriver } from '@moduler-prompt/driver';
 
@@ -17,35 +17,46 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
   beforeEach(() => {
     // モックコンテキストの準備
     mockContext = createCustomMockContext({
-      driverResponses: [JSON.stringify({
-        interpretation: 'システムエラーに関する報告',
-        requestType: 'issue',
-        events: [{
-          type: 'ISSUE_CREATED',
-          reason: 'エラー報告からIssueを作成',
-          payload: {}
-        }],
-        actions: [{
-          type: 'create',
-          target: 'issue',
-          details: 'システムエラーのIssue作成'
-        }],
-        response: 'エラー報告を受付しました。調査を開始します。',
-        updatedState: 'Initial state\n## ユーザーリクエスト処理\n- User ID: user-123\n- Request Type: issue\n- Interpretation: システムエラーに関する報告'
-      })],
+      driverResponses: [
+        JSON.stringify({
+          interpretation: 'システムエラーに関する報告',
+          requestType: 'issue',
+          events: [
+            {
+              type: 'ISSUE_CREATED',
+              reason: 'エラー報告からIssueを作成',
+              payload: {},
+            },
+          ],
+          actions: [
+            {
+              type: 'create',
+              target: 'issue',
+              details: 'システムエラーのIssue作成',
+            },
+          ],
+          response: 'エラー報告を受付しました。調査を開始します。',
+          updatedState:
+            'Initial state\n## ユーザーリクエスト処理\n- User ID: user-123\n- Request Type: issue\n- Interpretation: システムエラーに関する報告',
+        }),
+      ],
       storageOverrides: {
-        addPondEntry: vi.fn().mockResolvedValue(createMockPondEntry({
-          id: 'pond-test-123',
-          content: 'test content',
-          source: 'user_request',
-        })),
-        createIssue: vi.fn().mockResolvedValue(createMockIssue({
-          id: 'issue-test-123',
-          title: 'Test Issue',
-          description: 'Test Description',
-          labels: ['user-reported'],
-        })),
-      }
+        addPondEntry: vi.fn().mockResolvedValue(
+          createMockPondEntry({
+            id: 'pond-test-123',
+            content: 'test content',
+            source: 'user_request',
+          })
+        ),
+        createIssue: vi.fn().mockResolvedValue(
+          createMockIssue({
+            id: 'issue-test-123',
+            title: 'Test Issue',
+            description: 'Test Description',
+            labels: ['user-reported'],
+          })
+        ),
+      },
     });
 
     // モックイベントエミッター
@@ -101,15 +112,17 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
     (mockEvent.payload as { content: string }).content = '';
 
     mockContext = createCustomMockContext({
-      driverResponses: [JSON.stringify({
-        interpretation: '内容なしリクエスト',
-        requestType: 'other',
-        events: [],
-        actions: [],
-        response: 'リクエスト内容が空です。何かお手伝いできることはありますか？',
-        reasoning: '内容が不明なため処理不可',
-        updatedState: 'Initial state\n内容なしリクエスト処理'
-      })]
+      driverResponses: [
+        JSON.stringify({
+          interpretation: '内容なしリクエスト',
+          requestType: 'other',
+          events: [],
+          actions: [],
+          response: 'リクエスト内容が空です。何かお手伝いできることはありますか？',
+          reasoning: '内容が不明なため処理不可',
+          updatedState: 'Initial state\n内容なしリクエスト処理',
+        }),
+      ],
     });
     mockEmitter = createMockWorkflowEmitter();
 
@@ -123,25 +136,31 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
     (mockEvent.payload as { content: string }).content = '毎日10時にレポートを実行してください';
 
     mockContext = createCustomMockContext({
-      driverResponses: [JSON.stringify({
-        interpretation: 'レポートの定期実行設定',
-        requestType: 'schedule',
-        events: [{
-          type: 'SCHEDULE_TRIGGERED',
-          payload: {
-            schedule: '0 10 * * *',
-            action: 'generate_report'
-          }
-        }],
-        actions: [{
-          type: 'create',
-          target: 'schedule',
-          details: { cron: '0 10 * * *' }
-        }],
-        response: '毎日10時にレポート実行をスケジュール設定しました。',
-        reasoning: '定期実行の要求',
-        updatedState: 'Initial state\nスケジュール設定: 毎日10時'
-      })]
+      driverResponses: [
+        JSON.stringify({
+          interpretation: 'レポートの定期実行設定',
+          requestType: 'schedule',
+          events: [
+            {
+              type: 'SCHEDULE_TRIGGERED',
+              payload: {
+                schedule: '0 10 * * *',
+                action: 'generate_report',
+              },
+            },
+          ],
+          actions: [
+            {
+              type: 'create',
+              target: 'schedule',
+              details: { cron: '0 10 * * *' },
+            },
+          ],
+          response: '毎日10時にレポート実行をスケジュール設定しました。',
+          reasoning: '定期実行の要求',
+          updatedState: 'Initial state\nスケジュール設定: 毎日10時',
+        }),
+      ],
     });
     mockEmitter = createMockWorkflowEmitter();
 

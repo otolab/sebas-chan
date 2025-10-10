@@ -1,5 +1,3 @@
-import type { Input } from '@sebas-chan/shared-types';
-
 export interface ReporterConfig {
   name?: string;
   source: string;

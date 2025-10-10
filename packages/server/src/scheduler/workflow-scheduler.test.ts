@@ -60,7 +60,6 @@ describe('WorkflowScheduler', () => {
     });
 
     // モックメソッドをリセット
-    mockDbClient.execute = vi.fn();
     mockDbClient.getSchedule = vi.fn().mockResolvedValue(null);
     mockDbClient.searchSchedules = vi.fn().mockResolvedValue([]);
     mockDbClient.updateSchedule = vi.fn().mockResolvedValue(undefined);
@@ -174,8 +173,6 @@ describe('WorkflowScheduler', () => {
 
       scheduler = new WorkflowScheduler(mockDriverFactory, mockEventEmitter, mockDbClient);
 
-      mockDbClient.execute.mockResolvedValue([]);
-
       const result = await scheduler.schedule('test-issue-3', '毎日朝9時にレポート', {
         type: 'REPORT',
         payload: {},
@@ -244,7 +241,6 @@ describe('WorkflowScheduler', () => {
       ];
 
       mockDbClient.searchSchedules.mockResolvedValue(schedules);
-      mockDbClient.execute.mockResolvedValue(schedules);
 
       const result = await scheduler.list();
 
@@ -265,7 +261,6 @@ describe('WorkflowScheduler', () => {
       ];
 
       mockDbClient.searchSchedules.mockResolvedValue(activeSchedules);
-      mockDbClient.execute.mockResolvedValue(activeSchedules);
 
       const result = await scheduler.list({ status: 'active' });
 
@@ -360,12 +355,6 @@ describe('WorkflowScheduler', () => {
       ];
 
       mockDbClient.searchSchedules.mockResolvedValue(activeSchedules);
-      mockDbClient.execute.mockImplementation((params: DBExecuteParams) => {
-        if (params.action === 'search' && params.filter?.status === 'active') {
-          return Promise.resolve(activeSchedules);
-        }
-        return Promise.resolve([]);
-      });
 
       await scheduler.initialize();
 

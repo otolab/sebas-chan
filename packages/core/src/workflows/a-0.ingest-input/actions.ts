@@ -4,7 +4,11 @@
 
 import type { Issue, IssueUpdate } from '@sebas-chan/shared-types';
 import { PRIORITY } from '@sebas-chan/shared-types';
-import type { WorkflowEventEmitterInterface, WorkflowStorageInterface, WorkflowRecorder } from '../context.js';
+import type {
+  WorkflowEventEmitterInterface,
+  WorkflowStorageInterface,
+  WorkflowRecorder,
+} from '../context.js';
 import type { AIDriver } from '@moduler-prompt/driver';
 import { compile } from '@moduler-prompt/core';
 import { ingestInputPromptModule, type InputAnalysisContext } from './prompts.js';
@@ -64,17 +68,20 @@ export function extractIssueTitle(content: string): string {
   return firstLine.substring(0, 50) + (firstLine.length > 50 ? '...' : '');
 }
 
-
 /**
  * 深刻度から優先度を決定
  * 意図: AI判定の深刻度を具体的な優先度数値に変換
  */
 export function determinePriority(severity: 'low' | 'medium' | 'high' | 'critical'): number {
   switch (severity) {
-    case 'critical': return PRIORITY.CRITICAL;
-    case 'high': return PRIORITY.HIGH;
-    case 'medium': return PRIORITY.MEDIUM;
-    case 'low': return PRIORITY.LOW;
+    case 'critical':
+      return PRIORITY.CRITICAL;
+    case 'high':
+      return PRIORITY.HIGH;
+    case 'medium':
+      return PRIORITY.MEDIUM;
+    case 'low':
+      return PRIORITY.LOW;
   }
 }
 
@@ -126,7 +133,9 @@ export async function updateRelatedIssues(
             issueId: issueId,
             updates: {
               before: { priority: issue.priority },
-              after: { priority: analysis.severity === 'critical' ? PRIORITY.CRITICAL : issue.priority },
+              after: {
+                priority: analysis.severity === 'critical' ? PRIORITY.CRITICAL : issue.priority,
+              },
               changedFields: ['updates', 'sourceInputIds'],
             },
             updatedBy: 'IngestInput',
@@ -152,7 +161,10 @@ export async function createNewIssue(
   content: string,
   source: string
 ): Promise<string | null> {
-  if (!analysis.needsNewIssue || (analysis.relatedIssueIds && analysis.relatedIssueIds.length > 0)) {
+  if (
+    !analysis.needsNewIssue ||
+    (analysis.relatedIssueIds && analysis.relatedIssueIds.length > 0)
+  ) {
     return null;
   }
 
