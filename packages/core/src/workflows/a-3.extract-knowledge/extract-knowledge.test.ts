@@ -483,12 +483,15 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   });
 });
 
-describe.skipIf(process.env.SKIP_AI_TESTS === 'true')('ExtractKnowledge Workflow - AI Tests', () => {
-  // AI駆動テストはここに追加
-  // 実際のAIサービスを使用してワークフローの品質を確認
+describe.skipIf(process.env.SKIP_AI_TESTS === 'true')(
+  'ExtractKnowledge Workflow - AI Tests',
+  () => {
+    // AI駆動テストはここに追加
+    // 実際のAIサービスを使用してワークフローの品質を確認
 
-  it.todo('should extract meaningful knowledge items with actual AI');
-  it.todo('should properly categorize knowledge types');
-  it.todo('should identify relationships between knowledge items');
-  it.todo('should handle technical content with domain-specific extraction');
-});
+    it.todo('should extract meaningful knowledge items with actual AI');
+    it.todo('should properly categorize knowledge types');
+    it.todo('should identify relationships between knowledge items');
+    it.todo('should handle technical content with domain-specific extraction');
+  }
+);

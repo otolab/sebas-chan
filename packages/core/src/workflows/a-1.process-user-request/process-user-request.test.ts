@@ -191,11 +191,14 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
   });
 });
 
-describe.skipIf(process.env.SKIP_AI_TESTS === 'true')('ProcessUserRequest Workflow - AI Tests', () => {
-  // AI駆動テストはここに追加
-  // 実際のAIサービスを使用してワークフローの品質を確認
+describe.skipIf(process.env.SKIP_AI_TESTS === 'true')(
+  'ProcessUserRequest Workflow - AI Tests',
+  () => {
+    // AI駆動テストはここに追加
+    // 実際のAIサービスを使用してワークフローの品質を確認
 
-  it.todo('should correctly classify request types with actual AI');
-  it.todo('should generate appropriate Flows from complex user requests');
-  it.todo('should handle multi-intent requests properly');
-});
+    it.todo('should correctly classify request types with actual AI');
+    it.todo('should generate appropriate Flows from complex user requests');
+    it.todo('should handle multi-intent requests properly');
+  }
+);

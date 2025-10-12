@@ -449,11 +449,14 @@ describe('UpdateFlowRelations Workflow (B-2)', () => {
   });
 });
 
-describe.skipIf(process.env.SKIP_AI_TESTS === 'true')('UpdateFlowRelations Workflow - AI Tests', () => {
-  // AI駆動テストはここに追加
-  // 実際のAIサービスを使用してワークフローの品質を確認
+describe.skipIf(process.env.SKIP_AI_TESTS === 'true')(
+  'UpdateFlowRelations Workflow - AI Tests',
+  () => {
+    // AI駆動テストはここに追加
+    // 実際のAIサービスを使用してワークフローの品質を確認
 
-  it.todo('should identify complex relationships between flows with actual AI');
-  it.todo('should suggest appropriate flow merging based on content similarity');
-  it.todo('should detect conflicting flow priorities and suggest resolutions');
-});
+    it.todo('should identify complex relationships between flows with actual AI');
+    it.todo('should suggest appropriate flow merging based on content similarity');
+    it.todo('should detect conflicting flow priorities and suggest resolutions');
+  }
+);
