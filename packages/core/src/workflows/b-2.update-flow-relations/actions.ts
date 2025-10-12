@@ -100,15 +100,15 @@ export async function applyFlowUpdates(
     // 健全性がobsoleteの場合、Flowをアーカイブ状態に変更
     if (update.health === 'obsolete') {
       await storage.updateFlow(update.flowId, {
-        status: 'archived' as any, // Flow statusにarchivedがあると仮定
+        status: 'archived',
       });
 
       emitter.emit({
         type: 'FLOW_STATUS_CHANGED',
         payload: {
           flowId: update.flowId,
-          oldStatus: flow.status as any,
-          newStatus: 'archived' as any,
+          oldStatus: flow.status,
+          newStatus: 'archived',
           reason: 'Obsolete flow archived by workflow',
         },
       });
@@ -190,7 +190,7 @@ async function applyFlowChange(
    * SUGGESTEDイベントを発火せず、実行可能な変更は即座に適用する。
    * ユーザー判断が必要な複雑な変更はIssueとして作成する。
    */
-  
+
   const flow = await storage.getFlow(flowId);
   if (!flow) {
     recorder.record(RecordType.ERROR, {
@@ -204,7 +204,7 @@ async function applyFlowChange(
   switch (change.action) {
     case 'remove_issue': {
       // Issueを直接削除
-      const updatedIssueIds = flow.issueIds.filter(id => id !== change.target);
+      const updatedIssueIds = flow.issueIds.filter((id) => id !== change.target);
       await storage.updateFlow(flowId, {
         issueIds: updatedIssueIds,
       });
@@ -265,14 +265,16 @@ async function applyFlowChange(
       const suggestionIssue = await storage.createIssue({
         title: `Flow "${flow.title}" の分割を検討`,
         description: `## 提案内容\nFlow (${flowId}) を複数のFlowに分割することを提案します。\n\n## 理由\n${change.rationale}\n\n## 現在のFlow内容\n- タイトル: ${flow.title}\n- Issue数: ${flow.issueIds.length}\n\n## アクション\nこのIssueをレビューして、分割が適切な場合は手動で新しいFlowを作成してください。`,
-        status: 'open' as any,
+        status: 'open',
         priority: PRIORITY.MEDIUM,
         labels: ['suggestion', 'flow-management', 'split-flow'],
-        updates: [{
-          timestamp: new Date(),
-          content: `UpdateFlowRelationsワークフローによって作成されました。Flow ID: ${flowId}`,
-          author: 'ai' as const,
-        }],
+        updates: [
+          {
+            timestamp: new Date(),
+            content: `UpdateFlowRelationsワークフローによって作成されました。Flow ID: ${flowId}`,
+            author: 'ai' as const,
+          },
+        ],
         relations: [],
         sourceInputIds: [],
       });
@@ -302,14 +304,16 @@ async function applyFlowChange(
       const suggestionIssue = await storage.createIssue({
         title: `Flow "${flow.title}" と "${targetFlow?.title || change.target}" の統合を検討`,
         description: `## 提案内容\n2つのFlowを統合することを提案します。\n\n## 対象Flow\n- ソース: ${flow.title} (${flowId})\n- ターゲット: ${targetFlow?.title || 'Unknown'} (${change.target})\n\n## 理由\n${change.rationale}\n\n## アクション\nこのIssueをレビューして、統合が適切な場合は手動でFlowを統合してください。`,
-        status: 'open' as any,
+        status: 'open',
         priority: PRIORITY.MEDIUM,
         labels: ['suggestion', 'flow-management', 'merge-flow'],
-        updates: [{
-          timestamp: new Date(),
-          content: `UpdateFlowRelationsワークフローによって作成されました。Flow IDs: ${flowId}, ${change.target}`,
-          author: 'ai' as const,
-        }],
+        updates: [
+          {
+            timestamp: new Date(),
+            content: `UpdateFlowRelationsワークフローによって作成されました。Flow IDs: ${flowId}, ${change.target}`,
+            author: 'ai' as const,
+          },
+        ],
         relations: [],
         sourceInputIds: [],
       });
@@ -337,15 +341,15 @@ async function applyFlowChange(
     case 'archive_flow': {
       // Flowのアーカイブを直接実行
       await storage.updateFlow(flowId, {
-        status: 'archived' as any,
+        status: 'archived',
       });
 
       emitter.emit({
         type: 'FLOW_STATUS_CHANGED',
         payload: {
           flowId,
-          oldStatus: flow.status as any,
-          newStatus: 'archived' as any,
+          oldStatus: flow.status,
+          newStatus: 'archived',
           reason: change.rationale,
         },
       });

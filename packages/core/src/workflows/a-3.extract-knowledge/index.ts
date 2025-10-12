@@ -10,7 +10,12 @@
  * - ユーザーの経験を体系化し、忘れても再利用できる形で保存
  */
 
-import type { SystemEvent, IssueStatusChangedEvent, RecurringPatternDetectedEvent, KnowledgeExtractableEvent } from '@sebas-chan/shared-types';
+import type {
+  SystemEvent,
+  IssueStatusChangedEvent,
+  RecurringPatternDetectedEvent,
+  KnowledgeExtractableEvent,
+} from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -56,7 +61,10 @@ async function executeExtractKnowledge(
 
     const { content, sourceType, sourceId, confidence } = await getContentFromEvent(
       event.type,
-      event.payload as KnowledgeExtractableEvent['payload'] | IssueStatusChangedEvent['payload'] | RecurringPatternDetectedEvent['payload'],
+      event.payload as
+        | KnowledgeExtractableEvent['payload']
+        | IssueStatusChangedEvent['payload']
+        | RecurringPatternDetectedEvent['payload'],
       storage
     );
 
@@ -126,8 +134,8 @@ async function executeExtractKnowledge(
     const isDuplicate = isDuplicateKnowledge(extraction.extractedKnowledge, existingKnowledge);
     let knowledgeId: string | null = null;
 
-    if (!isDuplicate && extraction.extractedKnowledge.length > 50 && confidence > 0.5) {
-      // 新規Knowledge作成
+    if (!isDuplicate && extraction.extractedKnowledge.length > 0) {
+      // 新規Knowledge作成（AIが抽出した内容があれば作成）
       knowledgeId = await createNewKnowledge(
         storage,
         recorder,
@@ -151,7 +159,7 @@ async function executeExtractKnowledge(
     } else {
       recorder.record(RecordType.INFO, {
         step: 'knowledgeSkipped',
-        reason: isDuplicate ? 'duplicate' : 'low_quality',
+        reason: isDuplicate ? 'duplicate' : 'no_content',
       });
     }
 
@@ -203,16 +211,12 @@ export const extractKnowledgeWorkflow: WorkflowDefinition = {
   triggers: {
     eventTypes: ['KNOWLEDGE_EXTRACTABLE', 'ISSUE_STATUS_CHANGED', 'RECURRING_PATTERN_DETECTED'],
     condition: (event) => {
-      // ISSUE_STATUS_CHANGEDの場合はresolvedのみ
+      // ISSUE_STATUS_CHANGEDの場合はclosedのみ（ステータスチェックは機械的ではなくビジネスロジック）
       if (event.type === 'ISSUE_STATUS_CHANGED') {
         const payload = (event as IssueStatusChangedEvent).payload;
         return payload.to === 'closed';
       }
-      // RECURRING_PATTERN_DETECTEDの場合は信頼度が高いもののみ
-      if (event.type === 'RECURRING_PATTERN_DETECTED') {
-        const payload = (event as RecurringPatternDetectedEvent).payload;
-        return payload.confidence > 0.7;
-      }
+      // RECURRING_PATTERN_DETECTEDはすべて処理（AIが重要性を判断）
       return true;
     },
     priority: 20, // 低めの優先度：バックグラウンド処理

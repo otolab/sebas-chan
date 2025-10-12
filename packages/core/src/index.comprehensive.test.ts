@@ -9,9 +9,6 @@ describe('CoreAgent - Comprehensive Tests', () => {
   let agent: CoreAgent;
 
   beforeEach(() => {
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     agent = new CoreAgent();
   });
 
@@ -29,7 +26,7 @@ describe('CoreAgent - Comprehensive Tests', () => {
         triggers: {
           eventTypes: [name.toUpperCase()],
         },
-        executor: async (event) => {
+        executor: async (_event) => {
           executedWorkflows.push(name.toUpperCase());
           return {
             success: true,
@@ -106,7 +103,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
           eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event) => {
-          const payload = event.payload as { metadata?: { id: string } };
+          const payload = event.payload as {
+            source: string;
+            content: string;
+            pondEntryId: string;
+            timestamp: string;
+            metadata?: { id: string };
+          };
           if (payload.metadata?.id) {
             processedOrder.push(payload.metadata.id);
           }
@@ -464,7 +467,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
           eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event, context, emitter) => {
-          const payload = event.payload as any;
+          const payload = event.payload as {
+            source: string;
+            content: string;
+            pondEntryId: string;
+            timestamp: string;
+            metadata?: { count?: number };
+          };
           const count = payload.metadata?.count || 3;
 
           for (let i = 0; i < count; i++) {
@@ -698,7 +707,13 @@ describe('CoreAgent - Comprehensive Tests', () => {
           eventTypes: ['DATA_ARRIVED'],
         },
         executor: async (event) => {
-          const payload = event.payload as any;
+          const payload = event.payload as {
+            source: string;
+            content: string;
+            pondEntryId: string;
+            timestamp: string;
+            metadata?: { delay?: number };
+          };
           const delay = payload.metadata?.delay;
           if (delay) {
             await new Promise((resolve) => setTimeout(resolve, delay));

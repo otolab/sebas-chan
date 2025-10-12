@@ -3,6 +3,7 @@
 ## 概要
 
 Issueの状態変化を分析し、以下の判定を行うワークフローです：
+
 - クローズ可否の判定
 - 優先度の提案
 - 他Issueとの関連性（重複等）の検出
@@ -33,6 +34,7 @@ a-2.analyze-issue-impact/
 ```
 
 **設計意図**：
+
 - `index.ts`: ワークフローの骨格のみ（薄く保つ）
 - `actions.ts`: 再利用可能な関数を集約（テストしやすい）
 - `prompts.ts`: AI処理の定義を分離（静的に定義）
@@ -42,12 +44,13 @@ a-2.analyze-issue-impact/
 ```typescript
 // updateStatePromptModuleをマージして一体化
 export const analyzeImpactPromptModule = merge(
-  updateStatePromptModule,  // State管理機能を提供
-  baseAnalyzeImpactModule   // ワークフロー固有のロジック
+  updateStatePromptModule, // State管理機能を提供
+  baseAnalyzeImpactModule // ワークフロー固有のロジック
 );
 ```
 
 **重要な原則**：
+
 - **責務の分離**: 各モジュールが単一の責任を持つ
   - `updateStatePromptModule`: State管理に特化
   - `baseAnalyzeImpactModule`: Issue分析に特化
@@ -57,6 +60,7 @@ export const analyzeImpactPromptModule = merge(
 - 重複する指示を書かない（mergeで解決）
 
 **設計の利点**：
+
 - 各モジュールが独立してテスト可能
 - 再利用性が高い（他のワークフローでも`updateStatePromptModule`を使える）
 - 複雑なプロンプトも段階的に構築できる
@@ -68,6 +72,7 @@ export const analyzeImpactPromptModule = merge(
 - **schema**: 構造化出力の定義（必ずupdatedStateを含む）
 
 **注意点**：
+
 - 存在しない型（`type: 'list'`等）を使わない
 - セクションの役割を理解して適切に選択
 
@@ -77,7 +82,7 @@ export const analyzeImpactPromptModule = merge(
 // 単一のドライバーインスタンスを作成して共有
 const driver = await context.createDriver({
   requiredCapabilities: ['structured'],
-  preferredCapabilities: ['japanese']
+  preferredCapabilities: ['japanese'],
 });
 
 // 同じドライバーで複数の処理を行える
@@ -85,6 +90,7 @@ const analysis = await analyzeIssue(driver, issue, relatedIssues, context.state)
 ```
 
 **設計意図**：
+
 - ドライバー作成のオーバーヘッドを削減
 - 1回のAI呼び出しに統合することは推奨される（分析とstate更新の統合など）
 - 実行コスト削減とコンテキスト維持の2つの利点がある
@@ -98,12 +104,14 @@ if (!result.structuredOutput) {
 ```
 
 **重要**：
+
 - 構造化出力は必須（ワークフローの前提）
 - 明確なエラーメッセージで問題を特定しやすく
 
 ### 6. 記録の重要性
 
 すべての重要なステップを記録：
+
 - INPUT: 処理開始
 - DB_QUERY: データベース操作
 - AI_CALL: AI処理
@@ -112,6 +120,7 @@ if (!result.structuredOutput) {
 - ERROR: エラー発生
 
 **意図**：
+
 - 暗黙的に実行されるワークフローの動作を追跡可能に
 - 問題発生時の原因特定を容易に
 
@@ -121,13 +130,14 @@ if (!result.structuredOutput) {
 const setupDriverMocks = (analyzeIssueResponse: any) => {
   mockContext.createDriver = vi.fn().mockResolvedValue(
     new TestDriver({
-      responses: [JSON.stringify(analyzeIssueResponse)]
+      responses: [JSON.stringify(analyzeIssueResponse)],
     })
   );
 };
 ```
 
 **ポイント**：
+
 - TestDriverで実際のAI呼び出しをモック
 - setupユーティリティで重複を削減
 - 各テストケースで必要な応答を明示的に定義
@@ -142,6 +152,7 @@ const setupDriverMocks = (analyzeIssueResponse: any) => {
 - [ ] TestDriverを使った包括的なテストを作成
 
 **注意**: updateStatePromptModuleをマージすると、自動的に：
+
 - `updatedState`フィールドがスキーマに追加される
 - State更新の指示がinstructionsに含まれる
 - 現在のStateが表示される

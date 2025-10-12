@@ -178,9 +178,13 @@ export const analyzeIssueImpactWorkflow: WorkflowDefinition = {
     condition: (event) => {
       // ISSUE_UPDATEDの場合は重要な更新のみ
       if (event.type === 'ISSUE_UPDATED') {
-        const payload = event.payload as any;
+        const payload = event.payload as {
+          updates?: {
+            changedFields?: string[];
+          };
+        };
         // updates配列への追加、priority変更、status変更の場合のみ
-        return (
+        return !!(
           payload.updates?.changedFields?.includes('priority') ||
           payload.updates?.changedFields?.includes('status') ||
           payload.updates?.changedFields?.includes('updates')

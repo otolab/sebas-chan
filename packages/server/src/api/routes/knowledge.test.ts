@@ -46,7 +46,7 @@ describe('Knowledge Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({
         success: true,
-        data: mockKnowledge.map(k => ({
+        data: mockKnowledge.map((k) => ({
           ...k,
           createdAt: k.createdAt.toISOString(),
         })),

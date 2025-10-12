@@ -4,6 +4,13 @@
 
 C系ワークフローは「提案系ワークフロー」として、ユーザーの次のアクションを支援する役割を持ちます。Flow の「観点」システムを活用し、コンテキストに応じた最適な提案を生成します。
 
+### C-1 → C-2 連携フロー
+C系ワークフローは以下の流れで連携して動作します：
+1. **C-1 (SUGGEST_NEXT_FLOW)**: ユーザーの状況に応じて最適なFlowを選定
+2. **C-2 (SUGGEST_NEXT_ACTION_FOR_ISSUE)**: 選定されたFlow内の最優先Issueを特定し、具体的な解決方法を提案
+
+この連携により、ユーザーへの包括的な行動指針を提供します。
+
 ## C-1: SUGGEST_NEXT_FLOW（次のFlow提案）
 
 ### 目的
@@ -270,68 +277,71 @@ if (primarySuggestion && primarySuggestion.score > 0.8) {
 }
 ```
 
-### 出力
+### 結果の記録とイベント発行
 ```typescript
-interface SuggestNextFlowOutput {
-  primarySuggestion: {
-    flow: Flow;
-    score: number;
-    reason: string;
-    estimatedDuration: number;
-    preparationSteps?: string[];
-  };
-  alternatives: Array<{
-    flow: Flow;
-    score: number;
-    reason: string;
-  }>;
-  insights: {
-    currentFocus: string;
-    productivityAdvice: string;
-    bottleneck?: string;
-  };
-  fallback?: {
-    action: string;
-    reason: string;
-    duration: number;
-  };
+// 提案結果の記録（stateに要約を保存）
+await context.updateState({
+  lastFlowSuggestion: {
+    timestamp: new Date(),
+    flowId: primarySuggestion.flowId,
+    reason: primarySuggestion.reason,
+    alternatives: alternativeSuggestions.map(s => s.flowId)
+  }
+});
+
+// C-2への連携イベント発行
+if (primarySuggestion) {
+  await context.emit('FLOW_SELECTED_FOR_ACTION', {
+    flowId: primarySuggestion.flowId,
+    trigger: 'c1_suggestion',
+    priority: primarySuggestion.score,
+    context: {
+      reason: primarySuggestion.reason,
+      estimatedDuration: primarySuggestion.estimatedDuration
+    }
+  });
 }
 ```
 
 ### イベント発行
-- `FLOW_SUGGESTION_READY`: 提案準備完了時
+- `FLOW_SELECTED_FOR_ACTION`: 選定したFlowに対するC-2起動イベント
 - `PERSPECTIVE_TRIGGERED`: Flow観点の適用時
 - `USER_GUIDANCE_PROVIDED`: ユーザーガイダンス提供時
 
 ## C-2: SUGGEST_NEXT_ACTION_FOR_ISSUE（Issue対応アクション提案）
 
 ### 目的
-特定のIssueに対して、具体的で実行可能なアクションステップを提案し、Issue解決を支援する。
+C-1で選定されたFlow内の最優先Issueを特定し、そのIssueに対する具体的で実行可能なアクションステップを提案する。これにより、ユーザーの「次に何をすべきか」を明確にする。
 
 ### トリガー
 ```typescript
 triggers: {
   events: [
-    'ISSUE_STALLED',            // Issue停滞検出
-    'ACTION_REQUESTED',          // アクション提案要求
-    'ISSUE_OPENED',             // 新規Issue作成時（高優先度のみ）
-    'USER_STUCK'                // ユーザーが行き詰まった時
+    'FLOW_SELECTED_FOR_ACTION',     // C-1からの連携イベント
+    'HIGH_PRIORITY_ISSUE_DETECTED', // 高優先度Issue検出時
+    'ISSUE_CREATED',                // 新規Issue作成時（高優先度のみ）
   ],
   priority: 25,
   condition: (context) => {
-    // 高優先度Issueまたは明示的な要求の場合のみ
+    // FLOW_SELECTED_FOR_ACTIONの場合は無条件で実行
+    if (context.eventType === 'FLOW_SELECTED_FOR_ACTION') {
+      return true;
+    }
+    // その他のイベントは高優先度の場合のみ
     const issue = context.getIssue(context.eventPayload.issueId);
-    return issue.priority > 70 ||
-           context.eventType === 'ACTION_REQUESTED';
+    return issue && issue.priority > 70;
   }
 }
 ```
 
+注：ISSUE_STALLEDイベントは直接C-2をトリガーせず、Flowレビューのきっかけとして扱われます。
+
 ### ペイロード型定義
 ```typescript
 interface SuggestNextActionPayload {
-  issueId: string;
-  trigger: 'stalled' | 'requested' | 'new_issue' | 'user_stuck';
+  flowId?: string;              // C-1から連携された場合のFlowID
+  issueId?: string;             // 直接Issue指定の場合
+  trigger: 'flow_selected' | 'high_priority' | 'new_issue';
   requestDetail: {
     level: 'quick' | 'detailed' | 'comprehensive';
     focusArea?: string;         // 特定の側面に焦点
@@ -350,34 +360,60 @@ interface SuggestNextActionPayload {
 
 ### 処理ステップ
 
-#### 1. Issue分析と知識検索
+#### 1. Issue特定と分析
 ```typescript
+// Flow内の最優先Issue特定（C-1から連携された場合）
+let targetIssueId: string;
+let parentFlow: Flow | null = null;
+
+if (input.flowId) {
+  // Flow内のIssueを優先度順で取得
+  parentFlow = await context.getFlow(input.flowId);
+  const flowIssues = await context.getIssuesByFlowId(input.flowId);
+
+  // 優先度とステータスに基づいてソート
+  const prioritizedIssues = flowIssues
+    .filter(issue => issue.status !== 'closed')
+    .sort((a, b) => {
+      // 優先度が高いものを先に
+      if (b.priority !== a.priority) return b.priority - a.priority;
+      // 停滞期間が長いものを先に
+      const stalledA = calculateStalledDuration(a.id);
+      const stalledB = calculateStalledDuration(b.id);
+      return stalledB - stalledA;
+    });
+
+  targetIssueId = prioritizedIssues[0]?.id;
+
+  if (!targetIssueId) {
+    // Flow内にIssueがない場合は新規Issue作成を提案
+    await context.emit('EMPTY_FLOW_DETECTED', { flowId: input.flowId });
+    return;
+  }
+} else if (input.issueId) {
+  targetIssueId = input.issueId;
+  parentFlow = await context.getFlowByIssueId(input.issueId);
+} else {
+  throw new Error('Either flowId or issueId must be provided');
+}
+
 // Issueの詳細分析
 const issueAnalysis = {
-  issue: await context.getIssue(input.issueId),
-  history: await context.getIssueHistory(input.issueId),
-  relations: await context.getIssueRelations(input.issueId),
-  stalledDuration: calculateStalledDuration(input.issueId),
-  complexity: await estimateIssueComplexity(input.issueId)
+  issue: await context.getIssue(targetIssueId),
+  history: await context.getIssueHistory(targetIssueId),
+  relations: await context.getIssueRelations(targetIssueId),
+  stalledDuration: calculateStalledDuration(targetIssueId),
+  complexity: await estimateIssueComplexity(targetIssueId)
 };
 
 // 関連するKnowledge検索
 const relevantKnowledge = await context.queryKnowledge({
   vector: await context.vectorize(issueAnalysis.issue.description),
-  types: ['procedure', 'best_practice', 'similar_case'],
+  types: ['procedure', 'best_practice', 'system_rule'],
   limit: 10
 });
 
-// 類似の解決済みIssue検索
-const similarResolvedIssues = await context.querySimilarIssues({
-  issue: issueAnalysis.issue,
-  status: 'closed',
-  hasResolution: true,
-  limit: 5
-});
-
-// Issue が属する Flow の観点を取得
-const parentFlow = await context.getFlowByIssueId(input.issueId);
+// Flow の観点を取得
 const flowPerspective = parentFlow?.perspective;
 ```
 
@@ -388,7 +424,6 @@ const issueActionPromptModule: PromptModule<IssueActionContext> = {
   createContext: () => ({
     issueAnalysis: {},
     relevantKnowledge: [],
-    similarResolvedIssues: [],
     flowPerspective: null,
     userContext: {},
     constraints: {},
@@ -467,19 +502,6 @@ const issueActionPromptModule: PromptModule<IssueActionContext> = {
         `内容: ${knowledge.content}`,
         knowledge.confidence ? `信頼度: ${knowledge.confidence}` : '',
         knowledge.applicability ? `適用可能性: ${knowledge.applicability}` : ''
-      ].filter(Boolean).join('\n')
-    })),
-
-    // 類似の解決済みIssue
-    ctx => ctx.similarResolvedIssues.map(issue => ({
-      type: 'material' as const,
-      id: `similar-${issue.id}`,
-      title: `類似Issue: ${issue.title}`,
-      content: [
-        `類似度: ${issue.similarity}`,
-        `解決方法: ${issue.resolution}`,
-        `所要時間: ${issue.resolutionTime}`,
-        issue.keyLearning ? `学習ポイント: ${issue.keyLearning}` : ''
       ].filter(Boolean).join('\n')
     })),
 
@@ -574,7 +596,6 @@ const issueActionPromptModule: PromptModule<IssueActionContext> = {
 const actionContext: IssueActionContext = {
   issueAnalysis,
   relevantKnowledge,
-  similarResolvedIssues,
   flowPerspective,
   userContext: input.userContext,
   constraints: input.requestDetail.constraints,
@@ -639,45 +660,51 @@ if (result.escalationSuggestion?.shouldEscalate) {
   });
 }
 
-// アクション提案の記録
-await context.recordActionSuggestion({
-  issueId: input.issueId,
-  timestamp: new Date(),
-  suggestions: prioritizedActions,
-  selected: null, // ユーザーの選択は後で更新
-  rootCause: result.rootCauseAnalysis
+// アクション提案をIssue updatesに直接記録
+const issue = await context.getIssue(targetIssueId);
+await context.updateIssue(targetIssueId, {
+  updates: [
+    ...issue.updates,
+    {
+      type: 'ai_suggestion',
+      timestamp: new Date(),
+      content: {
+        primaryAction: {
+          title: primaryAction.title,
+          type: primaryAction.type,
+          steps: primaryAction.steps,
+          estimatedTime: primaryAction.estimatedTotalTime,
+          confidence: primaryAction.confidence
+        },
+        alternatives: prioritizedActions.slice(1, 3).map(a => ({
+          title: a.title,
+          type: a.type,
+          reason: a.description
+        })),
+        executionSupport,
+        rootCause: result.rootCauseAnalysis
+      }
+    }
+  ]
+});
+
+// stateに要約を記録
+await context.updateState({
+  lastActionSuggestion: {
+    timestamp: new Date(),
+    issueId: targetIssueId,
+    flowId: parentFlow?.id,
+    actionTitle: primaryAction.title,
+    confidence: primaryAction.confidence
+  }
 });
 ```
 
-### 出力
-```typescript
-interface SuggestNextActionOutput {
-  primaryAction: {
-    title: string;
-    type: string;
-    steps: ActionStep[];
-    estimatedTime: number;
-    confidence: number;
-    prerequisites: string[];
-  };
-  alternativeActions: Array<{
-    title: string;
-    type: string;
-    reason: string;
-  }>;
-  executionSupport: {
-    checklist: ChecklistItem[];
-    resources: ActionResources;
-    timeline: Timeline;
-    nextCheckIn: Date;
-  };
-  insights: {
-    rootCause?: RootCauseAnalysis;
-    splitSuggestion?: IssueSplitSuggestion;
-    escalation?: EscalationSuggestion;
-  };
-}
-```
+### 結果の記録
+提案結果は以下の方法で記録されます：
+- **Issue updates**: AIの提案内容を直接追記
+- **state**: 最新の提案の要約を保存
+- **イベント発行**: 必要に応じて後続処理をトリガー
 
 ### イベント発行
 - `ACTION_SUGGESTION_READY`: アクション提案準備完了
@@ -757,7 +784,7 @@ function generateExplanation(suggestion: any, factors: any[]) {
 
 1. **キャッシング**
    - 頻繁にアクセスされるユーザーパターンをキャッシュ
-   - 類似Issue検索結果の一時保存
+   - Flow内Issue優先度計算の一時保存
 
 2. **バッチ処理**
    - 複数の提案要求をまとめて処理

@@ -78,8 +78,8 @@ jobs:
       - name: Check TypeScript
         run: npm run typecheck
 
-      - name: Run linter
-        run: npm run lint
+      - name: Run linter (strict mode - no warnings allowed)
+        run: npm run lint:strict
 
   unit-tests:
     name: Unit Tests

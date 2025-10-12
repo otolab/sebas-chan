@@ -14,7 +14,7 @@ export interface KnowledgeExtractionContext {
   confidence: number;
   content: string;
   existingKnowledge: Knowledge[];
-  currentState: string;  // statePromptModuleと統合
+  currentState: string; // statePromptModuleと統合
 }
 
 /**
@@ -25,81 +25,79 @@ const outputSchema = {
   properties: {
     extractedKnowledge: {
       type: 'string' as const,
-      description: '抽出された知識の内容'
+      description: '抽出された知識の内容',
     },
     // updatedStateはupdateStatePromptModuleから自動的に提供される
   },
-  required: ['extractedKnowledge']
+  required: ['extractedKnowledge'],
 } as const;
 
 /**
  * ExtractKnowledgeワークフローのプロンプトモジュール
  */
 const baseExtractKnowledgeModule: PromptModule<KnowledgeExtractionContext> = {
-    createContext: () => ({
-      sourceType: '',
-      confidence: 0.5,
-      content: '',
-      existingKnowledge: [] as Knowledge[],
-      currentState: ''
-    }),
+  createContext: () => ({
+    sourceType: '',
+    confidence: 0.5,
+    content: '',
+    existingKnowledge: [] as Knowledge[],
+    currentState: '',
+  }),
 
-    // objective: instructions大セクションに分類
-    objective: [
-      '- 情報から再利用可能な知識を抽出し、構造化する'
-    ],
+  // objective: instructions大セクションに分類
+  objective: ['- 情報から再利用可能な知識を抽出し、構造化する'],
 
-    // terms: instructions大セクションに分類
-    terms: [
-      '- 知識: 再利用可能な情報やノウハウ',
-      '- ベストプラクティス: 推奨される方法や手順',
-      '- 解決方法: 問題に対する具体的な対処法'
-    ],
+  // terms: instructions大セクションに分類
+  terms: [
+    '- 知識: 再利用可能な情報やノウハウ',
+    '- ベストプラクティス: 推奨される方法や手順',
+    '- 解決方法: 問題に対する具体的な対処法',
+  ],
 
-    // instructions標準セクション: instructions大セクションに分類
-    instructions: [
-      '以下の形式で知識を抽出してください：',
-      '1. 問題の概要',
-      '2. 解決方法またはベストプラクティス',
-      '3. 適用可能な状況',
-      '4. 注意点',
-      '',
-      '簡潔にまとめてください。'
-    ],
+  // instructions標準セクション: instructions大セクションに分類
+  instructions: [
+    '以下の形式で知識を抽出してください：',
+    '1. 問題の概要',
+    '2. 解決方法またはベストプラクティス',
+    '3. 適用可能な状況',
+    '4. 注意点',
+    '',
+    '簡潔にまとめてください。',
+  ],
 
-    // materials: data大セクションに分類（参考情報）
-    materials: [
-      (ctx: KnowledgeExtractionContext) =>
-        ctx.existingKnowledge.map((knowledge) => ({
-          type: 'material' as const,
-          id: `knowledge-${knowledge.id}`,
-          title: `既存の知識: ${knowledge.type}`,
-          content: knowledge.content,
-        })),
-    ],
+  // materials: data大セクションに分類（参考情報）
+  materials: [
+    (ctx: KnowledgeExtractionContext) =>
+      ctx.existingKnowledge.map((knowledge) => ({
+        type: 'material' as const,
+        id: `knowledge-${knowledge.id}`,
+        title: `既存の知識: ${knowledge.type}`,
+        content: knowledge.content,
+      })),
+  ],
 
-    // inputs: data大セクションに分類（動的データ）
-    inputs: [
-      (ctx: KnowledgeExtractionContext) => `ソースタイプ: ${ctx.sourceType}`,
-      (ctx: KnowledgeExtractionContext) => `信頼度: ${ctx.confidence}`,
-      '',
-      '内容:',
+  // inputs: data大セクションに分類（動的データ）
+  inputs: [
+    (ctx: KnowledgeExtractionContext) => `ソースタイプ: ${ctx.sourceType}`,
+    (ctx: KnowledgeExtractionContext) => `信頼度: ${ctx.confidence}`,
+    '',
+    '内容:',
 
-      // >>> 省略しない
+    // >>> 省略しない
 
-      (ctx: KnowledgeExtractionContext) => {
-        const lines = ctx.content.split('\n').slice(0, 20);
-        return lines.length > 20 ? [...lines, '...'] : lines;
-      }
-    ],
+    (ctx: KnowledgeExtractionContext) => {
+      const lines = ctx.content.split('\n').slice(0, 20);
+      return lines.length > 20 ? [...lines, '...'] : lines;
+    },
+  ],
 
-    // schemaセクション（output大セクションに分類）
-    schema: [
-      {
-        type: 'json',
-        content: outputSchema
-      }
-    ]
+  // schemaセクション（output大セクションに分類）
+  schema: [
+    {
+      type: 'json',
+      content: outputSchema,
+    },
+  ],
 };
 
 /**

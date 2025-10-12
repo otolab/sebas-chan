@@ -26,13 +26,13 @@ export abstract class BaseReporter {
     }
 
     this.isRunning = true;
-    
+
     if (this.config.pollInterval) {
       this.setupPolling(this.config.pollInterval, async () => {
         await this.submitCollected();
       });
     }
-    
+
     await this.onStart();
   }
 
@@ -42,7 +42,7 @@ export abstract class BaseReporter {
     }
 
     this.isRunning = false;
-    
+
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = undefined;
@@ -66,7 +66,10 @@ export abstract class BaseReporter {
     }
   }
 
-  protected async submitInput(content: string, metadata?: Record<string, any>): Promise<SubmitResult> {
+  protected async submitInput(
+    content: string,
+    metadata?: Record<string, unknown>
+  ): Promise<SubmitResult> {
     const input: Omit<Input, 'id' | 'timestamp'> = {
       source: this.config.source,
       content,

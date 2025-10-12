@@ -37,9 +37,10 @@ export function createSystemRouter(coreEngine: CoreEngine): Router {
       const dto: ProcessRequestDto = req.body;
 
       // セッションIDを生成（contextにsessionIdがあれば使用、なければ新規生成）
-      const sessionId = (typeof dto.context?.sessionId === 'string' && dto.context.sessionId)
-        ? dto.context.sessionId
-        : `api-session-${nanoid()}`;
+      const sessionId =
+        typeof dto.context?.sessionId === 'string' && dto.context.sessionId
+          ? dto.context.sessionId
+          : `api-session-${nanoid()}`;
 
       coreEngine.emitEvent({
         type: 'USER_REQUEST_RECEIVED',

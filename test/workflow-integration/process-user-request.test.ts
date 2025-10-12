@@ -35,7 +35,7 @@ describe('ProcessUserRequest Workflow Integration', () => {
       // 必要に応じてStorageのモックをカスタマイズ
       searchIssues: vi.fn().mockResolvedValue([]),
       searchKnowledge: vi.fn().mockResolvedValue([]),
-      searchPond: vi.fn().mockResolvedValue([])
+      searchPond: vi.fn().mockResolvedValue([]),
     });
 
     if (!context) {
@@ -51,9 +51,9 @@ describe('ProcessUserRequest Workflow Integration', () => {
         context!.recorder.record(RecordType.INFO, {
           message: 'Event emitted',
           eventType: event.type,
-          payload: event.payload
+          payload: event.payload,
         });
-      }
+      },
     };
   });
 
@@ -71,9 +71,10 @@ describe('ProcessUserRequest Workflow Integration', () => {
         type: 'PROCESS_USER_REQUEST',
         payload: {
           userId: 'test-user',
-          content: 'ログイン画面でエラーが発生しています。「認証に失敗しました」というメッセージが表示されます。',
-          sessionId: 'test-session'
-        }
+          content:
+            'ログイン画面でエラーが発生しています。「認証に失敗しました」というメッセージが表示されます。',
+          sessionId: 'test-session',
+        },
       };
 
       // 実行
@@ -84,12 +85,12 @@ describe('ProcessUserRequest Workflow Integration', () => {
       expect(result.output?.requestType).toBe('issue');
 
       // ISSUE_CREATEDイベントが発行されることを確認
-      const issueEvents = emittedEvents.filter(e => e.type === 'ISSUE_CREATED');
+      const issueEvents = emittedEvents.filter((e) => e.type === 'ISSUE_CREATED');
       expect(issueEvents.length).toBeGreaterThan(0);
 
       // Recorder出力の確認
       const logs = context!.recorder.getBuffer();
-      const infoLogs = logs.filter(l => l.type === RecordType.INFO);
+      const infoLogs = logs.filter((l) => l.type === RecordType.INFO);
       expect(infoLogs.length).toBeGreaterThan(0);
 
       // AIがエラーとして認識したことを確認
@@ -104,8 +105,8 @@ describe('ProcessUserRequest Workflow Integration', () => {
         payload: {
           userId: 'test-user',
           content: 'APIの使い方を教えてください。認証トークンはどうやって取得しますか？',
-          sessionId: 'test-session'
-        }
+          sessionId: 'test-session',
+        },
       };
 
       const result = await processUserRequestWorkflow.executor(event, context!, emitter);
@@ -114,7 +115,7 @@ describe('ProcessUserRequest Workflow Integration', () => {
       expect(result.output?.requestType).toBe('question');
 
       // KNOWLEDGE_EXTRACTABLEイベントの発行を確認
-      const knowledgeEvents = emittedEvents.filter(e => e.type === 'KNOWLEDGE_EXTRACTABLE');
+      const knowledgeEvents = emittedEvents.filter((e) => e.type === 'KNOWLEDGE_EXTRACTABLE');
       expect(knowledgeEvents.length).toBeGreaterThan(0);
 
       if (knowledgeEvents.length > 0) {
@@ -129,8 +130,8 @@ describe('ProcessUserRequest Workflow Integration', () => {
         payload: {
           userId: 'test-user',
           content: '新しいUIは使いやすくて良いですね。特に検索機能が改善されました。',
-          sessionId: 'test-session'
-        }
+          sessionId: 'test-session',
+        },
       };
 
       const result = await processUserRequestWorkflow.executor(event, context!, emitter);
@@ -139,7 +140,7 @@ describe('ProcessUserRequest Workflow Integration', () => {
       expect(result.output?.requestType).toBe('feedback');
 
       // KNOWLEDGE_EXTRACTABLEイベントの確認
-      const knowledgeEvents = emittedEvents.filter(e => e.type === 'KNOWLEDGE_EXTRACTABLE');
+      const knowledgeEvents = emittedEvents.filter((e) => e.type === 'KNOWLEDGE_EXTRACTABLE');
       expect(knowledgeEvents.length).toBeGreaterThan(0);
 
       if (knowledgeEvents.length > 0) {
@@ -153,8 +154,8 @@ describe('ProcessUserRequest Workflow Integration', () => {
         payload: {
           userId: 'test-user',
           content: '緊急！本番環境のデータベースが応答しません。すぐに確認してください。',
-          sessionId: 'test-session'
-        }
+          sessionId: 'test-session',
+        },
       };
 
       const result = await processUserRequestWorkflow.executor(event, context!, emitter);
@@ -162,7 +163,7 @@ describe('ProcessUserRequest Workflow Integration', () => {
       expect(result.success).toBe(true);
 
       // HIGH_PRIORITY_DETECTEDイベントの確認
-      const priorityEvents = emittedEvents.filter(e => e.type === 'HIGH_PRIORITY_DETECTED');
+      const priorityEvents = emittedEvents.filter((e) => e.type === 'HIGH_PRIORITY_DETECTED');
 
       // AIが緊急性を認識した場合
       if (priorityEvents.length > 0) {
@@ -180,8 +181,8 @@ describe('ProcessUserRequest Workflow Integration', () => {
         payload: {
           userId: 'test-user',
           content: 'テストメッセージです。',
-          sessionId: 'test-session'
-        }
+          sessionId: 'test-session',
+        },
       };
 
       const result = await processUserRequestWorkflow.executor(event, context!, emitter);
@@ -206,8 +207,8 @@ describe('ProcessUserRequest Workflow Integration', () => {
         payload: {
           userId: 'test-user',
           content: 'テスト用のリクエストです。',
-          sessionId: 'test-session'
-        }
+          sessionId: 'test-session',
+        },
       };
 
       const result = await processUserRequestWorkflow.executor(event, context!, emitter);
@@ -220,11 +221,11 @@ describe('ProcessUserRequest Workflow Integration', () => {
       expect(logs.length).toBeGreaterThan(0);
 
       // ログタイプの確認
-      const logTypes = logs.map(l => l.type);
+      const logTypes = logs.map((l) => l.type);
       expect(logTypes).toContain(RecordType.INFO);
 
       // workflowNameが自動付与されていることを確認
-      logs.forEach(log => {
+      logs.forEach((log) => {
         expect(log).toHaveProperty('workflowName', 'ProcessUserRequest');
         expect(log).toHaveProperty('timestamp');
       });
@@ -236,8 +237,8 @@ describe('ProcessUserRequest Workflow Integration', () => {
         payload: {
           userId: 'test-user',
           content: 'タイムスタンプテスト',
-          sessionId: 'test-session'
-        }
+          sessionId: 'test-session',
+        },
       };
 
       await processUserRequestWorkflow.executor(event, context!, emitter);

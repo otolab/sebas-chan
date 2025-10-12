@@ -1,7 +1,10 @@
 import { RecordType } from './workflows/recorder.js';
 import { WorkflowRegistry } from './workflows/workflow-registry.js';
 import type { WorkflowDefinition, WorkflowResult } from './workflows/workflow-types.js';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from './workflows/context.js';
+import type {
+  WorkflowContextInterface,
+  WorkflowEventEmitterInterface,
+} from './workflows/context.js';
 import type { SystemEvent } from '@sebas-chan/shared-types';
 import {
   ingestInputWorkflow,
@@ -50,7 +53,7 @@ class CoreAgent {
       return {
         success: false,
         context,
-        error: error instanceof Error ? error : new Error(String(error))
+        error: error instanceof Error ? error : new Error(String(error)),
       };
     }
   }

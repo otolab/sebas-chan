@@ -34,10 +34,12 @@ export type EventType =
   | 'KNOWLEDGE_EXTRACTABLE'
   | 'HIGH_PRIORITY_ISSUE_DETECTED'
   | 'HIGH_PRIORITY_FLOW_DETECTED'
-  | 'ISSUES_CLUSTER_DETECTED'
   | 'PERSPECTIVE_TRIGGERED'
   | 'UNCLUSTERED_ISSUES_EXCEEDED'
   | 'POND_CAPACITY_WARNING'
+
+  // ワークフロー連携イベント
+  | 'FLOW_SELECTED_FOR_ACTION'
 
   // システムイベント
   | 'SCHEDULE_TRIGGERED'
@@ -215,25 +217,6 @@ export interface HighPriorityFlowDetectedEvent {
 }
 
 /**
- * ISSUES_CLUSTER_DETECTED: 類似するIssue群のクラスターが検出された
- */
-export interface IssuesClusterDetectedEvent {
-  type: 'ISSUES_CLUSTER_DETECTED';
-  payload: {
-    clusterId: string;
-    perspective: {
-      type: 'project' | 'temporal' | 'thematic' | 'dependency';
-      title: string;
-      description: string;
-    };
-    issueIds: string[];
-    similarity: number; // 0-1
-    suggestedPriority?: number;
-    autoCreate?: boolean; // Flow自動作成フラグ
-  };
-}
-
-/**
  * PERSPECTIVE_TRIGGERED: 重要な観点が発見された
  */
 export interface PerspectiveTriggeredEvent {
@@ -302,6 +285,23 @@ export interface FlowStatusChangedEvent {
     oldStatus: FlowStatus;
     newStatus: FlowStatus;
     reason?: string;
+  };
+}
+
+/**
+ * FLOW_SELECTED_FOR_ACTION: C-1がFlowを選定し、C-2へ連携するイベント
+ */
+export interface FlowSelectedForActionEvent {
+  type: 'FLOW_SELECTED_FOR_ACTION';
+  payload: {
+    flowId: string;
+    trigger: 'c1_suggestion' | 'flow_selected' | 'high_priority' | 'new_issue';
+    priority: number;
+    context?: {
+      reason?: string;
+      estimatedDuration?: number;
+      userState?: string;
+    };
   };
 }
 
@@ -387,8 +387,8 @@ export type SystemEvent =
   | KnowledgeCreatedEvent
   | HighPriorityIssueDetectedEvent
   | HighPriorityFlowDetectedEvent
-  | IssuesClusterDetectedEvent
   | PerspectiveTriggeredEvent
+  | FlowSelectedForActionEvent
   | ScheduleTriggeredEvent
   | SystemMaintenanceDueEvent
   | IdleTimeDetectedEvent
@@ -441,7 +441,6 @@ export type WorkflowType =
   | 'ANALYZE_ISSUE_IMPACT' // A-2
   | 'EXTRACT_KNOWLEDGE' // A-3
   | 'DEFINE_SYSTEM_RULE'
-  | 'CREATE_FLOW' // B-0
   | 'CLUSTER_ISSUES' // B-1
   | 'UPDATE_FLOW_RELATIONS' // B-2
   | 'UPDATE_FLOW_PRIORITIES' // B-3
@@ -466,13 +465,13 @@ export const EVENT_TO_WORKFLOWS: Record<EventType, WorkflowType[]> = {
   FLOW_CREATED: [], // 終端イベント（現時点）
   FLOW_UPDATED: ['UPDATE_FLOW_PRIORITIES'],
   FLOW_STATUS_CHANGED: [], // 終端イベント（現時点）
+  FLOW_SELECTED_FOR_ACTION: ['SUGGEST_NEXT_ACTION'], // C-1 → C-2連携
   RECURRING_PATTERN_DETECTED: ['EXTRACT_KNOWLEDGE'],
   KNOWLEDGE_EXTRACTABLE: ['EXTRACT_KNOWLEDGE'],
   KNOWLEDGE_CREATED: [], // 終端イベント
   HIGH_PRIORITY_ISSUE_DETECTED: ['SUGGEST_NEXT_ACTION'],
   HIGH_PRIORITY_FLOW_DETECTED: ['SUGGEST_NEXT_ACTION'],
-  ISSUES_CLUSTER_DETECTED: ['CREATE_FLOW'],
-  PERSPECTIVE_TRIGGERED: ['CREATE_FLOW'],
+  PERSPECTIVE_TRIGGERED: ['CLUSTER_ISSUES'],
   SCHEDULE_TRIGGERED: ['HANDLE_SCHEDULED_TASK'],
   SYSTEM_MAINTENANCE_DUE: ['COLLECT_SYSTEM_STATS'],
   IDLE_TIME_DETECTED: ['COLLECT_SYSTEM_STATS'],

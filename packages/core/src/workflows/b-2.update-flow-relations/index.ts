@@ -10,7 +10,7 @@
  * - Flow間の関係性の再評価
  */
 
-import type { SystemEvent } from '@sebas-chan/shared-types';
+import type { SystemEvent, Issue, Flow } from '@sebas-chan/shared-types';
 import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
 import { RecordType } from '../recorder.js';
@@ -47,7 +47,7 @@ async function executeUpdateFlowRelations(
       ? [await storage.getFlow(payload.flowId)]
       : await storage.searchFlows('status:active');
 
-    const validFlows = flows.filter(f => f !== null);
+    const validFlows = flows.filter((f) => f !== null);
     if (validFlows.length === 0) {
       recorder.record(RecordType.INFO, {
         message: 'No active flows to update',
@@ -62,12 +62,10 @@ async function executeUpdateFlowRelations(
     // 2. 各Flowに関連するIssueを取得
     const flowAnalysis = await Promise.all(
       validFlows.map(async (flow) => {
-        const issues = await Promise.all(
-          flow.issueIds.map(id => storage.getIssue(id))
-        );
+        const issues = await Promise.all(flow.issueIds.map((id) => storage.getIssue(id)));
         return {
           flow,
-          issues: issues.filter(i => i !== null),
+          issues: issues.filter((i) => i !== null),
           completionRate: calculateCompletionRate(issues),
           staleness: calculateStaleness(flow),
         };
@@ -105,8 +103,8 @@ async function executeUpdateFlowRelations(
         state: analysisResult.updatedState,
       },
       output: {
-        updatedFlows: analysisResult.flowUpdates.map(u => u.flowId),
-        changes: analysisResult.flowUpdates.map(u => ({
+        updatedFlows: analysisResult.flowUpdates.map((u) => u.flowId),
+        changes: analysisResult.flowUpdates.map((u) => ({
           flowId: u.flowId,
           health: u.health,
           perspectiveValid: u.perspectiveValidity.stillValid,
@@ -134,16 +132,16 @@ async function executeUpdateFlowRelations(
 /**
  * 完了率を計算
  */
-function calculateCompletionRate(issues: any[]): number {
+function calculateCompletionRate(issues: (Issue | null)[]): number {
   if (issues.length === 0) return 0;
-  const closedCount = issues.filter(i => i?.status === 'closed').length;
+  const closedCount = issues.filter((i) => i?.status === 'closed').length;
   return Math.round((closedCount / issues.length) * 100);
 }
 
 /**
  * 停滞度を計算（日数）
  */
-function calculateStaleness(flow: any): number {
+function calculateStaleness(flow: Flow): number {
   const lastUpdated = new Date(flow.updatedAt);
   const now = new Date();
   return Math.floor((now.getTime() - lastUpdated.getTime()) / (1000 * 60 * 60 * 24));

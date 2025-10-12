@@ -32,7 +32,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 4. AnalyzeIssueImpactワークフローが実行され、影響度を判定
       // 5. KNOWLEDGE_EXTRACTABLEイベントが発行される（高影響度の場合）
       // 6. ExtractKnowledgeワークフローが実行され、知識が抽出される
-
       // 検証ポイント:
       // - 各ワークフローのRecorder出力を確認
       // - イベントの発行順序と内容
@@ -46,7 +45,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 2. ProcessUserRequestワークフローが質問を分類
       // 3. KNOWLEDGE_EXTRACTABLEイベントが発行される
       // 4. ExtractKnowledgeワークフローが実行される
-
       // 検証ポイント:
       // - 質問の適切な分類（requestType: 'question'）
       // - 知識の正しいカテゴリ分類
@@ -61,7 +59,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 2. AnalyzeIssueImpactが実行され、優先度を再評価
       // 3. HIGH_PRIORITY_DETECTEDイベントが発行される（高優先度の場合）
       // 4. 関連するワークフローが実行される
-
       // 検証ポイント:
       // - 優先度の変更が正しく反映される
       // - 適切なイベントが条件に応じて発行される
@@ -74,7 +71,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 2. AIがクローズ可能と判定
       // 3. ISSUE_STATUS_CHANGEDイベントが発行される
       // 4. ステータスがresolvedに変更される
-
       // 検証ポイント:
       // - AIの判定理由がRecorderに記録される
       // - ステータス変更の履歴が正しく保存される
@@ -88,7 +84,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 1. AI処理でエラーが発生するケース
       // 2. Storage操作でエラーが発生するケース
       // 3. イベント発行でエラーが発生するケース
-
       // 検証ポイント:
       // - エラーがRecorderに記録される
       // - WorkflowResultのsuccessがfalseになる
@@ -100,7 +95,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 1. AI処理が長時間かかるケース
       // 2. タイムアウト設定が適用される
       // 3. 適切なエラーメッセージが返される
-
       // 検証ポイント:
       // - タイムアウトエラーがRecorderに記録される
       // - 部分的な処理結果が保存されない
@@ -113,7 +107,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 1. 複数のイベントを同時に発行
       // 2. 各ワークフローが並列に実行される
       // 3. 相互に干渉しないことを確認
-
       // 検証ポイント:
       // - Recorderのログが混在しても追跡可能
       // - 各ワークフローの実行時間
@@ -127,7 +120,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 1. 最初のワークフローでstateを更新
       // 2. 次のワークフローで更新されたstateを参照
       // 3. 最終的なstateが期待通りになる
-
       // 検証ポイント:
       // - state更新がRecorderに記録される
       // - metadataが正しく引き継がれる
@@ -141,7 +133,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 1. RecordTypeが適切に使用されている
       // 2. ログのタイムスタンプが順序通り
       // 3. workflowNameが自動的に付与されている
-
       // 検証ポイント:
       // - INFO, DEBUG, ERROR, OUTPUT等の使い分け
       // - 構造化ログのフォーマット
@@ -153,7 +144,6 @@ describe('Workflow Chain Integration Tests', () => {
       // 1. getBuffer()で全ログを取得
       // 2. フィルタリングが正しく動作
       // 3. clear()後は空になる
-
       // 検証ポイント:
       // - バッファサイズの制限
       // - 非同期処理でのログ順序

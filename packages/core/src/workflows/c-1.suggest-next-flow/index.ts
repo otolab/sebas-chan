@@ -11,9 +11,12 @@
  */
 
 import type { SystemEvent, Flow } from '@sebas-chan/shared-types';
-import type { WorkflowContextInterface, WorkflowEventEmitterInterface, WorkflowStorageInterface } from '../context.js';
+import type {
+  WorkflowContextInterface,
+  WorkflowEventEmitterInterface,
+  WorkflowStorageInterface,
+} from '../context.js';
 import type { WorkflowResult, WorkflowDefinition } from '../workflow-types.js';
-import type { ExtendedFlow } from '../extended-types.js';
 import { RecordType } from '../recorder.js';
 import { suggestNextFlow, recordSuggestion } from './actions.js';
 
@@ -82,7 +85,7 @@ async function executeSuggestNextFlow(
       return {
         success: true,
         context,
-        output: { message: 'No active flows to suggest' },
+        // outputフィールドは使用しない
       };
     }
 
@@ -121,6 +124,27 @@ async function executeSuggestNextFlow(
     if (suggestionResult.suggestions.length > 0) {
       const primarySuggestion = suggestionResult.suggestions[0];
 
+      // C-2への連携イベント発行（C-1 → C-2のフロー）
+      emitter.emit({
+        type: 'FLOW_SELECTED_FOR_ACTION',
+        payload: {
+          flowId: primarySuggestion.flowId,
+          trigger: 'c1_suggestion',
+          priority: primarySuggestion.score,
+          context: {
+            reason: primarySuggestion.reason,
+            estimatedDuration: primarySuggestion.estimatedDuration,
+            userState: payload.userState?.energy,
+          },
+        },
+      });
+
+      recorder.record(RecordType.INFO, {
+        message: 'Emitted FLOW_SELECTED_FOR_ACTION event for C-2',
+        flowId: primarySuggestion.flowId,
+        score: primarySuggestion.score,
+      });
+
       // 高スコアの場合、観点トリガーイベント
       if (primarySuggestion.score > 0.8) {
         const flow = await storage.getFlow(primarySuggestion.flowId);
@@ -139,17 +163,13 @@ async function executeSuggestNextFlow(
     }
 
     // 6. 結果を返す
+    // 必要な情報はすべてイベントペイロードに含めて発行済み
+    // stateは実行中の一時状態のみ保持
     return {
       success: true,
       context: {
         ...context,
-        state: suggestionResult.updatedState,
-      },
-      output: {
-        primarySuggestion: suggestionResult.suggestions[0],
-        alternatives: suggestionResult.suggestions.slice(1, 4),
-        insights: suggestionResult.contextInsights,
-        fallback: suggestionResult.fallbackSuggestion,
+        state: suggestionResult.updatedState, // AIドライバーが必要に応じて更新したstate
       },
     };
   } catch (error) {
@@ -168,7 +188,7 @@ async function executeSuggestNextFlow(
 /**
  * 作業時間内かチェック
  */
-function isWorkingHours(date: Date, timezone?: string): boolean {
+function isWorkingHours(date: Date, _timezone?: string): boolean {
   // 簡易実装（実際はタイムゾーン考慮が必要）
   const hour = date.getHours();
   return hour >= 9 && hour < 18;
@@ -177,7 +197,10 @@ function isWorkingHours(date: Date, timezone?: string): boolean {
 /**
  * 最近完了したFlowを取得
  */
-async function getRecentCompletedFlows(storage: WorkflowStorageInterface, days: number): Promise<Flow[]> {
+async function getRecentCompletedFlows(
+  storage: WorkflowStorageInterface,
+  days: number
+): Promise<Flow[]> {
   const flows = await storage.searchFlows('status:completed');
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - days);
@@ -186,19 +209,19 @@ async function getRecentCompletedFlows(storage: WorkflowStorageInterface, days: 
 }
 
 /**
- * 今後の締切を取得
+ * アクティブなFlowを取得
+ * （deadlineとpriorityフィールドは存在しないため、単にアクティブなFlowを返す）
  */
-async function getUpcomingDeadlines(storage: WorkflowStorageInterface, days: number): Promise<ExtendedFlow[]> {
-  const flows = await storage.searchFlows('status:active') as ExtendedFlow[];
-  const future = new Date();
-  future.setDate(future.getDate() + days);
+async function getUpcomingDeadlines(
+  storage: WorkflowStorageInterface,
+  _days: number
+): Promise<Flow[]> {
+  const flows = await storage.searchFlows('status:active');
 
-  return flows
-    .filter((f) => f.deadline && new Date(f.deadline) <= future)
-    .sort((a, b) => {
-      if (!a.deadline || !b.deadline) return 0;
-      return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
-    });
+  // 更新日時の新しい順にソート
+  return flows.sort((a, b) => {
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
 }
 
 /**
@@ -212,10 +235,15 @@ export const suggestNextFlowWorkflow: WorkflowDefinition = {
       'FLOW_STATUS_CHANGED',
       'SCHEDULE_TRIGGERED',
       'USER_REQUEST_RECEIVED',
+      'ISSUE_STALLED', // Flowレビューのきっかけとして
     ],
     priority: 25,
     condition: (event) => {
-      // 提案の頻度制限（実際はcontextから最後の提案時刻を取得すべき）
+      // ISSUE_STALLEDの場合はFlowレビューの観点で処理
+      if (event.type === 'ISSUE_STALLED') {
+        return true; // 停滞IssueからFlowの見直しへ
+      }
+      // 他のイベントは頻度制限を考慮（実際はcontextから最後の提案時刻を取得すべき）
       // ここでは簡略化のため常にtrueを返す
       return true;
     },

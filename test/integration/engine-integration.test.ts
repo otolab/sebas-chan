@@ -77,7 +77,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         executor: executorMock,
       };
 
-      // @ts-ignore - private propertyにアクセス
+      // @ts-expect-error - private propertyにアクセス
       engine.workflowRegistry.register(testWorkflow);
 
       // createInputを呼び出してDATA_ARRIVEDイベントを生成
@@ -100,12 +100,16 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.start();
 
       // デフォルトワークフローをクリア
-      // @ts-ignore - private propertyにアクセス
+      // @ts-expect-error - private propertyにアクセス
       engine.workflowRegistry.clear();
 
       // 複数のワークフローを登録
-      const executorMock1 = vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} });
-      const executorMock2 = vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} });
+      const executorMock1 = vi
+        .fn()
+        .mockResolvedValue({ success: true, context: { state: {} }, output: {} });
+      const executorMock2 = vi
+        .fn()
+        .mockResolvedValue({ success: true, context: { state: {} }, output: {} });
 
       const workflows = [
         {
@@ -122,8 +126,8 @@ describe('CoreEngine - CoreAgent Integration', () => {
         },
       ];
 
-      // @ts-ignore - private propertyにアクセス
-      workflows.forEach(w => engine.workflowRegistry.register(w));
+      // @ts-expect-error - private propertyにアクセス
+      workflows.forEach((w) => engine.workflowRegistry.register(w));
 
       // 異なるタイプのイベントを追加
       engine.emitEvent({
@@ -194,7 +198,9 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.start();
 
       // ワークフローを登録
-      const executorMock = vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} });
+      const executorMock = vi
+        .fn()
+        .mockResolvedValue({ success: true, context: { state: {} }, output: {} });
       const testWorkflow = {
         name: 'test-data-arrived-flow',
         description: 'Test workflow for DATA_ARRIVED flow',
@@ -202,7 +208,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         executor: executorMock,
       };
 
-      // @ts-ignore - private propertyにアクセス
+      // @ts-expect-error - private propertyにアクセス
       engine.workflowRegistry.register(testWorkflow);
 
       // 1. Input作成
@@ -239,10 +245,12 @@ describe('CoreEngine - CoreAgent Integration', () => {
       await engine.start();
 
       // デフォルトワークフローをクリアして、テスト用ワークフローのみを登録
-      // @ts-ignore - private propertyにアクセス
+      // @ts-expect-error - private propertyにアクセス
       engine.workflowRegistry.clear();
 
-      const executorMock = vi.fn().mockResolvedValue({ success: true, context: { state: {} }, output: {} });
+      const executorMock = vi
+        .fn()
+        .mockResolvedValue({ success: true, context: { state: {} }, output: {} });
       const testWorkflow = {
         name: 'test-multiple-inputs',
         description: 'Test workflow for multiple inputs',
@@ -250,7 +258,7 @@ describe('CoreEngine - CoreAgent Integration', () => {
         executor: executorMock,
       };
 
-      // @ts-ignore - private propertyにアクセス
+      // @ts-expect-error - private propertyにアクセス
       engine.workflowRegistry.register(testWorkflow);
 
       // 複数のInputを作成

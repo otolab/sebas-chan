@@ -9,39 +9,37 @@ import { setupTestEnvironment, teardownTestEnvironment } from '../integration/se
 
 describe('API E2E Tests', () => {
   let app: any;
-  
+
   beforeAll(async () => {
     // DBの初期化を先に行う
     await setupTestEnvironment();
-    
+
     // アプリケーションを作成（実際のDBとCoreEngineを使用）
     app = await createApp();
-    
+
     // エンジンが準備できるまで待つ
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
   }, 60000); // 60秒のタイムアウト
-  
+
   afterAll(async () => {
     await teardownTestEnvironment();
   });
-  
+
   describe('GET /health', () => {
     it('should return healthy status', async () => {
-      const response = await request(app)
-        .get('/health')
-        .expect(200);
-      
+      const response = await request(app).get('/health').expect(200);
+
       expect(response.body).toMatchObject({
         status: 'healthy',
         ready: true,
         engine: 'running',
         database: 'ready',
         agent: 'initialized',
-        timestamp: expect.any(String)
+        timestamp: expect.any(String),
       });
     });
   });
-  
+
   describe('POST /api/inputs', () => {
     it('should accept and process input data', async () => {
       const inputData = {
@@ -49,11 +47,8 @@ describe('API E2E Tests', () => {
         content: 'E2Eテスト用の入力データ：システムエラーが発生しました',
       };
 
-      const response = await request(app)
-        .post('/api/inputs')
-        .send(inputData)
-        .expect(201);
-      
+      const response = await request(app).post('/api/inputs').send(inputData).expect(201);
+
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('data');
       expect(response.body).toHaveProperty('timestamp');
@@ -70,21 +65,16 @@ describe('API E2E Tests', () => {
         // contentが欠落
       };
 
-      const response = await request(app)
-        .post('/api/inputs')
-        .send(invalidData)
-        .expect(400);
-      
+      const response = await request(app).post('/api/inputs').send(invalidData).expect(400);
+
       expect(response.body).toHaveProperty('error');
     });
   });
 
   describe.skip('GET /api/state', () => {
     it('should return current state document', async () => {
-      const response = await request(app)
-        .get('/api/state')
-        .expect(200);
-      
+      const response = await request(app).get('/api/state').expect(200);
+
       expect(response.body).toHaveProperty('state');
       expect(typeof response.body.state).toBe('string');
     });
@@ -93,19 +83,17 @@ describe('API E2E Tests', () => {
   describe.skip('POST /api/state', () => {
     it('should update state document', async () => {
       const newState = '# Updated State\nTest content from E2E test';
-      
+
       const response = await request(app)
         .post('/api/state')
         .send({ content: newState })
         .expect(200);
-      
+
       expect(response.body).toHaveProperty('message', 'State updated');
 
       // 更新を確認
-      const getResponse = await request(app)
-        .get('/api/state')
-        .expect(200);
-      
+      const getResponse = await request(app).get('/api/state').expect(200);
+
       expect(getResponse.body.state).toBe(newState);
     });
   });
@@ -118,11 +106,8 @@ describe('API E2E Tests', () => {
         labels: ['test', 'e2e'],
       };
 
-      const response = await request(app)
-        .post('/api/issues')
-        .send(issueData)
-        .expect(201);
-      
+      const response = await request(app).post('/api/issues').send(issueData).expect(201);
+
       expect(response.body).toHaveProperty('success', true);
       expect(response.body).toHaveProperty('data');
       expect(response.body.data).toMatchObject({
@@ -150,7 +135,7 @@ describe('API E2E Tests', () => {
         .get('/api/issues/search')
         .query({ q: 'データベース' })
         .expect(200);
-      
+
       expect(response.body).toHaveProperty('results');
       expect(Array.isArray(response.body.results)).toBe(true);
     });
@@ -163,11 +148,8 @@ describe('API E2E Tests', () => {
         source: 'e2e-test',
       };
 
-      const response = await request(app)
-        .post('/api/pond')
-        .send(pondData)
-        .expect(201);
-      
+      const response = await request(app).post('/api/pond').send(pondData).expect(201);
+
       expect(response.body).toHaveProperty('id');
       expect(response.body).toHaveProperty('message', 'Added to pond');
     });
@@ -176,19 +158,17 @@ describe('API E2E Tests', () => {
   describe.skip('GET /api/pond/search', () => {
     it('should search pond entries', async () => {
       // まずPondにデータを追加
-      await request(app)
-        .post('/api/pond')
-        .send({
-          content: 'Elasticsearchのエラーログ',
-          source: 'e2e-test',
-        });
+      await request(app).post('/api/pond').send({
+        content: 'Elasticsearchのエラーログ',
+        source: 'e2e-test',
+      });
 
       // 検索
       const response = await request(app)
         .get('/api/pond/search')
         .query({ q: 'Elasticsearch' })
         .expect(200);
-      
+
       expect(response.body).toHaveProperty('results');
       expect(Array.isArray(response.body.results)).toBe(true);
     });
@@ -198,29 +178,24 @@ describe('API E2E Tests', () => {
     it.skip('should rate limit excessive requests', async () => {
       // レート制限のテスト（実装されている場合）
       const requests = [];
-      
+
       // 短時間に多数のリクエストを送信
       for (let i = 0; i < 20; i++) {
-        requests.push(
-          request(app)
-            .get('/health')
-        );
+        requests.push(request(app).get('/health'));
       }
 
       const responses = await Promise.all(requests);
-      
+
       // いくつかのリクエストが429 (Too Many Requests)を返すことを確認
-      const rateLimited = responses.filter(r => r.status === 429);
+      const rateLimited = responses.filter((r) => r.status === 429);
       expect(rateLimited.length).toBeGreaterThan(0);
     });
   });
 
   describe('Error Handling', () => {
     it('should handle 404 for unknown routes', async () => {
-      const response = await request(app)
-        .get('/api/unknown-endpoint')
-        .expect(404);
-      
+      const response = await request(app).get('/api/unknown-endpoint').expect(404);
+
       expect(response.body).toHaveProperty('error');
     });
 
@@ -230,7 +205,7 @@ describe('API E2E Tests', () => {
         .set('Content-Type', 'application/json')
         .send('{ invalid json }')
         .expect(400);
-      
+
       expect(response.body).toHaveProperty('error');
     });
   });

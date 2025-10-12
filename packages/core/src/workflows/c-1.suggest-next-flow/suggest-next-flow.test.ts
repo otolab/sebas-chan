@@ -2,10 +2,14 @@
  * C-1: SUGGEST_NEXT_FLOW ワークフローのテスト
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { suggestNextFlowWorkflow } from './index.js';
 import type { Flow, SystemEvent } from '@sebas-chan/shared-types';
-import { createCustomMockContext, createMockWorkflowEmitter, createMockWorkflowRecorder } from '../test-utils.js';
+import {
+  createCustomMockContext,
+  createMockWorkflowEmitter,
+  createMockWorkflowRecorder,
+} from '../test-utils.js';
 import { RecordType } from '../recorder.js';
 
 describe('C-1: SuggestNextFlow', () => {
@@ -59,9 +63,9 @@ describe('C-1: SuggestNextFlow', () => {
               },
             ],
             contextInsights: {
-              workingHours: true,
-              energyLevel: 'high',
-              recentPatterns: 'morning routine detected',
+              currentFocus: 'morning routine',
+              productivityAdvice: '高エネルギー状態で効率的に作業',
+              bottleneck: undefined,
             },
             fallbackSuggestion: null,
             updatedState: 'Flow suggestions generated',
@@ -91,23 +95,23 @@ describe('C-1: SuggestNextFlow', () => {
 
       // 基本的な成功確認
       expect(result.success).toBe(true);
-      expect(result.output).toBeDefined();
 
-      // 提案の構造確認
-      const output = result.output as any;
-      expect(output.primarySuggestion).toBeDefined();
-      expect(output.primarySuggestion.flowId).toBe('flow-1');
-      expect(output.primarySuggestion.score).toBe(0.9);
+      // C-1 → C-2連携イベントの発行を確認
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'FLOW_SELECTED_FOR_ACTION',
+          payload: expect.objectContaining({
+            flowId: 'flow-1',
+            trigger: 'c1_suggestion',
+            priority: 0.9,
+            context: expect.objectContaining({
+              reason: '現在の時間帯と作業パターンに最適',
+            }),
+          }),
+        })
+      );
 
-      // 代替案の確認
-      expect(output.alternatives).toHaveLength(1);
-      expect(output.alternatives[0].flowId).toBe('flow-2');
-
-      // インサイトの確認
-      expect(output.insights).toBeDefined();
-      expect(output.insights.workingHours).toBe(true);
-
-      // 高スコアによるイベント発行の確認
+      // 高スコアによるPERSPECTIVE_TRIGGEREDイベント発行の確認
       expect(mockEmitter.emit).toHaveBeenCalledWith(
         expect.objectContaining({
           type: 'PERSPECTIVE_TRIGGERED',
@@ -203,8 +207,18 @@ describe('C-1: SuggestNextFlow', () => {
       }
 
       expect(result.success).toBe(true);
-      expect((result.output as any).primarySuggestion.flowId).toBe('morning-review');
-      expect((result.output as any).primarySuggestion.score).toBeGreaterThan(0.9);
+
+      // C-1 → C-2連携イベントの発行を確認
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'FLOW_SELECTED_FOR_ACTION',
+          payload: expect.objectContaining({
+            flowId: 'morning-review',
+            trigger: 'c1_suggestion',
+            priority: 0.95,
+          }),
+        })
+      );
     });
 
     it('ユーザーコンテキストを考慮した提案ができる', async () => {
@@ -272,8 +286,20 @@ describe('C-1: SuggestNextFlow', () => {
       const result = await suggestNextFlowWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      expect((result.output as any).primarySuggestion.reason).toContain('短時間タスク');
-      expect((result.output as any).fallback).toBeDefined();
+
+      // C-1 → C-2連携イベントの発行を確認
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'FLOW_SELECTED_FOR_ACTION',
+          payload: expect.objectContaining({
+            flowId: 'quick-task',
+            trigger: 'c1_suggestion',
+            context: expect.objectContaining({
+              reason: '低エネルギー状態に適した短時間タスク',
+            }),
+          }),
+        })
+      );
     });
   });
 
@@ -301,9 +327,7 @@ describe('C-1: SuggestNextFlow', () => {
       const result = await suggestNextFlowWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      expect(result.output).toEqual({
-        message: 'No active flows to suggest',
-      });
+      // アクティブなFlowがない場合はイベントを発行しない
       expect(mockEmitter.emit).not.toHaveBeenCalled();
     });
 
@@ -367,8 +391,21 @@ describe('C-1: SuggestNextFlow', () => {
       const result = await suggestNextFlowWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
+      // C-1 → C-2連携イベントは発行される
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'FLOW_SELECTED_FOR_ACTION',
+          payload: expect.objectContaining({
+            flowId: 'flow-1',
+          }),
+        })
+      );
       // Flow取得失敗のためPERSPECTIVE_TRIGGEREDイベントは発行されない
-      expect(mockEmitter.emit).not.toHaveBeenCalled();
+      expect(mockEmitter.emit).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'PERSPECTIVE_TRIGGERED',
+        })
+      );
     });
 
     it('制約条件を考慮した提案ができる', async () => {
@@ -449,7 +486,16 @@ describe('C-1: SuggestNextFlow', () => {
       const result = await suggestNextFlowWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      expect((result.output as any).primarySuggestion.flowId).toBe('flow-3');
+      // C-1 → C-2連携イベントの発行を確認
+      expect(mockEmitter.emit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'FLOW_SELECTED_FOR_ACTION',
+          payload: expect.objectContaining({
+            flowId: 'flow-3',
+            trigger: 'c1_suggestion',
+          }),
+        })
+      );
     });
   });
 

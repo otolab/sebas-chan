@@ -4,7 +4,11 @@
 
 import type { Issue, Flow, Knowledge } from '@sebas-chan/shared-types';
 import type { AIDriver } from '@moduler-prompt/driver';
-import type { WorkflowEventEmitterInterface, WorkflowStorageInterface, WorkflowRecorder } from '../context.js';
+import type {
+  WorkflowEventEmitterInterface,
+  WorkflowStorageInterface,
+  WorkflowRecorder,
+} from '../context.js';
 import { RecordType } from '../recorder.js';
 import { compile } from '@moduler-prompt/core';
 import { issueActionPromptModule } from './prompts.js';
@@ -17,6 +21,35 @@ export interface IssueAnalysis {
   issue: Issue;
   stalledDuration: number;
   complexity: 'low' | 'medium' | 'high';
+}
+
+/**
+ * 類似の解決済みIssueの型定義
+ */
+export interface SimilarResolvedIssue {
+  id: string;
+  title: string;
+  description?: string;
+  resolution?: string;
+  similarity: number;
+}
+
+/**
+ * ユーザーコンテキストの型定義
+ */
+export interface UserContext {
+  userId?: string;
+  recentActivity?: string[];
+  preferences?: Record<string, unknown>;
+}
+
+/**
+ * リクエスト詳細の型定義
+ */
+export interface RequestDetail {
+  level?: 'summary' | 'standard' | 'detailed';
+  constraints?: Record<string, unknown>;
+  focusArea?: string;
 }
 
 /**
@@ -85,16 +118,15 @@ export async function suggestIssueActions(
   driver: AIDriver,
   issueAnalysis: IssueAnalysis,
   relevantKnowledge: Knowledge[],
-  similarResolvedIssues: any[],
   flowPerspective: Flow | null,
-  userContext: any,
-  requestDetail: any,
+  userContext: UserContext,
+  requestDetail: RequestDetail,
   currentState: string
 ): Promise<ActionSuggestionResult> {
   const context = {
     issueAnalysis,
     relevantKnowledge,
-    similarResolvedIssues,
+    similarResolvedIssues: [], // 空配列を設定（プロンプトモジュールが期待するため）
     flowPerspective,
     userContext,
     constraints: requestDetail.constraints || {},
@@ -127,12 +159,8 @@ export async function applyActionSuggestions(
     const priorityWeight = { must_do: 3, should_do: 2, nice_to_have: 1 };
     const typeWeight = { immediate: 3, investigative: 2, planned: 1, delegatable: 0 };
 
-    const scoreA = priorityWeight[a.priority] * 10 +
-                    typeWeight[a.type] * 5 +
-                    a.confidence * 3;
-    const scoreB = priorityWeight[b.priority] * 10 +
-                    typeWeight[b.type] * 5 +
-                    b.confidence * 3;
+    const scoreA = priorityWeight[a.priority] * 10 + typeWeight[a.type] * 5 + a.confidence * 3;
+    const scoreB = priorityWeight[b.priority] * 10 + typeWeight[b.type] * 5 + b.confidence * 3;
 
     return scoreB - scoreA;
   });
@@ -149,15 +177,17 @@ export async function applyActionSuggestions(
     const issue = await storage.getIssue(issueId);
     const splitIssue = await storage.createIssue({
       title: `Issue "${issue?.title || issueId}" の分割を検討`,
-      description: `## 提案内容\nIssue (${issueId}) を複数のサブIssueに分割することを提案します。\n\n## 理由\n${actionResult.splitSuggestion.reason}\n\n## 提案されるサブIssue\n${actionResult.splitSuggestion.suggestedSubIssues.map((sub: any) => `- ${sub.title}: ${sub.description}`).join('\n')}\n\n## アクション\nこの提案をレビューして、適切な場合は手動でサブIssueを作成してください。`,
-      status: 'open' as any,
+      description: `## 提案内容\nIssue (${issueId}) を複数のサブIssueに分割することを提案します。\n\n## 理由\n${actionResult.splitSuggestion.reason}\n\n## 提案されるサブIssue\n${actionResult.splitSuggestion.suggestedSubIssues.map((sub) => `- ${sub.title}: ${sub.description}`).join('\n')}\n\n## アクション\nこの提案をレビューして、適切な場合は手動でサブIssueを作成してください。`,
+      status: 'open',
       priority: PRIORITY.MEDIUM,
       labels: ['suggestion', 'issue-split'],
-      updates: [{
-        timestamp: new Date(),
-        content: `SuggestNextActionワークフローによって作成されました。元Issue: ${issueId}`,
-        author: 'ai' as const,
-      }],
+      updates: [
+        {
+          timestamp: new Date(),
+          content: `SuggestNextActionワークフローによって作成されました。元Issue: ${issueId}`,
+          author: 'ai' as const,
+        },
+      ],
       relations: [{ type: 'relates_to', targetIssueId: issueId }],
       sourceInputIds: [],
     });

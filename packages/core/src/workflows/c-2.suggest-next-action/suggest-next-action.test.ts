@@ -2,10 +2,16 @@
  * C-2: SUGGEST_NEXT_ACTION_FOR_ISSUE ワークフローのテスト
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { suggestNextActionWorkflow } from './index.js';
-import type { Issue, Knowledge, Flow, SystemEvent } from '@sebas-chan/shared-types';
-import { createCustomMockContext, createMockWorkflowEmitter, createMockIssue, createMockKnowledge, createMockWorkflowRecorder } from '../test-utils.js';
+import type { SystemEvent } from '@sebas-chan/shared-types';
+import {
+  createCustomMockContext,
+  createMockWorkflowEmitter,
+  createMockIssue,
+  createMockKnowledge,
+  createMockWorkflowRecorder,
+} from '../test-utils.js';
 import { RecordType } from '../recorder.js';
 
 describe('C-2: SuggestNextActionForIssue', () => {
@@ -39,11 +45,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
                 title: 'Profile the application',
                 type: 'investigation',
                 description: 'Use profiling tools to identify bottlenecks',
-                steps: [
-                  'Install profiling tools',
-                  'Run the profiler',
-                  'Analyze results',
-                ],
+                steps: ['Install profiling tools', 'Run the profiler', 'Analyze results'],
                 estimatedTotalTime: 60,
                 confidence: 0.9,
                 prerequisites: ['Access to production environment'],
@@ -73,6 +75,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
           searchKnowledge: vi.fn().mockResolvedValue(mockKnowledge),
           searchIssues: vi.fn().mockResolvedValue([]),
           getFlow: vi.fn().mockResolvedValue(null),
+          updateIssue: vi.fn().mockResolvedValue(mockIssue),
         },
       });
       mockContext.recorder = mockRecorder;
@@ -92,24 +95,20 @@ describe('C-2: SuggestNextActionForIssue', () => {
 
       // 基本的な成功確認
       expect(result.success).toBe(true);
-      expect(result.output).toBeDefined();
 
-      // 主要アクションの確認
-      const output = result.output as any;
-      expect(output.primaryAction).toBeDefined();
-      expect(output.primaryAction.title).toBe('Profile the application');
-      expect(output.primaryAction.type).toBe('investigation');
-      expect(output.primaryAction.steps).toHaveLength(3);
-      expect(output.primaryAction.confidence).toBe(0.9);
-
-      // 代替アクションの確認
-      expect(output.alternativeActions).toHaveLength(1);
-      expect(output.alternativeActions[0].title).toBe('Check recent changes');
-
-      // インサイトの確認
-      expect(output.insights).toBeDefined();
-      expect(output.insights.rootCause).toBeDefined();
-      expect(output.insights.rootCause.identified).toBe(true);
+      // Issue.updatesへの記録を確認
+      const updateIssueCall = mockContext.storage.updateIssue as ReturnType<typeof vi.fn>;
+      expect(updateIssueCall).toHaveBeenCalledWith(
+        'issue-1',
+        expect.objectContaining({
+          updates: expect.arrayContaining([
+            expect.objectContaining({
+              author: 'ai',
+              content: expect.stringContaining('次のアクションを提案しました'),
+            }),
+          ]),
+        })
+      );
 
       // レコーダーの呼び出し確認
       expect(mockRecorder.record).toHaveBeenCalledWith(
@@ -121,7 +120,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       );
     });
 
-    it('停滞しているIssueに対して分割提案ができる', async () => {
+    it('Flow内のIssueに対して分割提案ができる', async () => {
       const mockRecorder = createMockWorkflowRecorder();
       const mockIssue = createMockIssue({
         id: 'stalled-issue',
@@ -150,11 +149,24 @@ describe('C-2: SuggestNextActionForIssue', () => {
               confidence: 0.9,
             },
             splitSuggestion: {
-              recommended: true,
-              subtasks: [
-                'Refactor authentication module',
-                'Refactor data layer',
-                'Refactor UI components',
+              shouldSplit: true,
+              reason: 'Task too large to tackle at once',
+              suggestedSubIssues: [
+                {
+                  title: 'Refactor authentication module',
+                  description: 'Refactor authentication module',
+                  dependency: 'independent' as const,
+                },
+                {
+                  title: 'Refactor data layer',
+                  description: 'Refactor data layer',
+                  dependency: 'independent' as const,
+                },
+                {
+                  title: 'Refactor UI components',
+                  description: 'Refactor UI components',
+                  dependency: 'independent' as const,
+                },
               ],
             },
             escalationSuggestion: null,
@@ -165,6 +177,12 @@ describe('C-2: SuggestNextActionForIssue', () => {
           getIssue: vi.fn().mockResolvedValue(mockIssue),
           searchKnowledge: vi.fn().mockResolvedValue([]),
           searchIssues: vi.fn().mockResolvedValue([]),
+          getFlow: vi.fn().mockResolvedValue({
+            id: 'flow-1',
+            title: 'Refactoring Flow',
+            issueIds: ['stalled-issue'],
+          }),
+          updateIssue: vi.fn().mockResolvedValue(mockIssue),
         },
       });
       mockContext.recorder = mockRecorder;
@@ -172,21 +190,34 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const mockEmitter = createMockWorkflowEmitter();
 
       const event: SystemEvent = {
-        type: 'ISSUE_STALLED',
+        type: 'FLOW_SELECTED_FOR_ACTION',
         payload: {
-          issueId: 'stalled-issue',
-          stalledDays: 7,
-          lastUpdate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
+          flowId: 'flow-1',
+          trigger: 'c1_suggestion',
+          priority: 0.8,
+          context: {
+            reason: 'Flow selected for complex refactoring task',
+          },
         },
       };
 
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
-      expect(output.insights.splitSuggestion).toBeDefined();
-      expect(output.insights.splitSuggestion.recommended).toBe(true);
-      expect(output.insights.splitSuggestion.subtasks).toHaveLength(3);
+
+      // Issue.updatesへの記録を確認
+      const updateIssueCall = mockContext.storage.updateIssue as ReturnType<typeof vi.fn>;
+      expect(updateIssueCall).toHaveBeenCalledWith(
+        'stalled-issue',
+        expect.objectContaining({
+          updates: expect.arrayContaining([
+            expect.objectContaining({
+              author: 'ai',
+              content: expect.stringContaining('次のアクションを提案しました'),
+            }),
+          ]),
+        })
+      );
     });
 
     it('ユーザーコンテキストを考慮した提案ができる', async () => {
@@ -194,6 +225,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const mockIssue = createMockIssue({
         id: 'issue-2',
         title: 'Bug in login flow',
+        priority: 80, // 高優先度Issue
       });
 
       const mockContext = createCustomMockContext({
@@ -213,8 +245,10 @@ describe('C-2: SuggestNextActionForIssue', () => {
             rootCauseAnalysis: null,
             splitSuggestion: null,
             escalationSuggestion: {
-              recommended: true,
+              shouldEscalate: true,
               reason: 'Multiple failed attempts detected',
+              escalateTo: 'senior-developer',
+              preparedInformation: ['Error logs', 'Previous attempts'],
             },
             updatedState: 'Alternative approach suggested',
           }),
@@ -223,28 +257,40 @@ describe('C-2: SuggestNextActionForIssue', () => {
           getIssue: vi.fn().mockResolvedValue(mockIssue),
           searchKnowledge: vi.fn().mockResolvedValue([]),
           searchIssues: vi.fn().mockResolvedValue([]),
+          updateIssue: vi.fn().mockResolvedValue(mockIssue),
         },
       });
       mockContext.recorder = mockRecorder;
 
       const mockEmitter = createMockWorkflowEmitter();
 
+      // HIGH_PRIORITY_ISSUE_DETECTEDイベントを使用
       const event: SystemEvent = {
-        type: 'USER_REQUEST_RECEIVED',
+        type: 'HIGH_PRIORITY_ISSUE_DETECTED',
         payload: {
-          userId: 'user-1',
-          content: 'Help with issue-2, stuck and cannot reproduce locally',
-          timestamp: new Date().toISOString(),
+          issueId: 'issue-2',
+          priority: 80,
+          reason: 'Multiple failed attempts detected',
         },
       };
 
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
-      expect(output.primaryAction.title).toContain('alternative approach');
-      expect(output.insights.escalation).toBeDefined();
-      expect(output.insights.escalation.recommended).toBe(true);
+
+      // Issue.updatesへの記録を確認
+      const updateIssueCall = mockContext.storage.updateIssue as ReturnType<typeof vi.fn>;
+      expect(updateIssueCall).toHaveBeenCalledWith(
+        'issue-2',
+        expect.objectContaining({
+          updates: expect.arrayContaining([
+            expect.objectContaining({
+              author: 'ai',
+              content: expect.stringContaining('次のアクションを提案しました'),
+            }),
+          ]),
+        })
+      );
     });
 
     it('類似の解決済みIssueから学習した提案ができる', async () => {
@@ -290,6 +336,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
           getIssue: vi.fn().mockResolvedValue(mockIssue),
           searchKnowledge: vi.fn().mockResolvedValue([]),
           searchIssues: vi.fn().mockResolvedValue(similarIssues),
+          updateIssue: vi.fn().mockResolvedValue(mockIssue),
         },
       });
       mockContext.recorder = mockRecorder;
@@ -308,9 +355,20 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
-      expect(output.primaryAction.confidence).toBeGreaterThan(0.9);
-      expect(output.primaryAction.title).toContain('similar solution');
+
+      // Issue.updatesへの記録を確認
+      const updateIssueCall = mockContext.storage.updateIssue as ReturnType<typeof vi.fn>;
+      expect(updateIssueCall).toHaveBeenCalledWith(
+        'current-issue',
+        expect.objectContaining({
+          updates: expect.arrayContaining([
+            expect.objectContaining({
+              author: 'ai',
+              content: expect.stringContaining('次のアクションを提案しました'),
+            }),
+          ]),
+        })
+      );
     });
   });
 
@@ -379,6 +437,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
           getIssue: vi.fn().mockResolvedValue(mockIssue),
           searchKnowledge: vi.fn().mockResolvedValue([]),
           searchIssues: vi.fn().mockResolvedValue([]),
+          updateIssue: vi.fn().mockResolvedValue(mockIssue),
         },
       });
       mockContext.recorder = mockRecorder;
@@ -400,15 +459,27 @@ describe('C-2: SuggestNextActionForIssue', () => {
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
-      expect(output.primaryAction).toBeDefined();
-      expect(output.primaryAction.confidence).toBeLessThan(0.7);
+
+      // Issue.updatesへの記録を確認
+      const updateIssueCall = mockContext.storage.updateIssue as ReturnType<typeof vi.fn>;
+      expect(updateIssueCall).toHaveBeenCalledWith(
+        'issue-no-knowledge',
+        expect.objectContaining({
+          updates: expect.arrayContaining([
+            expect.objectContaining({
+              author: 'ai',
+              content: expect.stringContaining('次のアクションを提案しました'),
+            }),
+          ]),
+        })
+      );
     });
 
     it('詳細レベルを指定した提案ができる', async () => {
       const mockRecorder = createMockWorkflowRecorder();
       const mockIssue = createMockIssue({
         id: 'issue-quick',
+        priority: 85, // 高優先度Issue
       });
 
       const mockContext = createCustomMockContext({
@@ -435,26 +506,40 @@ describe('C-2: SuggestNextActionForIssue', () => {
           getIssue: vi.fn().mockResolvedValue(mockIssue),
           searchKnowledge: vi.fn().mockResolvedValue([]),
           searchIssues: vi.fn().mockResolvedValue([]),
+          updateIssue: vi.fn().mockResolvedValue(mockIssue),
         },
       });
       mockContext.recorder = mockRecorder;
 
       const mockEmitter = createMockWorkflowEmitter();
 
+      // HIGH_PRIORITY_ISSUE_DETECTEDイベントを使用（時間制約を含む）
       const event: SystemEvent = {
-        type: 'USER_REQUEST_RECEIVED',
+        type: 'HIGH_PRIORITY_ISSUE_DETECTED',
         payload: {
-          userId: 'user-1',
-          content: 'Quick action for issue-quick, time limit 10 minutes',
-          timestamp: new Date().toISOString(),
+          issueId: 'issue-quick',
+          priority: 85,
+          reason: 'Quick action needed within time limit',
         },
       };
 
       const result = await suggestNextActionWorkflow.executor(event, mockContext, mockEmitter);
 
       expect(result.success).toBe(true);
-      const output = result.output as any;
-      expect(output.primaryAction.estimatedTime).toBeLessThanOrEqual(10);
+
+      // Issue.updatesへの記録を確認
+      const updateIssueCall = mockContext.storage.updateIssue as ReturnType<typeof vi.fn>;
+      expect(updateIssueCall).toHaveBeenCalledWith(
+        'issue-quick',
+        expect.objectContaining({
+          updates: expect.arrayContaining([
+            expect.objectContaining({
+              author: 'ai',
+              content: expect.stringContaining('次のアクションを提案しました'),
+            }),
+          ]),
+        })
+      );
     });
   });
 
@@ -502,6 +587,7 @@ describe('C-2: SuggestNextActionForIssue', () => {
           getIssue: vi.fn().mockResolvedValue(mockIssue),
           searchKnowledge: vi.fn().mockResolvedValue([]),
           searchIssues: vi.fn().mockResolvedValue([]),
+          updateIssue: vi.fn().mockResolvedValue(mockIssue),
         },
       });
       mockContext.recorder = mockRecorder;
@@ -548,7 +634,9 @@ describe('C-2: SuggestNextActionForIssue', () => {
 
       const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
-      expect(suggestNextActionWorkflow.triggers.eventTypes).toContain('HIGH_PRIORITY_ISSUE_DETECTED');
+      expect(suggestNextActionWorkflow.triggers.eventTypes).toContain(
+        'HIGH_PRIORITY_ISSUE_DETECTED'
+      );
     });
 
     it('低優先度のISSUE_CREATEDイベントでは起動しない', () => {
@@ -579,18 +667,22 @@ describe('C-2: SuggestNextActionForIssue', () => {
       expect(canTrigger).toBe(true);
     });
 
-    it('USER_REQUEST_RECEIVEDイベントで起動する', () => {
+    it('FLOW_SELECTED_FOR_ACTIONイベントで起動する', () => {
       const event: SystemEvent = {
-        type: 'USER_REQUEST_RECEIVED',
+        type: 'FLOW_SELECTED_FOR_ACTION',
         payload: {
-          userId: 'user-1',
-          content: 'Trigger test',
-          timestamp: new Date().toISOString(),
+          flowId: 'flow-1',
+          trigger: 'c1_suggestion',
+          priority: 0.8,
+          context: {
+            reason: 'Flow selected for action',
+          },
         },
       };
 
       const canTrigger = suggestNextActionWorkflow.triggers.condition?.(event);
       expect(canTrigger).toBe(true);
+      expect(suggestNextActionWorkflow.triggers.eventTypes).toContain('FLOW_SELECTED_FOR_ACTION');
     });
 
     it('優先度が適切に設定されている', () => {

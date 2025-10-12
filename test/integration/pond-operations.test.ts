@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PondEntry } from '../../packages/shared-types/src';
-import { setupTestEnvironment, teardownTestEnvironment, getTestId, getTestTimestamp } from './setup';
+import {
+  setupTestEnvironment,
+  teardownTestEnvironment,
+  getTestId,
+  getTestTimestamp,
+} from './setup';
 import type { DBClient } from '../../packages/db/src';
 
 describe('Pond Operations - Integration Tests', () => {
@@ -54,11 +59,9 @@ describe('Pond Operations - Integration Tests', () => {
         },
       ];
 
-      const results = await Promise.all(
-        entries.map(entry => dbClient.addPondEntry(entry))
-      );
-      
-      expect(results.every(r => r === true)).toBe(true);
+      const results = await Promise.all(entries.map((entry) => dbClient.addPondEntry(entry)));
+
+      expect(results.every((r) => r === true)).toBe(true);
     });
 
     it('should handle English content', async () => {
@@ -78,7 +81,8 @@ describe('Pond Operations - Integration Tests', () => {
     it('should handle mixed Japanese and English content', async () => {
       const entry: PondEntry = {
         id: getTestId('pond-mixed'),
-        content: 'Error: Memory leakが発生している可能性があります。GC frequencyを確認してください。',
+        content:
+          'Error: Memory leakが発生している可能性があります。GC frequencyを確認してください。',
         source: 'mixed-log',
         context: null,
         metadata: null,
@@ -139,42 +143,39 @@ describe('Pond Operations - Integration Tests', () => {
         },
       ];
 
-      await Promise.all(
-        testData.map(entry => dbClient.addPondEntry(entry))
-      );
+      await Promise.all(testData.map((entry) => dbClient.addPondEntry(entry)));
 
       // インデックス作成を待つ
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     });
 
     it('should search pond with Japanese query', async () => {
       const response = await dbClient.searchPond({ q: 'Elasticsearch クラスタ' });
-      
+
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
       expect(Array.isArray(response.data)).toBe(true);
-      
+
       // Elasticsearchに関する結果が含まれることを確認
-      const elasticsearchResults = response.data.filter(r => 
-        r.content.includes('Elasticsearch')
-      );
+      const elasticsearchResults = response.data.filter((r) => r.content.includes('Elasticsearch'));
       expect(elasticsearchResults.length).toBeGreaterThan(0);
     });
 
     it('should search with semantic similarity', async () => {
       // "データベースの問題"で検索して関連エントリを見つける
       const response = await dbClient.searchPond({ q: 'データベースの問題' });
-      
+
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
       expect(Array.isArray(response.data)).toBe(true);
-      
+
       // データベース関連の内容が見つかることを確認
       if (response.data.length > 0) {
-        const hasRelevantContent = response.data.some(r => 
-          r.content.includes('PostgreSQL') || 
-          r.content.includes('Elasticsearch') ||
-          r.content.includes('データベース')
+        const hasRelevantContent = response.data.some(
+          (r) =>
+            r.content.includes('PostgreSQL') ||
+            r.content.includes('Elasticsearch') ||
+            r.content.includes('データベース')
         );
         expect(hasRelevantContent).toBe(true);
       }
@@ -183,7 +184,7 @@ describe('Pond Operations - Integration Tests', () => {
     it('should limit search results', async () => {
       const limit = 5;
       const response = await dbClient.searchPond({ q: 'エラー', limit });
-      
+
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
       expect(Array.isArray(response.data)).toBe(true);
@@ -191,8 +192,10 @@ describe('Pond Operations - Integration Tests', () => {
     });
 
     it('should handle search with no results gracefully', async () => {
-      const response = await dbClient.searchPond({ q: '完全に存在しないキーワード_xyz123_' + Date.now() });
-      
+      const response = await dbClient.searchPond({
+        q: '完全に存在しないキーワード_xyz123_' + Date.now(),
+      });
+
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
       expect(Array.isArray(response.data)).toBe(true);
@@ -201,16 +204,17 @@ describe('Pond Operations - Integration Tests', () => {
 
     it('should search with English query', async () => {
       const response = await dbClient.searchPond({ q: 'replication delay' });
-      
+
       expect(response).toBeDefined();
       expect(response.data).toBeDefined();
       expect(Array.isArray(response.data)).toBe(true);
-      
+
       // レプリケーションに関する内容が見つかることを確認
       if (response.data.length > 0) {
-        const hasReplicationContent = response.data.some(r => 
-          r.content.toLowerCase().includes('replication') ||
-          r.content.includes('レプリケーション')
+        const hasReplicationContent = response.data.some(
+          (r) =>
+            r.content.toLowerCase().includes('replication') ||
+            r.content.includes('レプリケーション')
         );
         expect(hasReplicationContent).toBe(true);
       }
@@ -220,7 +224,7 @@ describe('Pond Operations - Integration Tests', () => {
   describe('Performance and Edge Cases', () => {
     it('should handle very long content', async () => {
       const longContent = 'テスト'.repeat(1000); // 2000文字
-      
+
       const entry: PondEntry = {
         id: getTestId('pond-long'),
         content: longContent,
@@ -260,7 +264,7 @@ describe('Pond Operations - Integration Tests', () => {
       }
 
       const results = await Promise.all(promises);
-      expect(results.every(r => r === true)).toBe(true);
+      expect(results.every((r) => r === true)).toBe(true);
     });
   });
 });
