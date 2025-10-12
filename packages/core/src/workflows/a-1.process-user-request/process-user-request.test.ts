@@ -191,7 +191,7 @@ describe('ProcessUserRequest Workflow (A-1)', () => {
   });
 });
 
-describe.skipIf(!process.env.ENABLE_AI_TESTS)('ProcessUserRequest Workflow - AI Tests', () => {
+describe.skipIf(process.env.SKIP_AI_TESTS === 'true')('ProcessUserRequest Workflow - AI Tests', () => {
   // AI駆動テストはここに追加
   // 実際のAIサービスを使用してワークフローの品質を確認
 

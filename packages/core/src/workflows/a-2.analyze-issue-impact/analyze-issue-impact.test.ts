@@ -305,7 +305,7 @@ describe('AnalyzeIssueImpact Workflow (A-2)', () => {
   });
 });
 
-describe.skipIf(!process.env.ENABLE_AI_TESTS)('AnalyzeIssueImpact Workflow - AI Tests', () => {
+describe.skipIf(process.env.SKIP_AI_TESTS === 'true')('AnalyzeIssueImpact Workflow - AI Tests', () => {
   // AI駆動テストはここに追加
   // 実際のAIサービスを使用してワークフローの品質を確認
 

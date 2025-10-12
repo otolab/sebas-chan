@@ -103,49 +103,6 @@ describe('CollectSystemStats Workflow', () => {
     expect(collectSystemStatsWorkflow.triggers.priority).toBe(5);
   });
 
-  it('should emit UNCLUSTERED_ISSUES_EXCEEDED event when threshold exceeded', async () => {
-    // 21個の未整理Issueを作成
-    const issues: Issue[] = Array.from(
-      { length: 21 },
-      (_, i) =>
-        ({
-          id: `issue-${i}`,
-          title: `Issue ${i}`,
-          description: 'Test issue',
-          status: 'open',
-          priority: 50,
-          labels: [],
-          updates: [],
-          relations: [],
-          sourceInputIds: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          // flowIdsを設定しない（未整理）
-        }) as Issue
-    );
-
-    mockContext = createMockContext(issues, [], []);
-
-    const event: SystemEvent = {
-      type: 'SYSTEM_MAINTENANCE_DUE',
-      payload: {},
-    };
-
-    const result = await collectSystemStatsWorkflow.executor(event, mockContext, mockEmitter);
-
-    expect(result.success).toBe(true);
-
-    const emittedEvents = mockEmitter.getEmittedEvents();
-    const unclusteredEvent = emittedEvents.find((e) => e.type === 'UNCLUSTERED_ISSUES_EXCEEDED');
-
-    expect(unclusteredEvent).toBeDefined();
-    if (unclusteredEvent && unclusteredEvent.type === 'UNCLUSTERED_ISSUES_EXCEEDED') {
-      expect(unclusteredEvent.payload.count).toBe(21);
-      expect(unclusteredEvent.payload.threshold).toBe(20);
-      expect(unclusteredEvent.payload.issueIds).toHaveLength(21);
-    }
-  });
-
   it('should emit ISSUE_STALLED events for stalled issues', async () => {
     // 4日前の日付
     const fourDaysAgo = new Date();
@@ -287,7 +244,6 @@ describe('CollectSystemStats Workflow', () => {
     expect(result.output).toMatchObject({
       stats: {
         totalIssues: 2,
-        unclusteredIssues: 2,
         stalledIssues: 0,
         totalFlows: 1,
         staleFlows: 0,

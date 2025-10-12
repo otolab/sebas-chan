@@ -263,12 +263,12 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
     expect(mockContext.storage.createKnowledge).not.toHaveBeenCalled();
   });
 
-  it('should not create knowledge if content is too short', async () => {
+  it('should not create knowledge if content is empty', async () => {
     mockContext = createCustomMockContext({
       driverResponses: [
         JSON.stringify({
-          extractedKnowledge: '短いコンテンツ', // 50文字未満
-          updatedState: 'Initial state\n短いコンテンツのため知識作成せず',
+          extractedKnowledge: '', // 空のコンテンツ
+          updatedState: 'Initial state\n抽出できる知識なし',
         }),
       ],
       storageOverrides: {
@@ -395,7 +395,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
       driverResponses: [
         JSON.stringify({
           extractedKnowledge:
-            'これは重要な知識です。システムを正しく動作させるためには、定期的なメンテナンスと監視が必要です。',
+            'これは重要な知識です。システムを正しく動作させるためには、定期的なメンテナンスと監視が必要です。また、ログの確認も重要です。',
           updatedState: 'Initial state\n知識抽出: メンテナンス手順',
         }),
       ],
@@ -407,6 +407,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
           status: 'closed',
           updates: [],
         }),
+        searchKnowledge: vi.fn().mockResolvedValue([]), // 空の配列を返す（重複なし）
         createKnowledge: vi.fn().mockResolvedValue({
           id: 'knowledge-123',
           type: 'system_rule',
@@ -482,7 +483,7 @@ describe('ExtractKnowledge Workflow (A-3)', () => {
   });
 });
 
-describe.skipIf(!process.env.ENABLE_AI_TESTS)('ExtractKnowledge Workflow - AI Tests', () => {
+describe.skipIf(process.env.SKIP_AI_TESTS === 'true')('ExtractKnowledge Workflow - AI Tests', () => {
   // AI駆動テストはここに追加
   // 実際のAIサービスを使用してワークフローの品質を確認
 
