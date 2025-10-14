@@ -11,6 +11,7 @@ import { extractKnowledgeWorkflow } from './a-3.extract-knowledge/index.js';
 // Phase 4ワークフロー
 import { clusterIssuesWorkflow } from './b-1.cluster-issues/index.js';
 import { updateFlowRelationsWorkflow } from './b-2.update-flow-relations/index.js';
+import { updateFlowPrioritiesWorkflow } from './b-3.update-flow-priorities/index.js';
 import { suggestNextFlowWorkflow } from './c-1.suggest-next-flow/index.js';
 import { suggestNextActionWorkflow } from './c-2.suggest-next-action/index.js';
 import { collectSystemStatsWorkflow } from './d-2.collect-system-stats/index.js';
@@ -27,6 +28,7 @@ export const DEFAULT_WORKFLOWS: WorkflowDefinition[] = [
   // B系: 横断的ワークフロー（Phase 4）
   clusterIssuesWorkflow,
   updateFlowRelationsWorkflow,
+  updateFlowPrioritiesWorkflow,
   // C系: 提案ワークフロー（Phase 4）
   suggestNextFlowWorkflow,
   suggestNextActionWorkflow,

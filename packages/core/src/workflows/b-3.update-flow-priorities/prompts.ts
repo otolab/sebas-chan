@@ -24,7 +24,7 @@ import { updateStatePromptModule, type StateContext } from '../shared/prompts/st
 /**
  * 優先度判定のコンテキスト
  */
-interface PriorityContext {
+export interface PriorityContext {
   flowAnalysis: Array<{
     flow: Flow;
     issues: Issue[];
@@ -57,7 +57,7 @@ interface PriorityResult {
  * - instructions: 具体的な判断手順（ただし機械的にならないよう注意）
  * - materials: state文書をそのまま渡す（機械的分解はしない）
  */
-const flowPriorityPromptModule: PromptModule<PriorityContext> = {
+export const flowPriorityPromptModule: PromptModule<PriorityContext> = {
   // 今回の作業の目的を明確にする
   // なぜ：AIが何のために判断するのかを理解させる
   objective: [

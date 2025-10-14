@@ -6,11 +6,10 @@
  * - AI駆動テスト：実際のAI品質確認、環境変数で制御
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import type { SystemEvent, Flow, Issue } from '@sebas-chan/shared-types';
+import { describe, it, expect, beforeEach, beforeAll, vi } from 'vitest';
+import type { SystemEvent, Issue } from '@sebas-chan/shared-types';
 import { updateFlowPrioritiesWorkflow } from './index.js';
 import { updateFlowPriorities } from './actions.js';
-import { TestDriver } from '@moduler-prompt/driver';
 import {
   createCustomMockContext,
   createMockWorkflowEmitter,
@@ -80,7 +79,8 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
             }),
             // updateStateDocument の応答
             JSON.stringify({
-              updatedState: '# 現在の状況\n\n優先度を更新しました。\n\n## 更新内容\n- flow-1: 0.50 → 0.75',
+              updatedState:
+                '# 現在の状況\n\n優先度を更新しました。\n\n## 更新内容\n- flow-1: 0.50 → 0.75',
             }),
           ],
           storageOverrides: {
@@ -93,7 +93,12 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
         // 実行
         const event: SystemEvent = {
           type: 'SCHEDULE_TRIGGERED',
-          payload: {},
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
         };
 
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
@@ -150,7 +155,11 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
 
         const event: SystemEvent = {
           type: 'FLOW_STATUS_CHANGED',
-          payload: { flowId: 'flow-high' },
+          payload: {
+            flowId: 'flow-high',
+            oldStatus: 'active' as const,
+            newStatus: 'completed' as const,
+          },
         };
 
         await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
@@ -161,7 +170,7 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
             type: 'HIGH_PRIORITY_FLOW_DETECTED',
             payload: expect.objectContaining({
               flowId: 'flow-high',
-              priority: 0.9,
+              priority: 95, // 0.95 * 100
             }),
           })
         );
@@ -180,14 +189,22 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
 
         const event: SystemEvent = {
           type: 'SCHEDULE_TRIGGERED',
-          payload: {},
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
         };
 
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
 
         expect(result.success).toBe(false);
         expect(result.error).toBe(error);
-        expect(mockContext.recorder.record).toHaveBeenCalledWith(RecordType.ERROR, expect.any(Object));
+        expect(mockContext.recorder.record).toHaveBeenCalledWith(
+          RecordType.ERROR,
+          expect.any(Object)
+        );
       });
     });
 
@@ -219,7 +236,15 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
           },
         });
 
-        const event: SystemEvent = { type: 'SCHEDULE_TRIGGERED', payload: {} };
+        const event: SystemEvent = {
+          type: 'SCHEDULE_TRIGGERED',
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
+        };
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
 
         expect(result.success).toBe(true);
@@ -259,7 +284,8 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
               overallAssessment: { confidence: 0.7, contextQuality: 'partial' },
             }),
             JSON.stringify({
-              updatedState: '# 現在の状況\n\n## ユーザーへの確認事項\n- 「停滞Flow」は7日間更新されていません',
+              updatedState:
+                '# 現在の状況\n\n## ユーザーへの確認事項\n- 「停滞Flow」は7日間更新されていません',
             }),
           ],
           storageOverrides: {
@@ -269,7 +295,15 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
           },
         });
 
-        const event: SystemEvent = { type: 'SCHEDULE_TRIGGERED', payload: {} };
+        const event: SystemEvent = {
+          type: 'SCHEDULE_TRIGGERED',
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
+        };
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
 
         expect(result.success).toBe(true);
@@ -302,7 +336,8 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
                   reasoning: '2週間以上更新がないため、クローズを検討',
                   userQuery: {
                     type: 'confirm_stale',
-                    message: '「放置Flow」は14日間更新されていません。まだ必要ですか？クローズしますか？',
+                    message:
+                      '「放置Flow」は14日間更新されていません。まだ必要ですか？クローズしますか？',
                   },
                 },
               ],
@@ -319,7 +354,15 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
           },
         });
 
-        const event: SystemEvent = { type: 'SCHEDULE_TRIGGERED', payload: {} };
+        const event: SystemEvent = {
+          type: 'SCHEDULE_TRIGGERED',
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
+        };
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
 
         expect(result.success).toBe(true);
@@ -365,9 +408,19 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
             // 全体の優先度計算
             JSON.stringify({
               updates: [
-                { flowId: 'flow-1', newPriority: 0.2, mainFactor: '低優先度', reasoning: '他と比較して低い' },
+                {
+                  flowId: 'flow-1',
+                  newPriority: 0.2,
+                  mainFactor: '低優先度',
+                  reasoning: '他と比較して低い',
+                },
                 { flowId: 'flow-2', newPriority: 0.5, mainFactor: '中優先度', reasoning: '平均的' },
-                { flowId: 'flow-3', newPriority: 0.8, mainFactor: '高優先度', reasoning: '最も重要' },
+                {
+                  flowId: 'flow-3',
+                  newPriority: 0.8,
+                  mainFactor: '高優先度',
+                  reasoning: '最も重要',
+                },
               ],
               overallAssessment: { confidence: 0.8, contextQuality: 'good' },
             }),
@@ -384,7 +437,15 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
           },
         });
 
-        const event: SystemEvent = { type: 'SCHEDULE_TRIGGERED', payload: {} };
+        const event: SystemEvent = {
+          type: 'SCHEDULE_TRIGGERED',
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
+        };
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
 
         expect(result.success).toBe(true);
@@ -409,7 +470,15 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
           },
         });
 
-        const event: SystemEvent = { type: 'SCHEDULE_TRIGGERED', payload: {} };
+        const event: SystemEvent = {
+          type: 'SCHEDULE_TRIGGERED',
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
+        };
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
 
         expect(result.success).toBe(true);
@@ -430,7 +499,14 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
               analysisConfidence: 0.5,
             }),
             JSON.stringify({
-              updates: [{ flowId: flow.id, newPriority: 0.5, mainFactor: '情報不足', reasoning: 'コンテキストなし' }],
+              updates: [
+                {
+                  flowId: flow.id,
+                  newPriority: 0.5,
+                  mainFactor: '情報不足',
+                  reasoning: 'コンテキストなし',
+                },
+              ],
               overallAssessment: { confidence: 0.5, contextQuality: 'poor' },
             }),
             JSON.stringify({ updatedState: '# 初期状態' }),
@@ -442,7 +518,15 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
           },
         });
 
-        const event: SystemEvent = { type: 'SCHEDULE_TRIGGERED', payload: {} };
+        const event: SystemEvent = {
+          type: 'SCHEDULE_TRIGGERED',
+          payload: {
+            issueId: 'issue-1',
+            scheduleId: 'schedule-1',
+            scheduledTime: new Date().toISOString(),
+            action: 'reminder' as const,
+          },
+        };
         const result = await updateFlowPrioritiesWorkflow.executor(event, mockContext, mockEmitter);
 
         expect(result.success).toBe(true);
@@ -466,10 +550,14 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
         return;
       }
 
-      const driver = await aiService.createDriver({
-        requiredCapabilities: ['structured'],
-        preferredCapabilities: ['japanese', 'fast'],
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
       });
+
+      if (!driver) {
+        console.log('Driver creation failed');
+        return;
+      }
 
       // テスト用のFlowデータ
       const flows = [
@@ -502,7 +590,8 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
         ['stale-flow', []],
       ]);
 
-      const stateDocument = '# 現在の状況\n\n明日重要な顧客プレゼンがあります。準備を急ぐ必要があります。';
+      const stateDocument =
+        '# 現在の状況\n\n明日重要な顧客プレゼンがあります。準備を急ぐ必要があります。';
 
       // 実際のAIで優先度更新を実行
       const updatedState = await updateFlowPriorities(
@@ -511,8 +600,11 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
         issuesByFlow,
         stateDocument,
         {
-          updateFlow: vi.fn().mockResolvedValue(flows[0]),
-        } as any
+          storage: {
+            updateFlow: vi.fn().mockResolvedValue(flows[0]),
+          },
+        } as unknown as WorkflowContextInterface,
+        createMockWorkflowEmitter()
       );
 
       // AI出力の構造的妥当性を検証
@@ -532,10 +624,14 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
         return;
       }
 
-      const driver = await aiService.createDriver({
-        requiredCapabilities: ['structured'],
-        preferredCapabilities: ['japanese'],
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
       });
+
+      if (!driver) {
+        console.log('Driver creation failed');
+        return;
+      }
 
       const abandonedFlow = createMockFlow({
         id: 'abandoned-project',
@@ -549,9 +645,18 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
 
       const stateDocument = '# 現在の状況\n\n新しいプロジェクトに集中しています。';
 
-      const updatedState = await updateFlowPriorities(driver, [abandonedFlow], issuesByFlow, stateDocument, {
-        updateFlow: vi.fn(),
-      } as any);
+      const updatedState = await updateFlowPriorities(
+        driver,
+        [abandonedFlow],
+        issuesByFlow,
+        stateDocument,
+        {
+          storage: {
+            updateFlow: vi.fn(),
+          },
+        } as unknown as WorkflowContextInterface,
+        createMockWorkflowEmitter()
+      );
 
       // 停滞に関する適切な判断がされているか
       expect(updatedState).toMatch(/確認|停滞|更新されていない|クローズ/);
@@ -563,10 +668,14 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
         return;
       }
 
-      const driver = await aiService.createDriver({
-        requiredCapabilities: ['structured'],
-        preferredCapabilities: ['japanese', 'fast'],
+      const driver = await aiService.createDriverFromCapabilities(['structured'], {
+        lenient: true,
       });
+
+      if (!driver) {
+        console.log('Driver creation failed');
+        return;
+      }
 
       const flows = [
         createMockFlow({
@@ -597,9 +706,18 @@ describe('B-3: UPDATE_FLOW_PRIORITIES Workflow', () => {
 
       const stateDocument = '# 現在の状況\n\nシステムの安定性を最優先に考えています。';
 
-      const updatedState = await updateFlowPriorities(driver, flows, issuesByFlow, stateDocument, {
-        updateFlow: vi.fn(),
-      } as any);
+      const updatedState = await updateFlowPriorities(
+        driver,
+        flows,
+        issuesByFlow,
+        stateDocument,
+        {
+          storage: {
+            updateFlow: vi.fn(),
+          },
+        } as unknown as WorkflowContextInterface,
+        createMockWorkflowEmitter()
+      );
 
       // 優先順位に関する言及があるか
       expect(updatedState).toMatch(/優先|重要|最初に|バグ|修正/);

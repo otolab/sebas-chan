@@ -7,7 +7,7 @@
 
 import type { AIDriver } from '@moduler-prompt/driver';
 import type { Flow, Issue } from '@sebas-chan/shared-types';
-import type { WorkflowStorageInterface } from '../context.js';
+import type { WorkflowContextInterface, WorkflowEventEmitterInterface } from '../context.js';
 import { calculateFlowPriorities, analyzeIndividualFlow, updateStateDocument } from './prompts.js';
 
 // 型を再エクスポート（外部から参照可能にする）
@@ -82,7 +82,8 @@ export async function updateFlowPriorities(
   flows: Flow[],
   issuesByFlow: Map<string, Issue[]>,
   stateDocument: string,
-  storage: WorkflowStorageInterface
+  context: WorkflowContextInterface,
+  emitter: WorkflowEventEmitterInterface
 ): Promise<string> {
   // 更新されたstate文書を返す
 
@@ -160,12 +161,35 @@ export async function updateFlowPriorities(
   // 各Flowの優先度をstorageで直接更新
   // なぜ：次回の判断の基礎データとなるため
   for (const update of priorityResult.updates) {
-    await storage.updateFlow(update.flowId, {
+    await context.storage.updateFlow(update.flowId, {
       priorityScore: update.newPriority,
     });
 
-    // 大きな変更があった場合の記録（後でstate文書に追加）
-    // 閾値：優先度の変化が0.2以上
+    // FLOW_PRIORITY_UPDATEDイベントを発行
+    emitter.emit({
+      type: 'FLOW_PRIORITY_UPDATED',
+      payload: {
+        flowId: update.flowId,
+        oldPriority: update.oldPriority,
+        newPriority: update.newPriority,
+        reason: update.explanation.mainFactor,
+        updatedBy: 'workflow',
+        sourceWorkflow: 'B-3:UPDATE_FLOW_PRIORITIES',
+      },
+    });
+
+    // 高優先度Flowの場合は追加イベント発行
+    if (update.newPriority >= 0.8) {
+      emitter.emit({
+        type: 'HIGH_PRIORITY_FLOW_DETECTED',
+        payload: {
+          flowId: update.flowId,
+          priority: update.newPriority * 100, // 0-100のスケールに変換
+          reason: update.explanation.reasoning,
+          requiredAction: update.userQuery?.message || 'Immediate attention required',
+        },
+      });
+    }
   }
 
   // ========================================

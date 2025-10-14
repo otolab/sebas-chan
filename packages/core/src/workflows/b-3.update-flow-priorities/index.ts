@@ -80,7 +80,7 @@ async function executeUpdateFlowPriorities(
     //   - 全Flowとその詳細
     //   - 含まれるIssueの情報
     //   - state文書（現在のコンテキスト）
-    //   - storage（Flow更新用）
+    //   - context（Flow更新とイベント発行用）
     // 出力：
     //   - 更新されたstate文書（確認事項とログを含む）
     const updatedState = await updateFlowPriorities(
@@ -88,41 +88,16 @@ async function executeUpdateFlowPriorities(
       flows,
       issuesByFlow,
       currentState,
-      storage
+      context,
+      emitter
     );
 
     // ========================================
-    // 3. イベント発行（必要に応じて）
+    // 3. 結果の返却
     // ========================================
-
-    // 大きな変更があった場合はイベントを発行
-    // なぜ：他のワークフローやユーザーに通知が必要
-    // 閾値：優先度の変化が0.2以上
-
-    // 高優先度のFlowを検出
-    const highPriorityFlows = flows.filter((f) => f.priorityScore > 0.8);
-    if (highPriorityFlows.length > 0) {
-      // 最も優先度の高いFlowについてイベント発行
-      const topFlow = highPriorityFlows.sort((a, b) => b.priorityScore - a.priorityScore)[0];
-      emitter.emit({
-        type: 'HIGH_PRIORITY_FLOW_DETECTED',
-        payload: {
-          flowId: topFlow.id,
-          priority: topFlow.priorityScore,
-          title: topFlow.title,
-        },
-      });
-
-      recorder.record(RecordType.INFO, {
-        event: 'HIGH_PRIORITY_FLOW_DETECTED',
-        flowId: topFlow.id,
-        priority: topFlow.priorityScore,
-      });
-    }
-
-    // ========================================
-    // 4. 結果の返却
-    // ========================================
+    // 注：イベント発行はactions.ts内で実施済み
+    // - FLOW_PRIORITY_UPDATED: 全ての優先度更新について発行
+    // - HIGH_PRIORITY_FLOW_DETECTED: 高優先度Flow（0.8以上）について発行
 
     // contextへの作用として実行完了
     // 唯一の意味のある返り値は更新されたstate
@@ -161,6 +136,7 @@ export const updateFlowPrioritiesWorkflow: WorkflowDefinition = {
       'SCHEDULE_TRIGGERED', // 定期実行（日次での生存確認）
       'FLOW_STATUS_CHANGED', // Flow状態変更時
       'ISSUE_STATUS_CHANGED', // 含まれるIssueの状態変更時
+      'ISSUE_UPDATED', // Issueの重要な更新時
     ],
     priority: 15, // 中程度の優先度（バックグラウンド処理）
   },
