@@ -10,6 +10,9 @@ docs/
 ├── ROADMAP.md                 # 開発ロードマップ
 ├── IMPLEMENTATION_STATUS.md   # 実装状況
 ├── DOCUMENT_ORGANIZATION_PLAN.md # ドキュメント整理計画
+
+>>> STATE_DOCUMENT_DESIGN.md
+
 │
 ├── architecture/              # システムアーキテクチャ
 │   ├── README.md             # アーキテクチャドキュメントのインデックス

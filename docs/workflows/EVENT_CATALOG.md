@@ -523,6 +523,62 @@ interface HighPriorityFlowDetectedEvent {
 
 ---
 
+### FLOW_PRIORITY_UPDATED
+
+**カテゴリ**: データイベント
+**説明**: Flowの優先度が更新された
+
+```typescript
+interface FlowPriorityUpdatedEvent {
+  type: 'FLOW_PRIORITY_UPDATED';
+  payload: {
+    flowId: string;
+    oldPriority: number;
+    newPriority: number;
+    reason: string;
+    updatedBy: 'user' | 'system' | 'workflow';
+    sourceWorkflow?: string;
+  };
+}
+```
+
+**トリガーするワークフロー**:
+
+- （将来実装予定: 通知システム、ダッシュボード更新等）
+
+**発生元**: B-3: UpdateFlowPriorities
+
+**備考**: 優先度が変更されたすべてのFlowに対して発行される。HIGH_PRIORITY_FLOW_DETECTEDは高優先度の場合のみ発行される特別なイベント。
+
+---
+
+### FLOW_STATUS_CHANGED
+
+**カテゴリ**: データイベント
+**説明**: Flowのステータスが変更された
+
+```typescript
+interface FlowStatusChangedEvent {
+  type: 'FLOW_STATUS_CHANGED';
+  payload: {
+    flowId: string;
+    oldStatus: FlowStatus;
+    newStatus: FlowStatus;
+    reason?: string;
+    flow: Flow;
+  };
+}
+```
+
+**トリガーするワークフロー**:
+
+- B-3: UpdateFlowPriorities (優先度: 10)
+- C-1: SuggestNextFlow (優先度: 20)
+
+**発生元**: B-2: UpdateFlowRelations, ユーザー操作
+
+---
+
 ### SCHEDULE_TRIGGERED
 
 **カテゴリ**: システムイベント
@@ -581,6 +637,7 @@ type ScheduleAction =
 | A-2: AnalyzeIssueImpact  | `KNOWLEDGE_EXTRACTABLE`, `HIGH_PRIORITY_ISSUE_DETECTED`, `ISSUE_UPDATED` |
 | A-3: ExtractKnowledge    | `KNOWLEDGE_CREATED`                                                |
 | B-1: ClusterIssues       | `FLOW_CREATED`, `PATTERN_FOUND` (クラスタリング結果)               |
+| B-3: UpdateFlowPriorities | `FLOW_PRIORITY_UPDATED`, `HIGH_PRIORITY_FLOW_DETECTED`            |
 | B-4: SalvageFromPond     | `PATTERN_FOUND`, `KNOWLEDGE_EXTRACTABLE`                           |
 | C-1: SuggestNextFlow     | `FLOW_SELECTED_FOR_ACTION`, `PERSPECTIVE_TRIGGERED`                |
 | C-2: SuggestNextActionForIssue | `ISSUE_SPLIT_SUGGESTED`, `ESCALATION_REQUIRED`              |
@@ -593,7 +650,8 @@ type ScheduleAction =
 | `USER_REQUEST_RECEIVED`  | A-0                  | 常に                 |
 | `DATA_ARRIVED`           | A-1                  | 常に                 |
 | `ISSUE_CREATED`          | A-2, B-2, C-2        | C-2は高優先度のみ    |
-| `ISSUE_UPDATED`          | A-2                  | 重要な更新のみ       |
+| `ISSUE_UPDATED`          | A-2, B-3             | 重要な更新のみ       |
+| `FLOW_STATUS_CHANGED`    | B-3, C-1             | 常に                 |
 | `KNOWLEDGE_EXTRACTABLE`  | A-3                  | 常に                 |
 | `HIGH_PRIORITY_ISSUE_DETECTED` | C-2           | 常に                 |
 | `HIGH_PRIORITY_FLOW_DETECTED`  | C-2           | 常に                 |
